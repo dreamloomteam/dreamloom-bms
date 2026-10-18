@@ -1,0 +1,27 @@
+export interface MemberContribution {
+  memberId: string;
+  monthlyAmount: number;
+  monthsPaid: number;
+}
+
+export interface LoanItem {
+  principal: number;
+  interestRate: number; // e.g. 0.10 for 10%
+  penalties: number;
+}
+
+// 1. Calculate total member contribution (Monthly Amount * Months)
+export function calculateTotalContributions(contributions: MemberContribution[]): number {
+  return contributions.reduce((sum, item) => sum + item.monthlyAmount * item.monthsPaid, 0);
+}
+
+// 2. Calculate loan total due (Principal + Interest + Penalties)
+export function calculateLoanTotalDue(loan: LoanItem): number {
+  const interest = loan.principal * loan.interestRate;
+  return loan.principal + interest + loan.penalties;
+}
+
+// 3. Calculate net asset position (Assets - Liabilities/Loans)
+export function calculateNetAssets(totalAssets: number, totalExpenses: number, totalOutStandingLoans: number): number {
+  return totalAssets - (totalExpenses + totalOutStandingLoans);
+}

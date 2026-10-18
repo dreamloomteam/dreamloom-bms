@@ -1,0 +1,74 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             Int     @id @default(autoincrement())
+  username       String  @unique
+  passwordHash   String
+  fullName       String
+  role           String  @default("Member")
+  isActive       Boolean @default(true)
+  mustChangePass Boolean @default(true)
+}
+
+model Member {
+  id            Int            @id @default(autoincrement())
+  fullName      String
+  nationalId    String         @unique
+  phone         String
+  email         String         @unique
+  role          String         @default("Member")
+  contributions Contribution[]
+  loans         Loan[]
+  penalties     Penalty[]
+}
+
+model Contribution {
+  id        Int      @id @default(autoincrement())
+  memberId  Int
+  member    Member   @relation(fields: [memberId], references: [id])
+  monthYear String
+  amount    Float    @default(0.0)
+  remarks   String?
+  createdAt DateTime @default(now())
+}
+
+model Loan {
+  id           String    @id
+  memberId     Int
+  member       Member    @relation(fields: [memberId], references: [id])
+  issueDate    DateTime
+  principal    Float
+  interest     Float
+  totalPayable Float
+  paidAmount   Float     @default(0.0)
+  status       String    @default("Active")
+  clearedDate  DateTime?
+}
+
+model Expense {
+  id               Int      @id @default(autoincrement())
+  expenseDate      DateTime
+  description      String
+  amount           Float
+  expenseType      String
+  referenceDetails String?
+}
+
+model Penalty {
+  id            Int      @id @default(autoincrement())
+  memberId      Int
+  member        Member   @relation(fields: [memberId], references: [id])
+  monthYear     String
+  dueDate       DateTime
+  dateLevied    DateTime
+  penaltyAmount Float    @default(500.0)
+  paidAmount    Float    @default(0.0)
+  status        String   @default("Unpaid")
+  reason        String
+}
