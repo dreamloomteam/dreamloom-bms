@@ -1,19 +1,44 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id             Int     @id @default(autoincrement())
-  username       String  @unique
+  id             Int      @id @default(autoincrement())
+  username       String   @unique
   passwordHash   String
   fullName       String
-  role           String  @default("Member")
-  isActive       Boolean @default(true)
-  mustChangePass Boolean @default(true)
+  role           String   @default("Member")
+  isActive       Boolean  @default(true)
+  mustChangePass Boolean  @default(true)
+  loginLogs      LoginLog[]
+  editLogs       EditLog[]
+  member         Member?
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  email     String?
+  success   Boolean
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model EditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  model     String   // e.g., "Contribution"
+  action    String   // "create", "update", "delete"
+  recordId  Int?
+  changes   String?
+  createdAt DateTime @default(now())
 }
 
 model Member {
@@ -26,6 +51,8 @@ model Member {
   contributions Contribution[]
   loans         Loan[]
   penalties     Penalty[]
+  userId        Int? @unique
+  user          User?          @relation(fields: [userId], references: [id])
 }
 
 model Contribution {
