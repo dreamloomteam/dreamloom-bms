@@ -8,7 +8,7 @@ import {
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
-  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle
+  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2
 } from 'lucide-react';
 
 export default function Home() {
@@ -23,7 +23,7 @@ export default function Home() {
     { email: 'beatrice@dreamloom.co.ke', password: 'Beatrice@404', name: 'Beatrice Njoki', fullName: 'Beatrice Njoki Muthoni', nationalId: '40492876', phone: '0708665848', role: 'Member' },
   ];
 
-  // 2. Authentication States (Preserve session on refresh)
+  // 2. Authentication States (Always prompt on refresh, persistent database sync)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
@@ -31,15 +31,9 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Synchronize persisted auth session and database contributions on mount
+  // Synchronize database contributions on mount
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem('dreamloom_auth_user');
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        setIsLoggedIn(true);
-      }
       const savedContributions = localStorage.getItem('dreamloom_contributions');
       if (savedContributions) {
         try {
@@ -672,11 +666,6 @@ export default function Home() {
     if (targetUser) {
       setCurrentUser(targetUser);
       setIsLoggedIn(true);
-      try {
-        localStorage.setItem('dreamloom_auth_user', JSON.stringify(targetUser));
-      } catch (err) {
-        console.warn('Failed to persist user session:', err);
-      }
       setLoginEmail('');
       setLoginPassword('');
       setLoginLogs(prev => [
@@ -698,11 +687,6 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser(null);
-    try {
-      localStorage.removeItem('dreamloom_auth_user');
-    } catch (err) {
-      console.warn('Failed to clear user session:', err);
-    }
   };
 
   // Toggle Loan Status: Active <-> Settled
@@ -858,6 +842,60 @@ export default function Home() {
       setField3(item.status || 'Available');
     }
     setIsModalOpen(true);
+  };
+
+  // Delete Action for Records
+  const handleDeleteCurrentRecord = async () => {
+    if (!editingId) return;
+    if (!canEdit) {
+      alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can delete records.');
+      return;
+    }
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete this ${modalMode} record? This action will update the database.`);
+    if (!confirmDelete) return;
+
+    if (modalMode === 'Contributions') {
+      const remaining = contributions.filter(c => c.id !== editingId);
+      setContributions(remaining);
+      try {
+        localStorage.setItem('dreamloom_contributions', JSON.stringify(remaining));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+      fetch(`/api/contributions?customId=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+        method: 'DELETE'
+      }).catch(err => console.error('Database delete failed:', err));
+    } else if (modalMode === 'Member Directory') {
+      setMembers(members.filter(m => m.id !== editingId));
+    } else if (modalMode === 'Loan Portfolio') {
+      setLoans(loans.filter(l => l.id !== editingId));
+    } else if (modalMode === 'Fines & Penalties') {
+      setFines(fines.filter(f => f.id !== editingId));
+    } else if (modalMode === 'Expenses') {
+      setExpenses(expenses.filter(exp => exp.id !== editingId));
+    } else if (modalMode === 'Investments') {
+      setInvestments(investments.filter(inv => inv.id !== editingId));
+    } else if (modalMode === 'Projects') {
+      setProjects(projects.filter(p => p.id !== editingId));
+    } else if (modalMode === 'Suppliers') {
+      setSuppliers(suppliers.filter(s => s.id !== editingId));
+    } else if (modalMode === 'Documents') {
+      setDocuments(documents.filter(d => d.id !== editingId));
+    }
+
+    setEditLogs(prev => [
+      {
+        id: `LOG-${Date.now().toString().slice(-4)}`,
+        user: currentUser?.fullName || 'Simon Memia',
+        action: 'Deleted Record',
+        module: modalMode,
+        details: `Deleted record ID ${editingId} in ${modalMode}`,
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
+      },
+      ...prev
+    ]);
+
+    setIsModalOpen(false);
   };
 
   // Submit Modal for All Modules (Add & Edit)
@@ -2983,20 +3021,35 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#1E293B]">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-[#142036] text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium shadow-lg shadow-emerald-950/50"
-                >
-                  Save Entry
-                </button>
+              <div className="flex justify-between items-center pt-4 border-t border-[#1E293B]">
+                <div>
+                  {editingId && canEdit && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteCurrentRecord}
+                      className="px-3.5 py-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition border border-rose-500/30"
+                      title="Permanently Delete this record"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete Record
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 bg-[#142036] text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium shadow-lg shadow-emerald-950/50"
+                  >
+                    Save Entry
+                  </button>
+                </div>
               </div>
             </form>
           </div>
