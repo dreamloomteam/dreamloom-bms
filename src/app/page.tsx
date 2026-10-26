@@ -23,13 +23,57 @@ export default function Home() {
     { email: 'beatrice@dreamloom.co.ke', password: 'Beatrice@404', name: 'Beatrice Njoki', fullName: 'Beatrice Njoki Muthoni', nationalId: '40492876', phone: '0708665848', role: 'Member' },
   ];
 
-  // 2. Authentication States (Always prompt on page refresh)
+  // 2. Authentication States (Preserve session on refresh)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
+
+  // Synchronize persisted auth session and database contributions on mount
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('dreamloom_auth_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        setIsLoggedIn(true);
+      }
+      const savedContributions = localStorage.getItem('dreamloom_contributions');
+      if (savedContributions) {
+        try {
+          const parsedC = JSON.parse(savedContributions);
+          if (Array.isArray(parsedC) && parsedC.length > 0) {
+            setContributions(parsedC);
+          }
+        } catch (err) {
+          console.warn('Error reading saved contributions:', err);
+        }
+      }
+      // Query server-side database for latest records
+      fetch('/api/contributions')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map((c: any) => ({
+              id: c.customId || ('CNT-' + c.id),
+              month: c.monthYear,
+              member: c.member?.fullName || (c.remarks?.replace('Member: ', '') || 'Simon Memia Wanjiru'),
+              amount: Number(c.amount) || 0,
+              unsettled: Number(c.unsettled) || 0,
+              payout: Number(c.payout) || 0,
+              notes: c.remarks || ''
+            }));
+            setContributions(mapped);
+            localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server contributions:', err));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   // Role-Based Access Control: Strictly Simon Memia Wanjiru & Elijah Waitara Gichari can edit
   const canEdit = useMemo(() => {
@@ -616,6 +660,11 @@ export default function Home() {
     if (targetUser) {
       setCurrentUser(targetUser);
       setIsLoggedIn(true);
+      try {
+        localStorage.setItem('dreamloom_auth_user', JSON.stringify(targetUser));
+      } catch (err) {
+        console.warn('Failed to persist user session:', err);
+      }
       setLoginEmail('');
       setLoginPassword('');
       setLoginLogs(prev => [
@@ -637,6 +686,11 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser(null);
+    try {
+      localStorage.removeItem('dreamloom_auth_user');
+    } catch (err) {
+      console.warn('Failed to clear user session:', err);
+    }
   };
 
   // Toggle Loan Status: Active <-> Settled
@@ -840,7 +894,7 @@ export default function Home() {
     // 2. Contributions
     else if (modalMode === 'Contributions' || modalMode === 'Record Contribution') {
       if (editingId) {
-        setContributions(contributions.map(c => c.id === editingId ? {
+        const updatedList = contributions.map(c => c.id === editingId ? {
           ...c,
           month: field1,
           member: field2,
@@ -848,7 +902,29 @@ export default function Home() {
           unsettled: Number(field4) || 0,
           payout: Number(field5) || 0,
           notes: field6
-        } : c));
+        } : c);
+        setContributions(updatedList);
+        try {
+          localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn('LocalStorage save failed:', e);
+        }
+
+        // Asynchronously persist to Postgres via secure API
+        fetch('/api/contributions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser?.email,
+            customId: editingId,
+            memberName: field2,
+            month: field1,
+            amount: Number(field3) || 0,
+            unsettled: Number(field4) || 0,
+            payout: Number(field5) || 0,
+            notes: field6
+          })
+        }).catch(err => console.error('Database update failed:', err));
       } else {
         const newC = {
           id: `CNT-${contributions.length + 1}`,
@@ -859,7 +935,30 @@ export default function Home() {
           payout: Number(field5) || 0.00,
           notes: field6 || ''
         };
-        setContributions([newC, ...contributions]);
+        const updatedList = [newC, ...contributions];
+        setContributions(updatedList);
+        try {
+          localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn('LocalStorage save failed:', e);
+        }
+
+        // Asynchronously persist to Postgres via secure API
+        fetch('/api/contributions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser?.email,
+            customId: newC.id,
+            memberName: field2,
+            month: field1 || '01-Oct-2026',
+            amount: Number(field3) || 0,
+            unsettled: Number(field4) || 0,
+            payout: Number(field5) || 0,
+            notes: field6 || ''
+          })
+        }).catch(err => console.error('Database create failed:', err));
+
         setTransactions([
           { id: `TX-${Date.now()}`, title: `${field2.split(' ')[0]} - Contribution`, time: 'Just now', amount: `+ KES ${Number(field3 || 0).toLocaleString()}`, type: 'income', icon: Users, iconColor: 'bg-blue-600/20 text-sky-400' },
           ...transactions

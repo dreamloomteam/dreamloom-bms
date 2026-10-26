@@ -8,13 +8,13 @@ generator client {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
-  username       String   @unique
+  id             Int        @id @default(autoincrement())
+  username       String     @unique
   passwordHash   String
   fullName       String
-  role           String   @default("Member")
-  isActive       Boolean  @default(true)
-  mustChangePass Boolean  @default(true)
+  role           String     @default("Member")
+  isActive       Boolean    @default(true)
+  mustChangePass Boolean    @default(true)
   loginLogs      LoginLog[]
   editLogs       EditLog[]
   member         Member?
@@ -51,17 +51,20 @@ model Member {
   contributions Contribution[]
   loans         Loan[]
   penalties     Penalty[]
-  userId        Int? @unique
+  userId        Int?           @unique
   user          User?          @relation(fields: [userId], references: [id])
 }
 
 model Contribution {
   id        Int      @id @default(autoincrement())
-  memberId  Int
-  member    Member   @relation(fields: [memberId], references: [id])
+  memberId  Int?
+  member    Member?  @relation(fields: [memberId], references: [id])
   monthYear String
   amount    Float    @default(0.0)
+  unsettled Float    @default(0.0)
+  payout    Float    @default(0.0)
   remarks   String?
+  customId  String?  @unique
   createdAt DateTime @default(now())
 }
 
