@@ -67,6 +67,16 @@ export default function Home() {
             }));
             setContributions(mapped);
             localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped));
+          } else if (res.success && Array.isArray(res.data) && res.data.length === 0) {
+            // Neon DB has not been seeded yet: automatically sync official workbook contributions
+            fetch('/api/contributions/seed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userEmail: 'simon@dreamloom.co.ke',
+                records: defaultOfficialContributions
+              })
+            }).catch(e => console.warn('Auto-seed skipped:', e));
           }
         })
         .catch(err => console.warn('Could not fetch server contributions:', err));
@@ -256,7 +266,7 @@ export default function Home() {
   ]);
 
   // 2. Official Contributions & Land Payouts Register (PDF Pages 2, 3, 4, 5) with Unsettled Contributions Column
-  const [contributions, setContributions] = useState([
+  const defaultOfficialContributions = [
     // October 2025
     { id: 'CNT-001', month: '01-Oct-2025', member: 'Simon Memia Wanjiru', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
     { id: 'CNT-002', month: '01-Oct-2025', member: 'David Wainaina Kinyua', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
@@ -384,7 +394,9 @@ export default function Home() {
     { id: 'CNT-100', month: '01-Oct-2026', member: 'Michael Kiarie Wanjiru', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
     { id: 'CNT-101', month: '01-Oct-2026', member: 'Daniel Kamau Njiriri', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
     { id: 'CNT-102', month: '01-Oct-2026', member: 'Beatrice Njoki Muthoni', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-  ]);
+  ];
+
+  const [contributions, setContributions] = useState(defaultOfficialContributions);
 
   // 3. Official Operational Expenses & Payouts Log (PDF Page 6 - 27 Records totaling KES 380,555.02)
   const [expenses, setExpenses] = useState([
