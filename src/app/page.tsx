@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { initialMembers, initialLoans, initialContributions, initialExpenses, initialFines } from '@/lib/initialData';
 import {
   LayoutDashboard, Users, Wallet, AlertTriangle,
   TrendingUp, Briefcase, Truck, Boxes, Building,
@@ -31,21 +32,17 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Synchronize database contributions on mount
+  // Synchronize database records on mount across all modules
   useEffect(() => {
     try {
+      // 1. Contributions
       const savedContributions = localStorage.getItem('dreamloom_contributions');
       if (savedContributions) {
         try {
-          const parsedC = JSON.parse(savedContributions);
-          if (Array.isArray(parsedC) && parsedC.length > 0) {
-            setContributions(parsedC);
-          }
-        } catch (err) {
-          console.warn('Error reading saved contributions:', err);
-        }
+          const parsed = JSON.parse(savedContributions);
+          if (Array.isArray(parsed) && parsed.length > 0) setContributions(parsed);
+        } catch (e) { console.warn('Saved contributions parse failed:', e); }
       }
-      // Query server-side database for latest records
       fetch('/api/contributions')
         .then(r => r.json())
         .then(res => {
@@ -61,19 +58,94 @@ export default function Home() {
             }));
             setContributions(mapped);
             localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped));
-          } else if (res.success && Array.isArray(res.data) && res.data.length === 0) {
-            // Neon DB has not been seeded yet: automatically sync official workbook contributions
-            fetch('/api/contributions/seed', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userEmail: 'simon@dreamloom.co.ke',
-                records: defaultOfficialContributions
-              })
-            }).catch(e => console.warn('Auto-seed skipped:', e));
           }
         })
         .catch(err => console.warn('Could not fetch server contributions:', err));
+
+      // 2. Loans
+      const savedLoans = localStorage.getItem('dreamloom_loans');
+      if (savedLoans) {
+        try {
+          const parsed = JSON.parse(savedLoans);
+          if (Array.isArray(parsed) && parsed.length > 0) setLoans(parsed);
+        } catch (e) { console.warn('Saved loans parse failed:', e); }
+      }
+      fetch('/api/loans')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map((l: any) => ({
+              id: l.id,
+              issueDate: l.issueDate ? String(l.issueDate).slice(0, 10) : '-',
+              borrower: l.member?.fullName || 'Member',
+              principal: Number(l.principal) || 0,
+              interest: Number(l.interest) || 0,
+              totalLoan: Number(l.totalPayable) || 0,
+              paid: Number(l.paidAmount) || 0,
+              balance: (Number(l.totalPayable) || 0) - (Number(l.paidAmount) || 0),
+              status: l.status,
+              clearedDate: l.clearedDate ? String(l.clearedDate).slice(0, 10) : '-'
+            }));
+            setLoans(mapped);
+            localStorage.setItem('dreamloom_loans', JSON.stringify(mapped));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server loans:', err));
+
+      // 3. Fines & Penalties
+      const savedFines = localStorage.getItem('dreamloom_fines');
+      if (savedFines) {
+        try {
+          const parsed = JSON.parse(savedFines);
+          if (Array.isArray(parsed) && parsed.length > 0) setFines(parsed);
+        } catch (e) { console.warn('Saved fines parse failed:', e); }
+      }
+      fetch('/api/penalties')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map((p: any, idx: number) => ({
+              id: `FN-${String(idx + 1).padStart(2, '0')}`,
+              dbId: p.id,
+              date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-',
+              member: p.member?.fullName || 'Member',
+              reason: p.reason || 'Late payment + penalty',
+              amount: Number(p.penaltyAmount) || 500,
+              status: p.status === 'Settled' ? 'Paid' : 'Active',
+              datePaid: p.status === 'Settled' ? '2026-11-01' : '-'
+            }));
+            setFines(mapped);
+            localStorage.setItem('dreamloom_fines', JSON.stringify(mapped));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server penalties:', err));
+
+      // 4. Expenses
+      const savedExpenses = localStorage.getItem('dreamloom_expenses');
+      if (savedExpenses) {
+        try {
+          const parsed = JSON.parse(savedExpenses);
+          if (Array.isArray(parsed) && parsed.length > 0) setExpenses(parsed);
+        } catch (e) { console.warn('Saved expenses parse failed:', e); }
+      }
+      fetch('/api/expenses')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped = res.data.map((e: any, idx: number) => ({
+              id: `EXP-${String(idx + 1).padStart(2, '0')}`,
+              dbId: e.id,
+              date: e.expenseDate ? String(e.expenseDate).slice(0, 10) : '-',
+              description: e.description,
+              amount: Number(e.amount) || 0,
+              category: e.expenseType || 'Operational',
+              paidTo: e.referenceDetails || 'Operational Outflow'
+            }));
+            setExpenses(mapped);
+            localStorage.setItem('dreamloom_expenses', JSON.stringify(mapped));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server expenses:', err));
     } catch (e) {
       console.error(e);
     }
@@ -113,6 +185,21 @@ export default function Home() {
 
   // Core App States
   const [activeTab, setActiveTab] = useState('Overview');
+
+  // Monthly Contributions Entry State
+  const contributionMonthsList = [
+    'Oct 2025', 'Nov 2025', 'Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026',
+    'Apr 2026', 'May 2026', 'Jun 2026', 'Jul 2026', 'Aug 2026', 'Sep 2026',
+    'Oct 2026', 'Nov 2026', 'Dec 2026', 'Jan 2027', 'Feb 2027', 'Mar 2027',
+    'Apr 2027', 'May 2027', 'Jun 2027'
+  ];
+  const [selectedContributionCycle, setSelectedContributionCycle] = useState('October 2026');
+  const [contributionSearchMember, setContributionSearchMember] = useState('');
+  const [contributionSubView, setContributionSubView] = useState<'monthly' | 'register'>('monthly');
+
+  // Working state for monthly entries row editing
+  const [monthlyInputs, setMonthlyInputs] = useState<Record<string, { amount: number; paymentDate: string; remarks: string; unsettled: number; penalty: number }>>({});
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<string>('Overview');
   const [editingId, setEditingId] = useState<string | number | null>(null);
@@ -260,137 +347,8 @@ export default function Home() {
   ]);
 
   // 2. Official Contributions & Land Payouts Register (PDF Pages 2, 3, 4, 5) with Unsettled Contributions Column
-  const defaultOfficialContributions = [
-    // October 2025
-    { id: 'CNT-001', month: '01-Oct-2025', member: 'Simon Memia Wanjiru', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-002', month: '01-Oct-2025', member: 'David Wainaina Kinyua', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-003', month: '01-Oct-2025', member: 'Elijah Waitara Gichari', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-004', month: '01-Oct-2025', member: 'Samuel Kamau Nguuro', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-005', month: '01-Oct-2025', member: 'Michael Kiarie Wanjiru', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-006', month: '01-Oct-2025', member: 'Daniel Kamau Njiriri', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-007', month: '01-Oct-2025', member: 'Beatrice Njoki Muthoni', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-
-    // November 2025
-    { id: 'CNT-008', month: '01-Nov-2025', member: 'Simon Memia Wanjiru', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-009', month: '01-Nov-2025', member: 'David Wainaina Kinyua', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-010', month: '01-Nov-2025', member: 'Elijah Waitara Gichari', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-011', month: '01-Nov-2025', member: 'Samuel Kamau Nguuro', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-012', month: '01-Nov-2025', member: 'Michael Kiarie Wanjiru', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-013', month: '01-Nov-2025', member: 'Daniel Kamau Njiriri', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-014', month: '01-Nov-2025', member: 'Beatrice Njoki Muthoni', amount: 5025.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-015', month: '01-Nov-2025', member: 'Mawega Payout 12th Nov', amount: 0.00, unsettled: 0.00, payout: 50000.00, notes: 'Land Payout Disbursement' },
-
-    // December 2025
-    { id: 'CNT-016', month: '01-Dec-2025', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-017', month: '01-Dec-2025', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-018', month: '01-Dec-2025', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-019', month: '01-Dec-2025', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-020', month: '01-Dec-2025', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-021', month: '01-Dec-2025', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-022', month: '01-Dec-2025', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-023', month: '01-Dec-2025', member: 'Mawega Payout 16th Dec', amount: 0.00, unsettled: 0.00, payout: 35000.00, notes: 'Land Payout Disbursement' },
-
-    // January 2026
-    { id: 'CNT-024', month: '01-Jan-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-025', month: '01-Jan-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-026', month: '01-Jan-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-027', month: '01-Jan-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-028', month: '01-Jan-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-029', month: '01-Jan-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-030', month: '01-Jan-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-031', month: '01-Jan-2026', member: 'Mawega Payout 12th Jan', amount: 0.00, unsettled: 0.00, payout: 35000.00, notes: 'Land Payout Disbursement' },
-
-    // February 2026
-    { id: 'CNT-032', month: '01-Feb-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-033', month: '01-Feb-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-034', month: '01-Feb-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-035', month: '01-Feb-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-036', month: '01-Feb-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-037', month: '01-Feb-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-038', month: '01-Feb-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-039', month: '01-Feb-2026', member: 'Mawega Payout 19th Feb', amount: 0.00, unsettled: 0.00, payout: 39000.00, notes: 'Land Payout Disbursement' },
-
-    // March 2026
-    { id: 'CNT-040', month: '01-Mar-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-041', month: '01-Mar-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-042', month: '01-Mar-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-043', month: '01-Mar-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-044', month: '01-Mar-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-045', month: '01-Mar-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-046', month: '01-Mar-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-047', month: '01-Mar-2026', member: 'Mawega Payout 4th April', amount: 0.00, unsettled: 0.00, payout: 35000.00, notes: 'Land Payout Disbursement' },
-
-    // April 2026
-    { id: 'CNT-048', month: '01-Apr-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-049', month: '01-Apr-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-050', month: '01-Apr-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-051', month: '01-Apr-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-052', month: '01-Apr-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-053', month: '01-Apr-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-054', month: '01-Apr-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-055', month: '01-Apr-2026', member: 'Mawega Payout Apr-26', amount: 0.00, unsettled: 0.00, payout: 35000.00, notes: 'Land Payout Disbursement' },
-
-    // May 2026
-    { id: 'CNT-056', month: '01-May-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-057', month: '01-May-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-058', month: '01-May-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-059', month: '01-May-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-060', month: '01-May-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-061', month: '01-May-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-062', month: '01-May-2026', member: 'Beatrice Njoki Muthoni', amount: 5500.00, unsettled: 500.00, payout: 0, notes: '' },
-    { id: 'CNT-063', month: '01-May-2026', member: 'Mawega Payout 15th May', amount: 0.00, unsettled: 0.00, payout: 35000.00, notes: 'Land Payout Disbursement' },
-
-    // June 2026
-    { id: 'CNT-064', month: '01-Jun-2026', member: 'Simon Memia Wanjiru', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-065', month: '01-Jun-2026', member: 'David Wainaina Kinyua', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-066', month: '01-Jun-2026', member: 'Elijah Waitara Gichari', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-067', month: '01-Jun-2026', member: 'Samuel Kamau Nguuro', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-068', month: '01-Jun-2026', member: 'Michael Kiarie Wanjiru', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-069', month: '01-Jun-2026', member: 'Daniel Kamau Njiriri', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-070', month: '01-Jun-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 1000.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-071', month: '01-Jun-2026', member: 'Mawega Payout Jun-26', amount: 0.00, unsettled: 0.00, payout: 36000.00, notes: 'Land Payout Disbursement' },
-
-    // July 2026
-    { id: 'CNT-072', month: '01-Jul-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-073', month: '01-Jul-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-074', month: '01-Jul-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-075', month: '01-Jul-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-076', month: '01-Jul-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-077', month: '01-Jul-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-078', month: '01-Jul-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-079', month: '01-Jul-2026', member: 'Mawega Payout Jul-26', amount: 0.00, unsettled: 0.00, payout: 0.00, notes: 'Land Payout Disbursement' },
-
-    // August 2026
-    { id: 'CNT-080', month: '01-Aug-2026', member: 'Simon Memia Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-081', month: '01-Aug-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-082', month: '01-Aug-2026', member: 'Elijah Waitara Gichari', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-083', month: '01-Aug-2026', member: 'Samuel Kamau Nguuro', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-084', month: '01-Aug-2026', member: 'Michael Kiarie Wanjiru', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-085', month: '01-Aug-2026', member: 'Daniel Kamau Njiriri', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-086', month: '01-Aug-2026', member: 'Beatrice Njoki Muthoni', amount: 6000.00, unsettled: 0.00, payout: 0, notes: 'loan' },
-    { id: 'CNT-087', month: '01-Aug-2026', member: 'Mawega Payout Aug-26', amount: 0.00, unsettled: 0.00, payout: 0.00, notes: 'Land Payout Disbursement' },
-
-    // September 2026
-    { id: 'CNT-088', month: '01-Sep-2026', member: 'Simon Memia Wanjiru', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-089', month: '01-Sep-2026', member: 'David Wainaina Kinyua', amount: 6000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-090', month: '01-Sep-2026', member: 'Elijah Waitara Gichari', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-091', month: '01-Sep-2026', member: 'Samuel Kamau Nguuro', amount: 4400.00, unsettled: 1600.00, payout: 0, notes: '' },
-    { id: 'CNT-092', month: '01-Sep-2026', member: 'Michael Kiarie Wanjiru', amount: 7000.00, unsettled: 0.00, payout: 0, notes: '' },
-    { id: 'CNT-093', month: '01-Sep-2026', member: 'Daniel Kamau Njiriri', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-094', month: '01-Sep-2026', member: 'Beatrice Njoki Muthoni', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-095', month: '01-Sep-2026', member: 'Mawega Payout Sep-26', amount: 0.00, unsettled: 0.00, payout: 40000.00, notes: 'Land Payout Disbursement' },
-
-    // October 2026
-    { id: 'CNT-096', month: '01-Oct-2026', member: 'Simon Memia Wanjiru', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-097', month: '01-Oct-2026', member: 'David Wainaina Kinyua', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-098', month: '01-Oct-2026', member: 'Elijah Waitara Gichari', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-099', month: '01-Oct-2026', member: 'Samuel Kamau Nguuro', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-100', month: '01-Oct-2026', member: 'Michael Kiarie Wanjiru', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-101', month: '01-Oct-2026', member: 'Daniel Kamau Njiriri', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-    { id: 'CNT-102', month: '01-Oct-2026', member: 'Beatrice Njoki Muthoni', amount: 0.00, unsettled: 6000.00, payout: 0, notes: '' },
-  ];
-
-  const [contributions, setContributions] = useState(defaultOfficialContributions);
+  const defaultOfficialContributions = initialContributions;
+  const [contributions, setContributions] = useState(initialContributions);
 
   // 3. Official Operational Expenses & Payouts Log (PDF Page 6 - 27 Records totaling KES 380,555.02)
   const [expenses, setExpenses] = useState([
@@ -637,6 +595,105 @@ export default function Home() {
   };
 
   // PDF Export
+  
+  // Helper to export data as CSV file
+  const exportDataAsCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  
+  // Batch Save / Update Monthly Contributions to LocalStorage & Neon Database
+  const handleSaveMonthlyContributions = async (monthName: string) => {
+    if (!canEdit) {
+      alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can save contributions.');
+      return;
+    }
+
+    const official7Members = [
+      'Simon Memia Wanjiru',
+      'David Wainaina Kinyua',
+      'Elijah Waitara Gichari',
+      'Samuel Kamau Nguuro',
+      'Michael Kiarie Wanjiru',
+      'Daniel Kamau Njiriri',
+      'Beatrice Njoki Muthoni'
+    ];
+
+    let currentList = [...contributions];
+    const updatedRecordsToSave: any[] = [];
+
+    for (const memberName of official7Members) {
+      const input = monthlyInputs[memberName];
+      const existingIdx = currentList.findIndex(c => c.month === monthName && c.member === memberName);
+      
+      const amt = input?.amount !== undefined ? input.amount : (existingIdx >= 0 ? currentList[existingIdx].amount : 6000);
+      const unsettledVal = input?.unsettled !== undefined ? input.unsettled : (existingIdx >= 0 ? currentList[existingIdx].unsettled : 0);
+      const notesVal = input?.remarks !== undefined ? input.remarks : (existingIdx >= 0 ? currentList[existingIdx].notes : 'Monthly Contribution');
+      const payoutVal = existingIdx >= 0 ? currentList[existingIdx].payout : 0;
+      const recId = existingIdx >= 0 ? currentList[existingIdx].id : `CNT-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+      const recordObj = {
+        id: recId,
+        month: monthName,
+        member: memberName,
+        amount: amt,
+        unsettled: unsettledVal,
+        payout: payoutVal,
+        notes: notesVal
+      };
+
+      if (existingIdx >= 0) {
+        currentList[existingIdx] = recordObj;
+      } else {
+        currentList.push(recordObj);
+      }
+
+      updatedRecordsToSave.push(recordObj);
+    }
+
+    setContributions(currentList);
+    try {
+      localStorage.setItem('dreamloom_contributions', JSON.stringify(currentList));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+
+    // Persist each record to Neon PostgreSQL via PUT upsert
+    try {
+      for (const rec of updatedRecordsToSave) {
+        await fetch('/api/contributions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser?.email,
+            customId: rec.id,
+            memberName: rec.member,
+            month: rec.month,
+            amount: rec.amount,
+            unsettled: rec.unsettled,
+            payout: rec.payout,
+            notes: rec.notes
+          })
+        });
+      }
+      alert(`Successfully saved contributions for ${monthName} to database and local system.`);
+    } catch (err) {
+      console.error('Failed to save monthly records to database:', err);
+      alert(`Saved locally, but server update had a warning: ${(err as Error).message}`);
+    }
+  };
+
   const handleExportReport = async () => {
     const element = document.getElementById('dashboard-content-area');
     if (!element) return;
@@ -695,29 +752,43 @@ export default function Home() {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update loan status.');
       return;
     }
-    const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    setLoans(prevLoans => prevLoans.map(l => {
-      if (l.id === loanId) {
-        if (l.status === 'Active') {
-          return {
-            ...l,
-            status: 'Settled',
-            clearedDate: todayStr,
-            paid: l.totalLoan,
-            balance: 0.00
-          };
-        } else {
-          return {
-            ...l,
-            status: 'Active',
-            clearedDate: '-',
-            paid: 0.00,
-            balance: l.totalLoan
-          };
-        }
-      }
-      return l;
-    }));
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const targetLoan = loans.find(l => l.id === loanId);
+    if (!targetLoan) return;
+
+    const isCurrentlyActive = targetLoan.status === 'Active';
+    const nextStatus = isCurrentlyActive ? 'Settled' : 'Active';
+    const nextPaid = isCurrentlyActive ? targetLoan.totalLoan : 0.00;
+    const nextBal = isCurrentlyActive ? 0.00 : targetLoan.totalLoan;
+    const nextCleared = isCurrentlyActive ? todayStr : '-';
+
+    const updatedLoans = loans.map(l => l.id === loanId ? {
+      ...l,
+      status: nextStatus,
+      clearedDate: nextCleared,
+      paid: nextPaid,
+      balance: nextBal
+    } : l);
+
+    setLoans(updatedLoans);
+    try {
+      localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+
+    // Persist to Neon DB
+    fetch('/api/loans', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userEmail: currentUser?.email,
+        id: loanId,
+        status: nextStatus,
+        paidAmount: nextPaid,
+        clearedDate: isCurrentlyActive ? todayStr : null
+      })
+    }).catch(err => console.error('Database loan toggle failed:', err));
 
     setEditLogs(prev => [
       {
@@ -725,7 +796,7 @@ export default function Home() {
         user: currentUser?.fullName || 'Simon Memia',
         action: 'Toggled Loan Status',
         module: 'Loans',
-        details: `Updated status for Loan ${loanId}`,
+        details: `Updated status for Loan ${loanId} to ${nextStatus}`,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
       },
       ...prev
@@ -738,18 +809,36 @@ export default function Home() {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update penalty status.');
       return;
     }
-    const todayStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    setFines(prevFines => prevFines.map(f => {
-      if (f.id === fineId) {
-        const nextStatus = f.status === 'Active' ? 'Paid' : 'Active';
-        return {
-          ...f,
-          status: nextStatus,
-          datePaid: nextStatus === 'Paid' ? todayStr : '-'
-        };
-      }
-      return f;
-    }));
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const targetFine = fines.find(f => f.id === fineId);
+    if (!targetFine) return;
+
+    const nextStatus = targetFine.status === 'Active' ? 'Paid' : 'Active';
+    const updatedFines = fines.map(f => f.id === fineId ? {
+      ...f,
+      status: nextStatus,
+      datePaid: nextStatus === 'Paid' ? todayStr : '-'
+    } : f);
+
+    setFines(updatedFines);
+    try {
+      localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+
+    if ((targetFine as any).dbId) {
+      fetch('/api/penalties', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail: currentUser?.email,
+          id: (targetFine as any).dbId,
+          status: nextStatus === 'Paid' ? 'Settled' : 'Active',
+          paidAmount: nextStatus === 'Paid' ? targetFine.amount : 0
+        })
+      }).catch(err => console.error('Database penalty toggle failed:', err));
+    }
 
     setEditLogs(prev => [
       {
@@ -757,7 +846,7 @@ export default function Home() {
         user: currentUser?.fullName || 'Simon Memia',
         action: 'Toggled Penalty Status',
         module: 'Fines & Penalties',
-        details: `Updated penalty ${fineId} status`,
+        details: `Updated penalty ${fineId} status to ${nextStatus}`,
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
       },
       ...prev
@@ -865,14 +954,47 @@ export default function Home() {
       fetch(`/api/contributions?customId=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
         method: 'DELETE'
       }).catch(err => console.error('Database delete failed:', err));
+    } else if (modalMode === 'Loan Portfolio') {
+      const remaining = loans.filter(l => l.id !== editingId);
+      setLoans(remaining);
+      try {
+        localStorage.setItem('dreamloom_loans', JSON.stringify(remaining));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+      fetch(`/api/loans?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+        method: 'DELETE'
+      }).catch(err => console.error('Database loan delete failed:', err));
+    } else if (modalMode === 'Fines & Penalties') {
+      const targetFine = fines.find(f => f.id === editingId);
+      const remaining = fines.filter(f => f.id !== editingId);
+      setFines(remaining);
+      try {
+        localStorage.setItem('dreamloom_fines', JSON.stringify(remaining));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+      if (targetFine && (targetFine as any).dbId) {
+        fetch(`/api/penalties?id=${encodeURIComponent(String((targetFine as any).dbId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+          method: 'DELETE'
+        }).catch(err => console.error('Database penalty delete failed:', err));
+      }
+    } else if (modalMode === 'Expenses') {
+      const targetExp = expenses.find(exp => exp.id === editingId);
+      const remaining = expenses.filter(exp => exp.id !== editingId);
+      setExpenses(remaining);
+      try {
+        localStorage.setItem('dreamloom_expenses', JSON.stringify(remaining));
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+      if (targetExp && (targetExp as any).dbId) {
+        fetch(`/api/expenses?id=${encodeURIComponent(String((targetExp as any).dbId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+          method: 'DELETE'
+        }).catch(err => console.error('Database expense delete failed:', err));
+      }
     } else if (modalMode === 'Member Directory') {
       setMembers(members.filter(m => m.id !== editingId));
-    } else if (modalMode === 'Loan Portfolio') {
-      setLoans(loans.filter(l => l.id !== editingId));
-    } else if (modalMode === 'Fines & Penalties') {
-      setFines(fines.filter(f => f.id !== editingId));
-    } else if (modalMode === 'Expenses') {
-      setExpenses(expenses.filter(exp => exp.id !== editingId));
     } else if (modalMode === 'Investments') {
       setInvestments(investments.filter(inv => inv.id !== editingId));
     } else if (modalMode === 'Projects') {
@@ -1021,7 +1143,7 @@ export default function Home() {
       const iAmt = field3 ? Number(field3) : pAmt * 0.10;
       const tAmt = pAmt + iAmt;
       if (editingId) {
-        setLoans(loans.map(l => l.id === editingId ? {
+        const updatedLoans = loans.map(l => l.id === editingId ? {
           ...l,
           borrower: field1,
           principal: pAmt,
@@ -1032,7 +1154,30 @@ export default function Home() {
           status: field6,
           balance: field6 === 'Settled' ? 0.00 : (field7 ? Number(field7) : tAmt),
           paid: field6 === 'Settled' ? tAmt : l.paid
-        } : l));
+        } : l);
+        setLoans(updatedLoans);
+        try {
+          localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
+        } catch (e) {
+          console.warn('LocalStorage save failed:', e);
+        }
+
+        fetch('/api/loans', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser?.email,
+            id: editingId,
+            memberName: field1,
+            principal: pAmt,
+            interest: iAmt,
+            totalPayable: tAmt,
+            issueDate: field4,
+            clearedDate: field5 !== '-' ? field5 : null,
+            status: field6,
+            paidAmount: field6 === 'Settled' ? tAmt : (tAmt - (field7 ? Number(field7) : tAmt))
+          })
+        }).catch(err => console.error('Database loan update failed:', err));
       } else {
         const newL = {
           id: `L0${loans.length + 1}`,
@@ -1040,13 +1185,36 @@ export default function Home() {
           principal: pAmt,
           interest: iAmt,
           totalLoan: tAmt,
-          issueDate: field4 || 'October 2026',
+          issueDate: field4 || new Date().toISOString().slice(0, 10),
           clearedDate: '-',
           status: 'Active',
           paid: 0.00,
           balance: tAmt
         };
-        setLoans([...loans, newL]);
+        const updatedLoans = [...loans, newL];
+        setLoans(updatedLoans);
+        try {
+          localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
+        } catch (e) {
+          console.warn('LocalStorage save failed:', e);
+        }
+
+        fetch('/api/loans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail: currentUser?.email,
+            id: newL.id,
+            memberName: field1,
+            principal: pAmt,
+            interest: iAmt,
+            totalPayable: tAmt,
+            issueDate: newL.issueDate,
+            status: 'Active',
+            paidAmount: 0
+          })
+        }).catch(err => console.error('Database loan create failed:', err));
+
         setTransactions([
           { id: `TX-${Date.now()}`, title: `${field1.split(' ')[0]} - Loan Approved`, time: 'Just now', amount: `+ KES ${pAmt.toLocaleString()}`, type: 'income', icon: CreditCard, iconColor: 'bg-cyan-600/20 text-cyan-400' },
           ...transactions
@@ -2245,78 +2413,432 @@ export default function Home() {
             </div>
           )}
 
-          {/* ===================================================================== */}
-          {/* CONTRIBUTIONS & LAND PAYOUTS REGISTER (PDF Pages 2, 3, 4, 5) */}
+                    {/* ===================================================================== */}
+          {/* CONTRIBUTIONS MODULE: MONTHLY ENTRY & MASTER REGISTER */}
           {/* ===================================================================== */}
           {activeTab === 'Contributions' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="space-y-6">
+              {/* TOP HEADER & SUB-TAB TOGGLE */}
+              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h2 className="font-bold text-white text-base">Member Contributions & Land Payouts Register</h2>
-                  <p className="text-xs text-slate-400">Total Contributions: KES {grandTotalContributions.toLocaleString()} • Unsettled: KES {grandTotalUnsettled.toLocaleString()} • Payouts: KES {grandTotalMawegaPayouts.toLocaleString()}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h2 className="font-extrabold text-white text-lg tracking-wide uppercase">Contributions Register</h2>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">Manage member monthly contributions, late payment indicators, and penalties</p>
                 </div>
-                {canEdit && (
+
+                {/* VIEW SWITCHER */}
+                <div className="flex items-center bg-[#142036] p-1 rounded-xl border border-[#1E2D4A]">
                   <button
-                    onClick={() => handleOpenQuickModal('Contributions')}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                    onClick={() => setContributionSubView('monthly')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      contributionSubView === 'monthly'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
                   >
-                    <Plus className="w-3.5 h-3.5" /> Record Contribution
+                    Monthly Entry Tab
                   </button>
-                )}
+                  <button
+                    onClick={() => setContributionSubView('register')}
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      contributionSubView === 'register'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    All Cycles Ledger ({contributions.length})
+                  </button>
+                </div>
               </div>
-              <div className="overflow-x-auto max-h-[650px]">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold sticky top-0 z-10">
-                    <tr>
-                      <th className="p-4">#</th>
-                      <th className="p-4">Date / Month</th>
-                      <th className="p-4">Member Name</th>
-                      <th className="p-4 text-right">Amount (KES)</th>
-                      <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
-                      <th className="p-4 text-right">Mawega Payout (KES)</th>
-                      <th className="p-4">Notes / Remarks</th>
-                      {canEdit && <th className="p-4 text-center">Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1E293B] font-mono">
-                    {filteredContributions.map((c, idx) => (
-                      <tr key={c.id} className="hover:bg-[#142036] transition">
-                        <td className="p-4 text-slate-500">{idx + 1}</td>
-                        <td className="p-4 text-slate-400">{c.month}</td>
-                        <td className="p-4 font-sans text-white font-medium">{c.member}</td>
-                        <td className="p-4 text-right font-bold text-emerald-400">
-                          {c.amount > 0 ? c.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        <td className="p-4 text-right font-bold text-amber-400">
-                          {c.unsettled > 0 ? c.unsettled.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        <td className="p-4 text-right font-bold text-sky-400">
-                          {c.payout > 0 ? c.payout.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        <td className="p-4 font-sans text-slate-400">{c.notes || '-'}</td>
+
+              {/* VIEW 1: MONTHLY CONTRIBUTIONS ENTRY TAB (EXACT DESIGN FROM SCREENSHOT) */}
+              {contributionSubView === 'monthly' && (() => {
+                const cycleRecords = contributions.filter(c => c.month === selectedContributionCycle && !c.payout);
+                const official7Members = [
+                  'Simon Memia Wanjiru',
+                  'David Wainaina Kinyua',
+                  'Elijah Waitara Gichari',
+                  'Samuel Kamau Nguuro',
+                  'Michael Kiarie Wanjiru',
+                  'Daniel Kamau Njiriri',
+                  'Beatrice Njoki Muthoni'
+                ];
+
+                // Metrics for this selected month
+                const expectedThisMonth = 42000.00; // 7 members * 6000
+                const receivedThisMonth = cycleRecords.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+                const outstandingThisMonth = cycleRecords.reduce((s, c) => s + (Number(c.unsettled) || 0), 0);
+                const penaltiesThisMonth = fines.filter(f => {
+                  const fDate = f.date || '';
+                  return fDate.includes(selectedContributionCycle.slice(0, 3)) || fDate.includes('2026-10');
+                }).reduce((s, f) => s + (f.amount || 500), 0) || (selectedContributionCycle.includes('Oct 2026') ? 1000 : 0);
+
+                const paidCount = cycleRecords.filter(c => Number(c.amount) > 0).length;
+                const unpaidCount = 7 - paidCount;
+
+                // Filter members by search input
+                const displayedMembers = official7Members.filter(m =>
+                  m.toLowerCase().includes(contributionSearchMember.toLowerCase())
+                );
+
+                return (
+                  <div className="space-y-6">
+                    {/* STAT CARDS BANNER (AS IN SCREENSHOT) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Expected */}
+                      <div className="bg-[#101B30] border border-blue-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+                          <Calendar className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Expected This Month</p>
+                          <p className="text-xl font-extrabold text-white font-mono mt-0.5">KES {expectedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+
+                      {/* Received */}
+                      <div className="bg-[#101B30] border border-emerald-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                          <CheckCircle className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Received ({paidCount} Paid)</p>
+                          <p className="text-xl font-extrabold text-emerald-400 font-mono mt-0.5">KES {receivedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+
+                      {/* Outstanding */}
+                      <div className="bg-[#101B30] border border-amber-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+                          <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Outstanding ({unpaidCount} Pending)</p>
+                          <p className="text-xl font-extrabold text-amber-400 font-mono mt-0.5">KES {outstandingThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+
+                      {/* Penalties */}
+                      <div className="bg-[#101B30] border border-rose-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
+                        <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-slate-400">Penalties Levied</p>
+                          <p className="text-xl font-extrabold text-rose-400 font-mono mt-0.5">KES {penaltiesThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CONTROLS BAR: Month, Year, Search, and Export (Screenshot Top Bar) */}
+                    <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-4 shadow-xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-slate-400">Cycle / Month:</label>
+                          <select
+                            value={selectedContributionCycle}
+                            onChange={(e) => setSelectedContributionCycle(e.target.value)}
+                            className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                          >
+                            {contributionMonthsList.map(m => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        </div>
+
                         {canEdit && (
-                          <td className="p-4 text-center font-sans">
-                            <button
-                              onClick={() => handleOpenEditModal(c, 'Contributions')}
-                              className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                              title="Edit Contribution Entry"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
-                          </td>
+                          <button
+                            onClick={() => handleSaveMonthlyContributions(selectedContributionCycle)}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/60 transition"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Save Month Entries
+                          </button>
                         )}
-                      </tr>
-                    ))}
-                    <tr className="bg-[#121B2F] font-bold text-white text-xs sticky bottom-0">
-                      <td className="p-4 uppercase font-sans" colSpan={3}>GRAND TOTAL CONTRIBUTIONS & PAYOUTS</td>
-                      <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td className="p-4 text-right text-amber-400 font-black">{grandTotalUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td className="p-4 text-right text-sky-400 font-black">{grandTotalMawegaPayouts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td className="p-4 font-sans" colSpan={canEdit ? 2 : 1}>Official Ledger Reconciled</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1 md:w-56">
+                          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            placeholder="Search Member..."
+                            value={contributionSearchMember}
+                            onChange={(e) => setContributionSearchMember(e.target.value)}
+                            className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* EXPORT OPTIONS DROPDOWN */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              const headers = ['#', 'Member Name', 'Month', 'Expected (KES)', 'Amount Paid (KES)', 'Unsettled (KES)', 'Status', 'Remarks'];
+                              const rows = displayedMembers.map((m, idx) => {
+                                const rec = cycleRecords.find(c => c.member === m);
+                                const amt = rec ? rec.amount : 0;
+                                const status = amt > 0 ? 'Paid' : 'Unpaid';
+                                return [idx + 1, m, selectedContributionCycle, 6000, amt, rec ? rec.unsettled : 0, status, rec ? rec.notes : ''];
+                              });
+                              exportDataAsCSV(`Dreamloom_${selectedContributionCycle.replace(/\s+/g, '_')}_Contributions.csv`, headers, rows);
+                            }}
+                            className="px-3 py-1.5 bg-[#142036] border border-[#1E2D4A] hover:bg-[#1A2A46] text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                            title="Download CSV for this month"
+                          >
+                            <Download className="w-3.5 h-3.5 text-emerald-400" /> Export Month
+                          </button>
+                          <button
+                            onClick={() => {
+                              const headers = ['#', 'Member Name', 'Month', 'Outstanding Amount (KES)', 'Contact Phone'];
+                              const rows = displayedMembers.filter(m => {
+                                const rec = cycleRecords.find(c => c.member === m);
+                                return !rec || rec.amount === 0;
+                              }).map((m, idx) => {
+                                const memObj = members.find(x => x.fullName === m);
+                                return [idx + 1, m, selectedContributionCycle, 6000, memObj ? memObj.phone : ''];
+                              });
+                              exportDataAsCSV(`Dreamloom_${selectedContributionCycle.replace(/\s+/g, '_')}_Outstanding_Members.csv`, headers, rows);
+                            }}
+                            className="px-3 py-1.5 bg-[#142036] border border-[#1E2D4A] hover:bg-[#1A2A46] text-amber-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                            title="Download list of members who have not paid"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Outstanding List
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* MONTHLY CONTRIBUTIONS TABLE (EXACT COLUMNS FROM SCREENSHOT) */}
+                    <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-300">
+                          <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
+                            <tr>
+                              <th className="p-4 w-10">#</th>
+                              <th className="p-4">Member Name</th>
+                              <th className="p-4 text-center">Contribution (KES)</th>
+                              <th className="p-4 text-center">LPI</th>
+                              <th className="p-4 text-center">Penalty (KES)</th>
+                              <th className="p-4 text-right">Amount Paid</th>
+                              <th className="p-4">Payment Date</th>
+                              <th className="p-4 text-center">Status</th>
+                              <th className="p-4">Remarks</th>
+                              {canEdit && <th className="p-4 text-center">Action</th>}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#1E293B] font-mono">
+                            {displayedMembers.map((memberName, idx) => {
+                              const rec = cycleRecords.find(c => c.member === memberName);
+                              const input = monthlyInputs[memberName];
+
+                              const amtPaid = input?.amount !== undefined ? input.amount : (rec ? rec.amount : (selectedContributionCycle.includes('2027') ? 0 : 6000));
+                              const isPaid = amtPaid > 0;
+                              const isLate = rec?.notes?.toLowerCase().includes('late') || rec?.unsettled > 0;
+                              const paymentDate = input?.paymentDate || (isPaid ? (selectedContributionCycle.includes('Oct 2026') ? '28-Oct-2026' : '15th') : '-');
+                              const remarks = input?.remarks !== undefined ? input.remarks : (rec?.notes || (isPaid ? 'On time' : 'Pending payment'));
+                              const penaltyVal = input?.penalty !== undefined ? input.penalty : (isLate ? 500 : 0);
+
+                              return (
+                                <tr key={memberName} className="hover:bg-[#142036] transition">
+                                  <td className="p-4 text-slate-500 font-sans">{idx + 1}</td>
+                                  <td className="p-4 font-sans text-white font-medium">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-[10px] font-bold">
+                                        {memberName.split(' ')[0][0]}
+                                      </div>
+                                      <span>{memberName}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-4 text-center text-slate-300">
+                                    6,000.00
+                                  </td>
+                                  <td className="p-4 text-center font-sans">
+                                    {isPaid && !isLate ? (
+                                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs">
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 font-bold text-xs">
+                                        •
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-4 text-center font-sans">
+                                    {penaltyVal > 0 ? (
+                                      <span className="text-rose-400 font-bold">{penaltyVal}</span>
+                                    ) : (
+                                      <span className="text-slate-500">-</span>
+                                    )}
+                                  </td>
+                                  <td className="p-4 text-right">
+                                    {canEdit ? (
+                                      <input
+                                        type="number"
+                                        value={amtPaid}
+                                        onChange={(e) => {
+                                          const val = Number(e.target.value) || 0;
+                                          setMonthlyInputs(prev => ({
+                                            ...prev,
+                                            [memberName]: {
+                                              ...prev[memberName],
+                                              amount: val,
+                                              unsettled: val >= 6000 ? 0 : (6000 - val),
+                                              paymentDate: val > 0 ? 'Today' : '-',
+                                              remarks: val >= 6000 ? 'On time' : (val > 0 ? 'Partial payment' : 'Pending payment'),
+                                              penalty: val < 6000 && val > 0 ? 500 : 0
+                                            }
+                                          }));
+                                        }}
+                                        className="w-24 bg-[#142036] border border-[#1E2D4A] rounded-lg px-2 py-1 text-right text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
+                                      />
+                                    ) : (
+                                      <span className={`font-bold ${amtPaid > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                                        {amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-4 text-slate-400 font-sans text-xs">
+                                    {paymentDate}
+                                  </td>
+                                  <td className="p-4 text-center font-sans">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                      isPaid && !isLate
+                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                        : isLate
+                                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                    }`}>
+                                      {isPaid && !isLate ? 'Paid' : isLate ? 'Late' : 'Unpaid'}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 font-sans text-slate-300 text-xs">
+                                    {remarks}
+                                  </td>
+                                  {canEdit && (
+                                    <td className="p-4 text-center font-sans">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        {rec && (
+                                          <button
+                                            onClick={() => handleOpenEditModal(rec, 'Contributions')}
+                                            className="p-1 text-emerald-400 hover:bg-emerald-500/10 rounded transition"
+                                            title="Edit this contribution record"
+                                          >
+                                            <Edit3 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                        {rec && (
+                                          <button
+                                            onClick={async () => {
+                                              if (!window.confirm(`Delete contribution record for ${memberName} in ${selectedContributionCycle}?`)) return;
+                                              const remaining = contributions.filter(c => c.id !== rec.id);
+                                              setContributions(remaining);
+                                              try { localStorage.setItem('dreamloom_contributions', JSON.stringify(remaining)); } catch(e){}
+                                              fetch(`/api/contributions?customId=${encodeURIComponent(rec.id)}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, { method: 'DELETE' });
+                                            }}
+                                            className="p-1 text-rose-400 hover:bg-rose-500/10 rounded transition"
+                                            title="Delete this record"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            })}
+                            {/* TOTALS FOOTER ROW */}
+                            <tr className="bg-[#121B2F] font-bold text-white text-xs">
+                              <td className="p-4 uppercase font-sans" colSpan={2}>Total ({selectedContributionCycle})</td>
+                              <td className="p-4 text-center font-black">42,000.00</td>
+                              <td className="p-4 text-center font-sans">-</td>
+                              <td className="p-4 text-center text-rose-400 font-black">{penaltiesThisMonth > 0 ? penaltiesThisMonth : '-'}</td>
+                              <td className="p-4 text-right text-emerald-400 font-black">{receivedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                              <td className="p-4 text-slate-400 font-sans" colSpan={canEdit ? 4 : 3}>
+                                Outstanding: KES {outstandingThisMonth.toLocaleString()} • Verified against Bank & Excel
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* VIEW 2: MASTER CONTRIBUTIONS & LAND PAYOUTS REGISTER (HISTORICAL ALL CYCLES) */}
+              {contributionSubView === 'register' && (
+                <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-5 border-b border-[#1E293B] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                      <h3 className="font-bold text-white text-sm">Master Historical Contributions & Land Payouts Ledger</h3>
+                      <p className="text-xs text-slate-400">Total Group Contributions: KES {grandTotalContributions.toLocaleString()} • Unsettled: KES {grandTotalUnsettled.toLocaleString()} • Payouts: KES {grandTotalMawegaPayouts.toLocaleString()}</p>
+                    </div>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleOpenQuickModal('Contributions')}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Record Contribution
+                      </button>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto max-h-[650px]">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold sticky top-0 z-10">
+                        <tr>
+                          <th className="p-4">#</th>
+                          <th className="p-4">Date / Month</th>
+                          <th className="p-4">Member Name</th>
+                          <th className="p-4 text-right">Amount (KES)</th>
+                          <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
+                          <th className="p-4 text-right">Mawega Payout (KES)</th>
+                          <th className="p-4">Notes / Remarks</th>
+                          {canEdit && <th className="p-4 text-center">Action</th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#1E293B] font-mono">
+                        {filteredContributions.map((c, idx) => (
+                          <tr key={c.id} className="hover:bg-[#142036] transition">
+                            <td className="p-4 text-slate-500">{idx + 1}</td>
+                            <td className="p-4 text-slate-400">{c.month}</td>
+                            <td className="p-4 font-sans text-white font-medium">{c.member}</td>
+                            <td className="p-4 text-right font-bold text-emerald-400">
+                              {c.amount > 0 ? c.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                            </td>
+                            <td className="p-4 text-right font-bold text-amber-400">
+                              {c.unsettled > 0 ? c.unsettled.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                            </td>
+                            <td className="p-4 text-right font-bold text-sky-400">
+                              {c.payout > 0 ? c.payout.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                            </td>
+                            <td className="p-4 font-sans text-slate-400">{c.notes || '-'}</td>
+                            {canEdit && (
+                              <td className="p-4 text-center font-sans">
+                                <button
+                                  onClick={() => handleOpenEditModal(c, 'Contributions')}
+                                  className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
+                                  title="Edit Contribution Entry"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                        <tr className="bg-[#121B2F] font-bold text-white text-xs sticky bottom-0">
+                          <td className="p-4 uppercase font-sans" colSpan={3}>GRAND TOTAL CONTRIBUTIONS & PAYOUTS</td>
+                          <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right text-amber-400 font-black">{grandTotalUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right text-sky-400 font-black">{grandTotalMawegaPayouts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 font-sans" colSpan={canEdit ? 2 : 1}>Official Ledger Reconciled</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

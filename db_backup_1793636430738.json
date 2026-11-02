@@ -1,0 +1,3273 @@
+{
+  "timestamp": "2026-11-02T16:20:30.703Z",
+  "users": [],
+  "members": [],
+  "contributions": [
+    {
+      "id": 9,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-004",
+      "createdAt": "2026-10-26T15:57:12.474Z"
+    },
+    {
+      "id": 10,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-005",
+      "createdAt": "2026-10-26T15:57:12.490Z"
+    },
+    {
+      "id": 20,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 50000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-015",
+      "createdAt": "2026-10-26T15:57:12.650Z"
+    },
+    {
+      "id": 28,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 35000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-023",
+      "createdAt": "2026-10-26T15:57:12.776Z"
+    },
+    {
+      "id": 36,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 35000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-031",
+      "createdAt": "2026-10-26T15:57:12.963Z"
+    },
+    {
+      "id": 44,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 39000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-039",
+      "createdAt": "2026-10-26T15:57:13.091Z"
+    },
+    {
+      "id": 52,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 35000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-047",
+      "createdAt": "2026-10-26T15:57:13.223Z"
+    },
+    {
+      "id": 60,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 35000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-055",
+      "createdAt": "2026-10-26T15:57:13.358Z"
+    },
+    {
+      "id": 11,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-006",
+      "createdAt": "2026-10-26T15:57:12.506Z"
+    },
+    {
+      "id": 12,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-007",
+      "createdAt": "2026-10-26T15:57:12.522Z"
+    },
+    {
+      "id": 13,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-008",
+      "createdAt": "2026-10-26T15:57:12.538Z"
+    },
+    {
+      "id": 56,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-051",
+      "createdAt": "2026-10-26T15:57:13.294Z"
+    },
+    {
+      "id": 15,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-010",
+      "createdAt": "2026-10-26T15:57:12.570Z"
+    },
+    {
+      "id": 16,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-011",
+      "createdAt": "2026-10-26T15:57:12.587Z"
+    },
+    {
+      "id": 17,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-012",
+      "createdAt": "2026-10-26T15:57:12.603Z"
+    },
+    {
+      "id": 47,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-042",
+      "createdAt": "2026-10-26T15:57:13.143Z"
+    },
+    {
+      "id": 14,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-009",
+      "createdAt": "2026-10-26T15:57:12.554Z"
+    },
+    {
+      "id": 7,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-002",
+      "createdAt": "2026-10-26T15:57:12.441Z"
+    },
+    {
+      "id": 55,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-050",
+      "createdAt": "2026-10-26T15:57:13.277Z"
+    },
+    {
+      "id": 21,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-016",
+      "createdAt": "2026-10-26T15:57:12.665Z"
+    },
+    {
+      "id": 22,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-017",
+      "createdAt": "2026-10-26T15:57:12.681Z"
+    },
+    {
+      "id": 29,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-024",
+      "createdAt": "2026-10-26T15:57:12.792Z"
+    },
+    {
+      "id": 40,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-035",
+      "createdAt": "2026-10-26T15:57:13.027Z"
+    },
+    {
+      "id": 33,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-028",
+      "createdAt": "2026-10-26T15:57:12.855Z"
+    },
+    {
+      "id": 42,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-037",
+      "createdAt": "2026-10-26T15:57:13.059Z"
+    },
+    {
+      "id": 31,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-026",
+      "createdAt": "2026-10-26T15:57:12.823Z"
+    },
+    {
+      "id": 26,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-021",
+      "createdAt": "2026-10-26T15:57:12.744Z"
+    },
+    {
+      "id": 37,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-032",
+      "createdAt": "2026-10-26T15:57:12.979Z"
+    },
+    {
+      "id": 38,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-033",
+      "createdAt": "2026-10-26T15:57:12.996Z"
+    },
+    {
+      "id": 35,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-030",
+      "createdAt": "2026-10-26T15:57:12.938Z"
+    },
+    {
+      "id": 23,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-018",
+      "createdAt": "2026-10-26T15:57:12.697Z"
+    },
+    {
+      "id": 41,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-036",
+      "createdAt": "2026-10-26T15:57:13.043Z"
+    },
+    {
+      "id": 25,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-020",
+      "createdAt": "2026-10-26T15:57:12.729Z"
+    },
+    {
+      "id": 43,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-038",
+      "createdAt": "2026-10-26T15:57:13.075Z"
+    },
+    {
+      "id": 30,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-025",
+      "createdAt": "2026-10-26T15:57:12.808Z"
+    },
+    {
+      "id": 39,
+      "memberId": null,
+      "monthYear": "01-Feb-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-034",
+      "createdAt": "2026-10-26T15:57:13.012Z"
+    },
+    {
+      "id": 32,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-027",
+      "createdAt": "2026-10-26T15:57:12.839Z"
+    },
+    {
+      "id": 24,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-019",
+      "createdAt": "2026-10-26T15:57:12.713Z"
+    },
+    {
+      "id": 34,
+      "memberId": null,
+      "monthYear": "01-Jan-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-029",
+      "createdAt": "2026-10-26T15:57:12.870Z"
+    },
+    {
+      "id": 27,
+      "memberId": null,
+      "monthYear": "01-Dec-2025",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-022",
+      "createdAt": "2026-10-26T15:57:12.760Z"
+    },
+    {
+      "id": 6,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-001",
+      "createdAt": "2026-10-26T15:57:12.406Z"
+    },
+    {
+      "id": 64,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-059",
+      "createdAt": "2026-10-26T15:57:13.422Z"
+    },
+    {
+      "id": 57,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-052",
+      "createdAt": "2026-10-26T15:57:13.310Z"
+    },
+    {
+      "id": 58,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-053",
+      "createdAt": "2026-10-26T15:57:13.326Z"
+    },
+    {
+      "id": 66,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-061",
+      "createdAt": "2026-10-26T15:57:13.454Z"
+    },
+    {
+      "id": 63,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-058",
+      "createdAt": "2026-10-26T15:57:13.406Z"
+    },
+    {
+      "id": 48,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-043",
+      "createdAt": "2026-10-26T15:57:13.159Z"
+    },
+    {
+      "id": 61,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-056",
+      "createdAt": "2026-10-26T15:57:13.373Z"
+    },
+    {
+      "id": 50,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-045",
+      "createdAt": "2026-10-26T15:57:13.191Z"
+    },
+    {
+      "id": 62,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-057",
+      "createdAt": "2026-10-26T15:57:13.390Z"
+    },
+    {
+      "id": 51,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-046",
+      "createdAt": "2026-10-26T15:57:13.206Z"
+    },
+    {
+      "id": 49,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-044",
+      "createdAt": "2026-10-26T15:57:13.175Z"
+    },
+    {
+      "id": 59,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-054",
+      "createdAt": "2026-10-26T15:57:13.342Z"
+    },
+    {
+      "id": 45,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-040",
+      "createdAt": "2026-10-26T15:57:13.111Z"
+    },
+    {
+      "id": 53,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-048",
+      "createdAt": "2026-10-26T15:57:13.239Z"
+    },
+    {
+      "id": 54,
+      "memberId": null,
+      "monthYear": "01-Apr-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-049",
+      "createdAt": "2026-10-26T15:57:13.255Z"
+    },
+    {
+      "id": 46,
+      "memberId": null,
+      "monthYear": "01-Mar-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-041",
+      "createdAt": "2026-10-26T15:57:13.127Z"
+    },
+    {
+      "id": 19,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-014",
+      "createdAt": "2026-10-26T15:57:12.634Z"
+    },
+    {
+      "id": 8,
+      "memberId": null,
+      "monthYear": "01-Oct-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-003",
+      "createdAt": "2026-10-26T15:57:12.458Z"
+    },
+    {
+      "id": 18,
+      "memberId": null,
+      "monthYear": "01-Nov-2025",
+      "amount": 5025,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-013",
+      "createdAt": "2026-10-26T15:57:12.618Z"
+    },
+    {
+      "id": 65,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-060",
+      "createdAt": "2026-10-26T15:57:13.438Z"
+    },
+    {
+      "id": 68,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 35000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-063",
+      "createdAt": "2026-10-26T15:57:13.486Z"
+    },
+    {
+      "id": 82,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: Daniel Kamau Njiriri",
+      "customId": "CNT-077",
+      "createdAt": "2026-10-26T15:57:13.706Z"
+    },
+    {
+      "id": 97,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: Michael Kiarie Wanjiru",
+      "customId": "CNT-092",
+      "createdAt": "2026-10-26T15:57:13.941Z"
+    },
+    {
+      "id": 100,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 40000,
+      "remarks": "Land Payout Disbursement",
+      "customId": "CNT-095",
+      "createdAt": "2026-10-26T15:57:13.989Z"
+    },
+    {
+      "id": 104,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Member: Samuel Kamau Nguuro",
+      "customId": "CNT-099",
+      "createdAt": "2026-10-26T15:57:14.054Z"
+    },
+    {
+      "id": 107,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Member: Beatrice Njoki Muthoni",
+      "customId": "CNT-102",
+      "createdAt": "2026-10-26T15:57:14.102Z"
+    },
+    {
+      "id": 101,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 6000,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-096",
+      "createdAt": "2026-10-26T15:57:14.005Z"
+    },
+    {
+      "id": 77,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 0,
+      "unsettled": 0,
+      "payout": 36000,
+      "remarks": "Land disbursement ",
+      "customId": "CNT-072",
+      "createdAt": "2026-10-26T15:57:13.628Z"
+    },
+    {
+      "id": 94,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: David Wainaina Kinyua",
+      "customId": "CNT-089",
+      "createdAt": "2026-10-26T15:57:13.894Z"
+    },
+    {
+      "id": 76,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-071",
+      "createdAt": "2026-10-26T15:57:13.612Z"
+    },
+    {
+      "id": 90,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "",
+      "customId": "CNT-085",
+      "createdAt": "2026-10-26T15:57:13.831Z"
+    },
+    {
+      "id": 89,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "",
+      "customId": "CNT-084",
+      "createdAt": "2026-10-26T15:57:13.816Z"
+    },
+    {
+      "id": 96,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-091",
+      "createdAt": "2026-10-26T15:57:13.926Z"
+    },
+    {
+      "id": 74,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-069",
+      "createdAt": "2026-10-26T15:57:13.580Z"
+    },
+    {
+      "id": 85,
+      "memberId": null,
+      "monthYear": "01-JUL-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-080",
+      "createdAt": "2026-10-26T15:57:13.753Z"
+    },
+    {
+      "id": 86,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-081",
+      "createdAt": "2026-10-26T15:57:13.769Z"
+    },
+    {
+      "id": 92,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 3500,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "",
+      "customId": "CNT-087",
+      "createdAt": "2026-10-26T15:57:13.863Z"
+    },
+    {
+      "id": 88,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Contributions",
+      "customId": "CNT-083",
+      "createdAt": "2026-10-26T15:57:13.800Z"
+    },
+    {
+      "id": 87,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: Elijah Waitara Gichari",
+      "customId": "CNT-082",
+      "createdAt": "2026-10-26T15:57:13.784Z"
+    },
+    {
+      "id": 84,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Contribution",
+      "customId": "CNT-079",
+      "createdAt": "2026-10-26T15:57:13.738Z"
+    },
+    {
+      "id": 91,
+      "memberId": null,
+      "monthYear": "01-Aug-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-086",
+      "createdAt": "2026-10-26T15:57:13.847Z"
+    },
+    {
+      "id": 93,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-088",
+      "createdAt": "2026-10-26T15:57:13.878Z"
+    },
+    {
+      "id": 98,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-093",
+      "createdAt": "2026-10-26T15:57:13.957Z"
+    },
+    {
+      "id": 99,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 0,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Unsettled contributions ",
+      "customId": "CNT-094",
+      "createdAt": "2026-10-26T15:57:13.973Z"
+    },
+    {
+      "id": 102,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: David Wainaina Kinyua",
+      "customId": "CNT-097",
+      "createdAt": "2026-10-26T15:57:14.021Z"
+    },
+    {
+      "id": 103,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 6000,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Member: Elijah Waitara Gichari",
+      "customId": "CNT-098",
+      "createdAt": "2026-10-26T15:57:14.037Z"
+    },
+    {
+      "id": 105,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 6000,
+      "unsettled": 6000,
+      "payout": 0,
+      "remarks": "Member: Michael Kiarie Wanjiru",
+      "customId": "CNT-100",
+      "createdAt": "2026-10-26T15:57:14.070Z"
+    },
+    {
+      "id": 106,
+      "memberId": null,
+      "monthYear": "01-Oct-2026",
+      "amount": 5100,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: Daniel Kamau Njiriri",
+      "customId": "CNT-101",
+      "createdAt": "2026-10-26T15:57:14.086Z"
+    },
+    {
+      "id": 78,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: contribution",
+      "customId": "CNT-073",
+      "createdAt": "2026-10-26T15:57:13.644Z"
+    },
+    {
+      "id": 79,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: contribution",
+      "customId": "CNT-074",
+      "createdAt": "2026-10-26T15:57:13.659Z"
+    },
+    {
+      "id": 80,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": " contribution",
+      "customId": "CNT-075",
+      "createdAt": "2026-10-26T15:57:13.675Z"
+    },
+    {
+      "id": 71,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-066",
+      "createdAt": "2026-10-26T15:57:13.533Z"
+    },
+    {
+      "id": 81,
+      "memberId": null,
+      "monthYear": "01-Jul-2026",
+      "amount": 6000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "Member: Michael Kiarie Wanjiru",
+      "customId": "CNT-076",
+      "createdAt": "2026-10-26T15:57:13.691Z"
+    },
+    {
+      "id": 95,
+      "memberId": null,
+      "monthYear": "01-Sep-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contributions ",
+      "customId": "CNT-090",
+      "createdAt": "2026-10-26T15:57:13.910Z"
+    },
+    {
+      "id": 69,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-064",
+      "createdAt": "2026-10-26T15:57:13.502Z"
+    },
+    {
+      "id": 67,
+      "memberId": null,
+      "monthYear": "01-May-2026",
+      "amount": 5500,
+      "unsettled": 500,
+      "payout": 0,
+      "remarks": "Unsettled Contribution",
+      "customId": "CNT-062",
+      "createdAt": "2026-10-26T15:57:13.470Z"
+    },
+    {
+      "id": 70,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-065",
+      "createdAt": "2026-10-26T15:57:13.517Z"
+    },
+    {
+      "id": 72,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-067",
+      "createdAt": "2026-10-26T15:57:13.549Z"
+    },
+    {
+      "id": 73,
+      "memberId": null,
+      "monthYear": "01-Jun-2026",
+      "amount": 7000,
+      "unsettled": 0,
+      "payout": 0,
+      "remarks": "contribution",
+      "customId": "CNT-068",
+      "createdAt": "2026-10-26T15:57:13.565Z"
+    }
+  ],
+  "loans": [],
+  "expenses": [],
+  "penalties": [],
+  "loginLogs": [],
+  "editLogs": [
+    {
+      "id": 1,
+      "userId": null,
+      "model": "Contribution",
+      "action": "create",
+      "recordId": 1,
+      "changes": "{\"customId\":\"CNT-TEST-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Nov-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Automated Live Persistence Test\",\"createdBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T15:40:26.779Z"
+    },
+    {
+      "id": 2,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 1,
+      "changes": "{\"customId\":\"CNT-TEST-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Nov-2026\",\"amount\":7500,\"unsettled\":500,\"payout\":0,\"notes\":\"Updated Live Persistence Verified\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T15:40:45.466Z"
+    },
+    {
+      "id": 3,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 3,
+      "changes": "{\"customId\":\"CNT-070\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":6000,\"unsettled\":6000,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T15:52:54.551Z"
+    },
+    {
+      "id": 4,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 3,
+      "changes": "{\"customId\":\"CNT-070\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T15:53:07.821Z"
+    },
+    {
+      "id": 5,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 5,
+      "changes": "{\"customId\":\"CNT-078\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jul-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T15:53:49.862Z"
+    },
+    {
+      "id": 6,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 3,
+      "changes": "{\"customId\":\"CNT-070\",\"memberName\":\"loan\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-26T16:07:09.634Z"
+    },
+    {
+      "id": 7,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":50,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Simon Memia Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:31:01.979Z"
+    },
+    {
+      "id": 8,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":500,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Simon Memia Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:33:37.755Z"
+    },
+    {
+      "id": 9,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 76,
+      "changes": "{\"customId\":\"CNT-071\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:36:27.303Z"
+    },
+    {
+      "id": 10,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 77,
+      "changes": "{\"customId\":\"CNT-072\",\"memberName\":\"Land Payout Disbursement\",\"month\":\"01-Jul-2026\",\"amount\":0,\"unsettled\":0,\"payout\":36000,\"notes\":\"Land disbursement \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:37:48.686Z"
+    },
+    {
+      "id": 11,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 78,
+      "changes": "{\"customId\":\"CNT-073\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:38:48.332Z"
+    },
+    {
+      "id": 12,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 79,
+      "changes": "{\"customId\":\"CNT-074\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Elijah Waitara Gichari\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:39:26.918Z"
+    },
+    {
+      "id": 13,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 80,
+      "changes": "{\"customId\":\"CNT-075\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Samuel Kamau Nguuro\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:40:07.798Z"
+    },
+    {
+      "id": 14,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 89,
+      "changes": "{\"customId\":\"CNT-084\",\"memberName\":\"Michael Kiarie wanjiru \",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:43:31.903Z"
+    },
+    {
+      "id": 15,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 90,
+      "changes": "{\"customId\":\"CNT-085\",\"memberName\":\"Daniel Kamau njiriri \",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:44:08.466Z"
+    },
+    {
+      "id": 16,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 91,
+      "changes": "{\"customId\":\"CNT-086\",\"memberName\":\"Beatrice Njoki Muthoni \",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:44:51.056Z"
+    },
+    {
+      "id": 17,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":5000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Simon Memia Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:56:46.778Z"
+    },
+    {
+      "id": 18,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Simon Memia Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T06:57:00.077Z"
+    },
+    {
+      "id": 19,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 76,
+      "changes": "{\"customId\":\"CNT-071\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:00:17.859Z"
+    },
+    {
+      "id": 20,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:01:29.757Z"
+    },
+    {
+      "id": 21,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 7,
+      "changes": "{\"customId\":\"CNT-002\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:01:48.819Z"
+    },
+    {
+      "id": 22,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 8,
+      "changes": "{\"customId\":\"CNT-003\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:00.502Z"
+    },
+    {
+      "id": 23,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 9,
+      "changes": "{\"customId\":\"CNT-004\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:13.122Z"
+    },
+    {
+      "id": 24,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 10,
+      "changes": "{\"customId\":\"CNT-005\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:22.495Z"
+    },
+    {
+      "id": 25,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:33.666Z"
+    },
+    {
+      "id": 26,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:37.923Z"
+    },
+    {
+      "id": 27,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 12,
+      "changes": "{\"customId\":\"CNT-007\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:47.001Z"
+    },
+    {
+      "id": 28,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 13,
+      "changes": "{\"customId\":\"CNT-008\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:02:58.647Z"
+    },
+    {
+      "id": 29,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 14,
+      "changes": "{\"customId\":\"CNT-009\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:03:10.420Z"
+    },
+    {
+      "id": 30,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 15,
+      "changes": "{\"customId\":\"CNT-010\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:03:26.366Z"
+    },
+    {
+      "id": 31,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 16,
+      "changes": "{\"customId\":\"CNT-011\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:03:36.156Z"
+    },
+    {
+      "id": 32,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 17,
+      "changes": "{\"customId\":\"CNT-012\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:03:44.646Z"
+    },
+    {
+      "id": 33,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 18,
+      "changes": "{\"customId\":\"CNT-013\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:03:53.758Z"
+    },
+    {
+      "id": 34,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 19,
+      "changes": "{\"customId\":\"CNT-014\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:04:04.727Z"
+    },
+    {
+      "id": 35,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 21,
+      "changes": "{\"customId\":\"CNT-016\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:04:20.163Z"
+    },
+    {
+      "id": 36,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 22,
+      "changes": "{\"customId\":\"CNT-017\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:04:31.366Z"
+    },
+    {
+      "id": 37,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 23,
+      "changes": "{\"customId\":\"CNT-018\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:04:42.168Z"
+    },
+    {
+      "id": 38,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 24,
+      "changes": "{\"customId\":\"CNT-019\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:05.081Z"
+    },
+    {
+      "id": 39,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 25,
+      "changes": "{\"customId\":\"CNT-020\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:17.374Z"
+    },
+    {
+      "id": 40,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 26,
+      "changes": "{\"customId\":\"CNT-021\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:26.232Z"
+    },
+    {
+      "id": 41,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 27,
+      "changes": "{\"customId\":\"CNT-022\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:35.100Z"
+    },
+    {
+      "id": 42,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 29,
+      "changes": "{\"customId\":\"CNT-024\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:43.970Z"
+    },
+    {
+      "id": 43,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 30,
+      "changes": "{\"customId\":\"CNT-025\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:05:52.768Z"
+    },
+    {
+      "id": 44,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 31,
+      "changes": "{\"customId\":\"CNT-026\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:06:02.937Z"
+    },
+    {
+      "id": 45,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 32,
+      "changes": "{\"customId\":\"CNT-027\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:07:22.980Z"
+    },
+    {
+      "id": 46,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 33,
+      "changes": "{\"customId\":\"CNT-028\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:07:34.944Z"
+    },
+    {
+      "id": 47,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 34,
+      "changes": "{\"customId\":\"CNT-029\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:07:43.440Z"
+    },
+    {
+      "id": 48,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 35,
+      "changes": "{\"customId\":\"CNT-030\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:08:00.226Z"
+    },
+    {
+      "id": 49,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 37,
+      "changes": "{\"customId\":\"CNT-032\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:08:16.368Z"
+    },
+    {
+      "id": 50,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 38,
+      "changes": "{\"customId\":\"CNT-033\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:08:26.559Z"
+    },
+    {
+      "id": 51,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 39,
+      "changes": "{\"customId\":\"CNT-034\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:08:55.758Z"
+    },
+    {
+      "id": 52,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 40,
+      "changes": "{\"customId\":\"CNT-035\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:09:04.350Z"
+    },
+    {
+      "id": 53,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 41,
+      "changes": "{\"customId\":\"CNT-036\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:09:13.322Z"
+    },
+    {
+      "id": 54,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 42,
+      "changes": "{\"customId\":\"CNT-037\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:09:23.842Z"
+    },
+    {
+      "id": 55,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 43,
+      "changes": "{\"customId\":\"CNT-038\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:09:35.602Z"
+    },
+    {
+      "id": 56,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 45,
+      "changes": "{\"customId\":\"CNT-040\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:09:51.521Z"
+    },
+    {
+      "id": 57,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 46,
+      "changes": "{\"customId\":\"CNT-041\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:10:00.188Z"
+    },
+    {
+      "id": 58,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 47,
+      "changes": "{\"customId\":\"CNT-042\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:10:16.074Z"
+    },
+    {
+      "id": 59,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 48,
+      "changes": "{\"customId\":\"CNT-043\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:10:25.222Z"
+    },
+    {
+      "id": 60,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 49,
+      "changes": "{\"customId\":\"CNT-044\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:10:38.854Z"
+    },
+    {
+      "id": 61,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 50,
+      "changes": "{\"customId\":\"CNT-045\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:10:57.297Z"
+    },
+    {
+      "id": 62,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 51,
+      "changes": "{\"customId\":\"CNT-046\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:11:10.756Z"
+    },
+    {
+      "id": 63,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 53,
+      "changes": "{\"customId\":\"CNT-048\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:11:30.755Z"
+    },
+    {
+      "id": 64,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 54,
+      "changes": "{\"customId\":\"CNT-049\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:11:43.920Z"
+    },
+    {
+      "id": 65,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 55,
+      "changes": "{\"customId\":\"CNT-050\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:11:52.113Z"
+    },
+    {
+      "id": 66,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 56,
+      "changes": "{\"customId\":\"CNT-051\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:12:00.727Z"
+    },
+    {
+      "id": 67,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 57,
+      "changes": "{\"customId\":\"CNT-052\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:12:15.503Z"
+    },
+    {
+      "id": 68,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 58,
+      "changes": "{\"customId\":\"CNT-053\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:12:24.137Z"
+    },
+    {
+      "id": 69,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 59,
+      "changes": "{\"customId\":\"CNT-054\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:12:39.656Z"
+    },
+    {
+      "id": 70,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 61,
+      "changes": "{\"customId\":\"CNT-056\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:13:07.081Z"
+    },
+    {
+      "id": 71,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 62,
+      "changes": "{\"customId\":\"CNT-057\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:13:17.652Z"
+    },
+    {
+      "id": 72,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 63,
+      "changes": "{\"customId\":\"CNT-058\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:13:29.248Z"
+    },
+    {
+      "id": 73,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 64,
+      "changes": "{\"customId\":\"CNT-059\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:13:37.506Z"
+    },
+    {
+      "id": 74,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 65,
+      "changes": "{\"customId\":\"CNT-060\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:13:56.342Z"
+    },
+    {
+      "id": 75,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 66,
+      "changes": "{\"customId\":\"CNT-061\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:17:58.653Z"
+    },
+    {
+      "id": 76,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 67,
+      "changes": "{\"customId\":\"CNT-062\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-May-2026\",\"amount\":5500,\"unsettled\":500,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:18:09.298Z"
+    },
+    {
+      "id": 77,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 69,
+      "changes": "{\"customId\":\"CNT-064\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:18:16.820Z"
+    },
+    {
+      "id": 78,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 70,
+      "changes": "{\"customId\":\"CNT-065\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:18:25.940Z"
+    },
+    {
+      "id": 79,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 71,
+      "changes": "{\"customId\":\"CNT-066\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:18:35.273Z"
+    },
+    {
+      "id": 80,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 72,
+      "changes": "{\"customId\":\"CNT-067\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:18:46.896Z"
+    },
+    {
+      "id": 81,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 73,
+      "changes": "{\"customId\":\"CNT-068\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:19:05.253Z"
+    },
+    {
+      "id": 82,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 74,
+      "changes": "{\"customId\":\"CNT-069\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:19:59.088Z"
+    },
+    {
+      "id": 83,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 78,
+      "changes": "{\"customId\":\"CNT-073\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:22:17.605Z"
+    },
+    {
+      "id": 84,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jul-2026\",\"amount\":0,\"unsettled\":0,\"payout\":0,\"notes\":\"Land Payout Disbursement\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:23:47.322Z"
+    },
+    {
+      "id": 85,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 85,
+      "changes": "{\"customId\":\"CNT-080\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"usettled contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:25:17.960Z"
+    },
+    {
+      "id": 86,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 76,
+      "changes": "{\"customId\":\"CNT-071\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:25:33.579Z"
+    },
+    {
+      "id": 87,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 85,
+      "changes": "{\"customId\":\"CNT-080\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:25:43.000Z"
+    },
+    {
+      "id": 88,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Land Payout Disbursement\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:26:02.442Z"
+    },
+    {
+      "id": 89,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 86,
+      "changes": "{\"customId\":\"CNT-081\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:29:17.871Z"
+    },
+    {
+      "id": 90,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 85,
+      "changes": "{\"customId\":\"CNT-080\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-JULY-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:31:16.245Z"
+    },
+    {
+      "id": 91,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 85,
+      "changes": "{\"customId\":\"CNT-080\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-JUL-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:31:29.792Z"
+    },
+    {
+      "id": 92,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 88,
+      "changes": "{\"customId\":\"CNT-083\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:32:29.055Z"
+    },
+    {
+      "id": 93,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 88,
+      "changes": "{\"customId\":\"CNT-083\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"loan\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:33:27.776Z"
+    },
+    {
+      "id": 94,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 87,
+      "changes": "{\"customId\":\"CNT-082\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Elijah Waitara Gichari\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:33:48.682Z"
+    },
+    {
+      "id": 95,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 89,
+      "changes": "{\"customId\":\"CNT-084\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:36:05.263Z"
+    },
+    {
+      "id": 96,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 90,
+      "changes": "{\"customId\":\"CNT-085\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:36:51.883Z"
+    },
+    {
+      "id": 97,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 91,
+      "changes": "{\"customId\":\"CNT-086\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:37:36.562Z"
+    },
+    {
+      "id": 98,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 86,
+      "changes": "{\"customId\":\"CNT-081\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:38:37.040Z"
+    },
+    {
+      "id": 99,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 93,
+      "changes": "{\"customId\":\"CNT-088\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Sep-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:39:02.591Z"
+    },
+    {
+      "id": 100,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 95,
+      "changes": "{\"customId\":\"CNT-090\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Sep-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:39:14.143Z"
+    },
+    {
+      "id": 101,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 96,
+      "changes": "{\"customId\":\"CNT-091\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Sep-2026\",\"amount\":4400,\"unsettled\":1600,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:39:28.277Z"
+    },
+    {
+      "id": 102,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 98,
+      "changes": "{\"customId\":\"CNT-093\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Sep-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:39:36.892Z"
+    },
+    {
+      "id": 103,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 99,
+      "changes": "{\"customId\":\"CNT-094\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Sep-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:39:52.300Z"
+    },
+    {
+      "id": 104,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 101,
+      "changes": "{\"customId\":\"CNT-096\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:40:14.822Z"
+    },
+    {
+      "id": 105,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 102,
+      "changes": "{\"customId\":\"CNT-097\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Oct-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:40:44.219Z"
+    },
+    {
+      "id": 106,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 95,
+      "changes": "{\"customId\":\"CNT-090\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Sep-2026\",\"amount\":6000,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:41:12.840Z"
+    },
+    {
+      "id": 107,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 95,
+      "changes": "{\"customId\":\"CNT-090\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Sep-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:41:41.490Z"
+    },
+    {
+      "id": 108,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 103,
+      "changes": "{\"customId\":\"CNT-098\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Oct-2026\",\"amount\":6000,\"unsettled\":6000,\"payout\":0,\"notes\":\"Member: Elijah Waitara Gichari\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:42:31.956Z"
+    },
+    {
+      "id": 109,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 105,
+      "changes": "{\"customId\":\"CNT-100\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Oct-2026\",\"amount\":6000,\"unsettled\":6000,\"payout\":0,\"notes\":\"Member: Michael Kiarie Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:42:53.257Z"
+    },
+    {
+      "id": 110,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 106,
+      "changes": "{\"customId\":\"CNT-101\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Oct-2026\",\"amount\":5100,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Daniel Kamau Njiriri\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:43:12.809Z"
+    },
+    {
+      "id": 111,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 101,
+      "changes": "{\"customId\":\"CNT-096\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Oct-2026\",\"amount\":6000,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:43:40.864Z"
+    },
+    {
+      "id": 112,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 94,
+      "changes": "{\"customId\":\"CNT-089\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Sep-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:44:11.360Z"
+    },
+    {
+      "id": 113,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 90,
+      "changes": "{\"customId\":\"CNT-085\",\"memberName\":\"Daniel Kamau Njiriri\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:45:04.656Z"
+    },
+    {
+      "id": 114,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 89,
+      "changes": "{\"customId\":\"CNT-084\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:45:21.026Z"
+    },
+    {
+      "id": 115,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 96,
+      "changes": "{\"customId\":\"CNT-091\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Sep-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:46:33.580Z"
+    },
+    {
+      "id": 116,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 92,
+      "changes": "{\"customId\":\"CNT-087\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Aug-2026\",\"amount\":3500,\"unsettled\":0,\"payout\":0,\"notes\":\"\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T07:48:45.362Z"
+    },
+    {
+      "id": 117,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 79,
+      "changes": "{\"customId\":\"CNT-074\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T08:04:38.890Z"
+    },
+    {
+      "id": 118,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 80,
+      "changes": "{\"customId\":\"CNT-075\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T08:04:52.133Z"
+    },
+    {
+      "id": 119,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 17,
+      "changes": "{\"customId\":\"CNT-012\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: simon memia wanjiru \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T08:30:40.408Z"
+    },
+    {
+      "id": 120,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: simon memia wanjiru \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T08:31:53.394Z"
+    },
+    {
+      "id": 121,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 7,
+      "changes": "{\"customId\":\"CNT-002\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:04:48.314Z"
+    },
+    {
+      "id": 122,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 8,
+      "changes": "{\"customId\":\"CNT-003\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Elijah Waitara Gichari \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:05:17.797Z"
+    },
+    {
+      "id": 123,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 9,
+      "changes": "{\"customId\":\"CNT-004\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Michael Kiarie Wanjiru \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:05:43.412Z"
+    },
+    {
+      "id": 124,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 10,
+      "changes": "{\"customId\":\"CNT-005\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Daniel Kamau njiriri \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:06:24.462Z"
+    },
+    {
+      "id": 125,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Beatrice Njoki Muthoni \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:06:44.181Z"
+    },
+    {
+      "id": 126,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 12,
+      "changes": "{\"customId\":\"CNT-007\",\"memberName\":\"contribution\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: simon memia wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:08:22.779Z"
+    },
+    {
+      "id": 127,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 13,
+      "changes": "{\"customId\":\"CNT-008\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:08:56.570Z"
+    },
+    {
+      "id": 128,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 14,
+      "changes": "{\"customId\":\"CNT-009\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Elijah Waitara Gichari\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:09:11.484Z"
+    },
+    {
+      "id": 129,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 15,
+      "changes": "{\"customId\":\"CNT-010\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Michael Kiarie Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:09:28.483Z"
+    },
+    {
+      "id": 130,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 16,
+      "changes": "{\"customId\":\"CNT-011\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Daniel Kamau njiriri\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-27T11:10:04.801Z"
+    },
+    {
+      "id": 131,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Beatrice Njoki Muthoni \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:33:31.308Z"
+    },
+    {
+      "id": 132,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Samuel Kamau Nguuro\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:37:17.823Z"
+    },
+    {
+      "id": 133,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 12,
+      "changes": "{\"customId\":\"CNT-007\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Beatrice Njoki Muthoni\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:38:59.582Z"
+    },
+    {
+      "id": 134,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 13,
+      "changes": "{\"customId\":\"CNT-008\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"simon memia wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:40:27.448Z"
+    },
+    {
+      "id": 135,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 17,
+      "changes": "{\"customId\":\"CNT-012\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"David Wainaina Kinyua\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:43:21.872Z"
+    },
+    {
+      "id": 136,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 18,
+      "changes": "{\"customId\":\"CNT-013\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Beatrice Njoki Muthoni\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:46:48.068Z"
+    },
+    {
+      "id": 137,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 18,
+      "changes": "{\"customId\":\"CNT-013\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"Beatrice Njoki Muthoni\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T08:47:51.342Z"
+    },
+    {
+      "id": 138,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 19,
+      "changes": "{\"customId\":\"CNT-014\",\"memberName\":\"contribution\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:10:53.230Z"
+    },
+    {
+      "id": 139,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 19,
+      "changes": "{\"customId\":\"CNT-014\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:11:36.378Z"
+    },
+    {
+      "id": 140,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 19,
+      "changes": "{\"customId\":\"CNT-014\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:13:34.675Z"
+    },
+    {
+      "id": 141,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 21,
+      "changes": "{\"customId\":\"CNT-016\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:15:39.791Z"
+    },
+    {
+      "id": 142,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 22,
+      "changes": "{\"customId\":\"CNT-017\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:16:32.276Z"
+    },
+    {
+      "id": 143,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 29,
+      "changes": "{\"customId\":\"CNT-024\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:17:17.442Z"
+    },
+    {
+      "id": 144,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 37,
+      "changes": "{\"customId\":\"CNT-032\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:17:43.886Z"
+    },
+    {
+      "id": 145,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 30,
+      "changes": "{\"customId\":\"CNT-025\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:18:41.668Z"
+    },
+    {
+      "id": 146,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 38,
+      "changes": "{\"customId\":\"CNT-033\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:19:05.267Z"
+    },
+    {
+      "id": 147,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 39,
+      "changes": "{\"customId\":\"CNT-034\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:20:08.652Z"
+    },
+    {
+      "id": 148,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 32,
+      "changes": "{\"customId\":\"CNT-027\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:21:15.287Z"
+    },
+    {
+      "id": 149,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 23,
+      "changes": "{\"customId\":\"CNT-018\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:22:51.387Z"
+    },
+    {
+      "id": 150,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 40,
+      "changes": "{\"customId\":\"CNT-035\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:23:29.165Z"
+    },
+    {
+      "id": 151,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 24,
+      "changes": "{\"customId\":\"CNT-019\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:24:13.317Z"
+    },
+    {
+      "id": 152,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 33,
+      "changes": "{\"customId\":\"CNT-028\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:24:42.235Z"
+    },
+    {
+      "id": 153,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 41,
+      "changes": "{\"customId\":\"CNT-036\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:25:05.538Z"
+    },
+    {
+      "id": 154,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 34,
+      "changes": "{\"customId\":\"CNT-029\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:25:47.996Z"
+    },
+    {
+      "id": 155,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 25,
+      "changes": "{\"customId\":\"CNT-020\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:26:13.276Z"
+    },
+    {
+      "id": 156,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 42,
+      "changes": "{\"customId\":\"CNT-037\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:27:05.367Z"
+    },
+    {
+      "id": 157,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 27,
+      "changes": "{\"customId\":\"CNT-022\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:29:44.254Z"
+    },
+    {
+      "id": 158,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 26,
+      "changes": "{\"customId\":\"CNT-021\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Dec-2025\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:30:04.747Z"
+    },
+    {
+      "id": 159,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 31,
+      "changes": "{\"customId\":\"CNT-026\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:31:01.071Z"
+    },
+    {
+      "id": 160,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 35,
+      "changes": "{\"customId\":\"CNT-030\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jan-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:31:45.464Z"
+    },
+    {
+      "id": 161,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 43,
+      "changes": "{\"customId\":\"CNT-038\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Feb-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:32:08.965Z"
+    },
+    {
+      "id": 162,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 6,
+      "changes": "{\"customId\":\"CNT-001\",\"memberName\":\"simon memia wanjiru \",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:37:01.239Z"
+    },
+    {
+      "id": 163,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 7,
+      "changes": "{\"customId\":\"CNT-002\",\"memberName\":\"David Wainaina Kinyua \",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:37:22.045Z"
+    },
+    {
+      "id": 164,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 8,
+      "changes": "{\"customId\":\"CNT-003\",\"memberName\":\"Elijah Waitara Gichari \",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:37:31.285Z"
+    },
+    {
+      "id": 165,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 9,
+      "changes": "{\"customId\":\"CNT-004\",\"memberName\":\"Michael Kiarie Wanjiru \",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:37:41.537Z"
+    },
+    {
+      "id": 166,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 10,
+      "changes": "{\"customId\":\"CNT-005\",\"memberName\":\"Daniel Kamau njiriri \",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:37:51.405Z"
+    },
+    {
+      "id": 167,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 11,
+      "changes": "{\"customId\":\"CNT-006\",\"memberName\":\"Samuel Kamau Nguuro\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:38:00.793Z"
+    },
+    {
+      "id": 168,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 12,
+      "changes": "{\"customId\":\"CNT-007\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Oct-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:38:14.907Z"
+    },
+    {
+      "id": 169,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 13,
+      "changes": "{\"customId\":\"CNT-008\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:38:25.148Z"
+    },
+    {
+      "id": 170,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 14,
+      "changes": "{\"customId\":\"CNT-009\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:38:50.881Z"
+    },
+    {
+      "id": 171,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 15,
+      "changes": "{\"customId\":\"CNT-010\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:38:59.575Z"
+    },
+    {
+      "id": 172,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 16,
+      "changes": "{\"customId\":\"CNT-011\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:39:12.858Z"
+    },
+    {
+      "id": 173,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 18,
+      "changes": "{\"customId\":\"CNT-013\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:39:29.167Z"
+    },
+    {
+      "id": 174,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 17,
+      "changes": "{\"customId\":\"CNT-012\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Nov-2025\",\"amount\":5025,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:39:39.599Z"
+    },
+    {
+      "id": 175,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 45,
+      "changes": "{\"customId\":\"CNT-040\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:40:48.621Z"
+    },
+    {
+      "id": 176,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 46,
+      "changes": "{\"customId\":\"CNT-041\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:40:59.690Z"
+    },
+    {
+      "id": 177,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 47,
+      "changes": "{\"customId\":\"CNT-042\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:41:16.234Z"
+    },
+    {
+      "id": 178,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 48,
+      "changes": "{\"customId\":\"CNT-043\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:41:33.474Z"
+    },
+    {
+      "id": 179,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 49,
+      "changes": "{\"customId\":\"CNT-044\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:41:43.807Z"
+    },
+    {
+      "id": 180,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 50,
+      "changes": "{\"customId\":\"CNT-045\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:43:06.264Z"
+    },
+    {
+      "id": 181,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 51,
+      "changes": "{\"customId\":\"CNT-046\",\"memberName\":\"contribution\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:43:24.801Z"
+    },
+    {
+      "id": 182,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 53,
+      "changes": "{\"customId\":\"CNT-048\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:43:35.419Z"
+    },
+    {
+      "id": 183,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 54,
+      "changes": "{\"customId\":\"CNT-049\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:43:45.768Z"
+    },
+    {
+      "id": 184,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 55,
+      "changes": "{\"customId\":\"CNT-050\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:43:53.412Z"
+    },
+    {
+      "id": 185,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 56,
+      "changes": "{\"customId\":\"CNT-051\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:44:02.084Z"
+    },
+    {
+      "id": 186,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 57,
+      "changes": "{\"customId\":\"CNT-052\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:44:19.417Z"
+    },
+    {
+      "id": 187,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 58,
+      "changes": "{\"customId\":\"CNT-053\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:44:38.059Z"
+    },
+    {
+      "id": 188,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 59,
+      "changes": "{\"customId\":\"CNT-054\",\"memberName\":\"contribution\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:44:51.613Z"
+    },
+    {
+      "id": 189,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 61,
+      "changes": "{\"customId\":\"CNT-056\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:45:01.174Z"
+    },
+    {
+      "id": 190,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 62,
+      "changes": "{\"customId\":\"CNT-057\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:45:09.727Z"
+    },
+    {
+      "id": 191,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 63,
+      "changes": "{\"customId\":\"CNT-058\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:45:20.263Z"
+    },
+    {
+      "id": 192,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 64,
+      "changes": "{\"customId\":\"CNT-059\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:45:44.663Z"
+    },
+    {
+      "id": 193,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 65,
+      "changes": "{\"customId\":\"CNT-060\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:45:54.250Z"
+    },
+    {
+      "id": 194,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 66,
+      "changes": "{\"customId\":\"CNT-061\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:46:09.957Z"
+    },
+    {
+      "id": 195,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 67,
+      "changes": "{\"customId\":\"CNT-062\",\"memberName\":\"contribution\",\"month\":\"01-May-2026\",\"amount\":5500,\"unsettled\":500,\"payout\":0,\"notes\":\"Unsettled Contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:47:00.043Z"
+    },
+    {
+      "id": 196,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 45,
+      "changes": "{\"customId\":\"CNT-040\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:48:08.264Z"
+    },
+    {
+      "id": 197,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 53,
+      "changes": "{\"customId\":\"CNT-048\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:48:21.836Z"
+    },
+    {
+      "id": 198,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 78,
+      "changes": "{\"customId\":\"CNT-073\",\"memberName\":\"simon memia wanjiru\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:48:42.837Z"
+    },
+    {
+      "id": 199,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 79,
+      "changes": "{\"customId\":\"CNT-074\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:49:25.647Z"
+    },
+    {
+      "id": 200,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 54,
+      "changes": "{\"customId\":\"CNT-049\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:49:56.560Z"
+    },
+    {
+      "id": 201,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 46,
+      "changes": "{\"customId\":\"CNT-041\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:50:12.469Z"
+    },
+    {
+      "id": 202,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 47,
+      "changes": "{\"customId\":\"CNT-042\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:53:17.734Z"
+    },
+    {
+      "id": 203,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 55,
+      "changes": "{\"customId\":\"CNT-050\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:53:59.195Z"
+    },
+    {
+      "id": 204,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 63,
+      "changes": "{\"customId\":\"CNT-058\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:54:20.902Z"
+    },
+    {
+      "id": 205,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 80,
+      "changes": "{\"customId\":\"CNT-075\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\" contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:55:02.919Z"
+    },
+    {
+      "id": 206,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 71,
+      "changes": "{\"customId\":\"CNT-066\",\"memberName\":\"Michael Kiarie Wanjiru\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:56:11.207Z"
+    },
+    {
+      "id": 207,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 48,
+      "changes": "{\"customId\":\"CNT-043\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:57:34.237Z"
+    },
+    {
+      "id": 208,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 56,
+      "changes": "{\"customId\":\"CNT-051\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:57:52.018Z"
+    },
+    {
+      "id": 209,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 64,
+      "changes": "{\"customId\":\"CNT-059\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:58:13.072Z"
+    },
+    {
+      "id": 210,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 72,
+      "changes": "{\"customId\":\"CNT-067\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:58:31.126Z"
+    },
+    {
+      "id": 211,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 81,
+      "changes": "{\"customId\":\"CNT-076\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: Michael Kiarie Wanjiru\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T09:58:55.277Z"
+    },
+    {
+      "id": 212,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 95,
+      "changes": "{\"customId\":\"CNT-090\",\"memberName\":\"Elijah Waitara Gichari\",\"month\":\"01-Sep-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:00:10.327Z"
+    },
+    {
+      "id": 213,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 69,
+      "changes": "{\"customId\":\"CNT-064\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:01:05.995Z"
+    },
+    {
+      "id": 214,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 61,
+      "changes": "{\"customId\":\"CNT-056\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:01:37.206Z"
+    },
+    {
+      "id": 215,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 49,
+      "changes": "{\"customId\":\"CNT-044\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:04:36.247Z"
+    },
+    {
+      "id": 216,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 57,
+      "changes": "{\"customId\":\"CNT-052\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:04:56.996Z"
+    },
+    {
+      "id": 217,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 50,
+      "changes": "{\"customId\":\"CNT-045\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:06:53.468Z"
+    },
+    {
+      "id": 218,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 51,
+      "changes": "{\"customId\":\"CNT-046\",\"memberName\":\"Beatrice Njoki Muthoni\\t\",\"month\":\"01-Mar-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:07:22.023Z"
+    },
+    {
+      "id": 219,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 59,
+      "changes": "{\"customId\":\"CNT-054\",\"memberName\":\"Beatrice Njoki Muthoni\\t\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:07:49.072Z"
+    },
+    {
+      "id": 220,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 58,
+      "changes": "{\"customId\":\"CNT-053\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-Apr-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:08:19.671Z"
+    },
+    {
+      "id": 221,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 66,
+      "changes": "{\"customId\":\"CNT-061\",\"memberName\":\"Daniel Kamau njiriri\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:09:19.293Z"
+    },
+    {
+      "id": 222,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 70,
+      "changes": "{\"customId\":\"CNT-065\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:10:50.952Z"
+    },
+    {
+      "id": 223,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 62,
+      "changes": "{\"customId\":\"CNT-057\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:11:14.487Z"
+    },
+    {
+      "id": 224,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 73,
+      "changes": "{\"customId\":\"CNT-068\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"Member: contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:11:58.911Z"
+    },
+    {
+      "id": 225,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 65,
+      "changes": "{\"customId\":\"CNT-060\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-May-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:13:35.139Z"
+    },
+    {
+      "id": 226,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 67,
+      "changes": "{\"customId\":\"CNT-062\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-May-2026\",\"amount\":5500,\"unsettled\":500,\"payout\":0,\"notes\":\"Unsettled Contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:14:22.143Z"
+    },
+    {
+      "id": 227,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 70,
+      "changes": "{\"customId\":\"CNT-065\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:15:44.290Z"
+    },
+    {
+      "id": 228,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 72,
+      "changes": "{\"customId\":\"CNT-067\",\"memberName\":\"Samuel Kamau Nguuro\\t\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:15:52.582Z"
+    },
+    {
+      "id": 229,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 73,
+      "changes": "{\"customId\":\"CNT-068\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:16:04.544Z"
+    },
+    {
+      "id": 230,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 74,
+      "changes": "{\"customId\":\"CNT-069\",\"memberName\":\"contribution\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:16:16.719Z"
+    },
+    {
+      "id": 231,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 76,
+      "changes": "{\"customId\":\"CNT-071\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jun-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:16:49.184Z"
+    },
+    {
+      "id": 232,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 74,
+      "changes": "{\"customId\":\"CNT-069\",\"memberName\":\"Daniel Kamau njiriri\\t\",\"month\":\"01-Jun-2026\",\"amount\":7000,\"unsettled\":0,\"payout\":0,\"notes\":\"contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:17:41.215Z"
+    },
+    {
+      "id": 233,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"Land Payout Disbursement\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Land Payout Disbursement\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:20:05.720Z"
+    },
+    {
+      "id": 234,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Jul-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled Contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:21:09.739Z"
+    },
+    {
+      "id": 235,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 86,
+      "changes": "{\"customId\":\"CNT-081\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:22:32.422Z"
+    },
+    {
+      "id": 236,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 85,
+      "changes": "{\"customId\":\"CNT-080\",\"memberName\":\"Beatrice Njoki Muthoni\",\"month\":\"01-JUL-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:22:55.397Z"
+    },
+    {
+      "id": 237,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Jul-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:23:54.549Z"
+    },
+    {
+      "id": 238,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 86,
+      "changes": "{\"customId\":\"CNT-081\",\"memberName\":\"Simon Memia Wanjiru\",\"month\":\"01-Aug-2026\",\"amount\":0,\"unsettled\":6000,\"payout\":0,\"notes\":\"Unsettled contributions \",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:24:34.669Z"
+    },
+    {
+      "id": 239,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 88,
+      "changes": "{\"customId\":\"CNT-083\",\"memberName\":\"David Wainaina Kinyua\",\"month\":\"01-Aug-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Contributions\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:25:58.329Z"
+    },
+    {
+      "id": 240,
+      "userId": null,
+      "model": "Contribution",
+      "action": "update",
+      "recordId": 84,
+      "changes": "{\"customId\":\"CNT-079\",\"memberName\":\"Elijah Waitara Gachari\",\"month\":\"01-Jul-2026\",\"amount\":6000,\"unsettled\":0,\"payout\":0,\"notes\":\"Contribution\",\"updatedBy\":\"simon@dreamloom.co.ke\"}",
+      "createdAt": "2026-10-28T10:26:33.241Z"
+    }
+  ]
+}
