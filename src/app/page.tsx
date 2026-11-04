@@ -22,7 +22,9 @@ import {
   getEATCurrentMonthName,
   getEATCurrentYear,
   matchesMonthAndYear,
-  parseDateToMonthYear
+  parseDateToMonthYear,
+  getMemberUnsettledForDate,
+  isSameMemberName
 } from '@/lib/dateUtils';
 
 export default function Home() {
@@ -871,6 +873,38 @@ export default function Home() {
     return grandTotalContributions - totalExpensesAmount - totalActiveLoansPrincipal + totalPaidPenalties + totalPaidInterest;
   }, [grandTotalContributions, totalExpensesAmount, totalActiveLoansPrincipal, totalPaidPenalties, totalPaidInterest]);
 
+  // Automated Member Financial Position (Dynamically derived from genuine contributions and loans)
+  const automatedMembers = useMemo(() => {
+    return members.map(m => {
+      // 1. Dynamic contributions paid by this member
+      const memberPaid = contributions
+        .filter(c => c.member && isSameMemberName(c.member, m.fullName) && !c.payout)
+        .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const effectiveTotalContrib = memberPaid > 0 ? memberPaid : m.totalContribution;
+
+      // 2. Active loans balance for this member
+      const memberActiveLoans = loans
+        .filter(l => l.borrower && isSameMemberName(l.borrower, m.fullName) && l.status === 'Active')
+        .reduce((sum, l) => sum + (Number(l.balance) || 0), 0);
+
+      // 3. Automated Net Balance: Total Contributions minus Active Loans
+      const dynamicNetBalance = effectiveTotalContrib - memberActiveLoans;
+
+      // 4. Automated Shareholding %
+      const dynamicShares = grandTotalContributions > 0
+        ? ((effectiveTotalContrib / grandTotalContributions) * 100).toFixed(2) + '%'
+        : m.shares;
+
+      return {
+        ...m,
+        totalContribution: effectiveTotalContrib,
+        activeLoans: memberActiveLoans,
+        netBalance: dynamicNetBalance,
+        shares: dynamicShares
+      };
+    });
+  }, [members, contributions, loans, grandTotalContributions]);
+
   // Member Unsettled Contributions Map (Automatically synced from main contributions page)
   const memberUnsettledTotals = useMemo(() => {
     const map: Record<string, number> = {};
@@ -895,13 +929,13 @@ export default function Home() {
 
   // Filtered lists based on search
   const filteredMembers = useMemo(() => {
-    return members.filter(m =>
+    return automatedMembers.filter(m =>
       m.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.nationalId.includes(searchQuery) ||
       m.phone.includes(searchQuery) ||
       m.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [members, searchQuery]);
+  }, [automatedMembers, searchQuery]);
 
   const filteredContributions = useMemo(() => {
     return contributions.filter(c =>
@@ -1710,11 +1744,25 @@ export default function Home() {
     // 4. Fines & Penalties
     else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
       if (editingId) {
+        const fineDateToUse = field2 || getEATISODate();
+        const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
+
+        // Enforce rule: Each member can only have ONE late-payment penalty per contribution month
+        const hasDuplicate = fines.some(f =>
+          f.id !== editingId &&
+          isSameMemberName(f.member, field1) &&
+          matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
+        );
+        if (hasDuplicate) {
+          alert(`Duplicate Blocked: A late-payment penalty is already recorded for ${field1} in ${syncCheck.monthLabel}. Each member can only have ONE late-payment penalty per contribution month.`);
+          return;
+        }
+
         const targetFine = fines.find(f => f.id === editingId);
         const updatedFines = fines.map(f => f.id === editingId ? {
           ...f,
           member: field1,
-          date: field2,
+          date: fineDateToUse,
           amount: Number(field3) || 500,
           reason: field4,
           status: field5,
@@ -1731,7 +1779,7 @@ export default function Home() {
               userEmail: currentUser?.email,
               id: (targetFine as any).dbId,
               memberName: field1,
-              dateLevied: field2,
+              dateLevied: fineDateToUse,
               penaltyAmount: Number(field3) || 500,
               paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
               reason: field4,
@@ -1740,10 +1788,24 @@ export default function Home() {
           }).catch(err => console.error('Database penalty update failed:', err));
         }
       } else {
+        // Month-by-Month Synchronization Check
+        const fineDateToUse = field2 || getEATISODate();
+        const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
+
+        // Enforce rule: Each member can only have ONE late-payment penalty per contribution month
+        const hasDuplicate = fines.some(f =>
+          isSameMemberName(f.member, field1) &&
+          matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
+        );
+        if (hasDuplicate) {
+          alert(`Duplicate Blocked: A late-payment penalty is already recorded for ${field1} in ${syncCheck.monthLabel}. Each member can only have ONE late-payment penalty per contribution month.`);
+          return;
+        }
+
         const newF = {
           id: `FN-${String(fines.length + 1).padStart(2, '0')}`,
           member: field1,
-          date: field2 || getEATISODate(),
+          date: fineDateToUse,
           amount: Number(field3) || 500,
           reason: field4 || 'Late payment + penalty',
           status: field5 || 'Active',
@@ -1753,13 +1815,38 @@ export default function Home() {
         setFines(updatedFines);
         try { localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines)); } catch (e) {}
 
+        // Month-by-month synchronization with Contributions page
+        if (syncCheck.found && syncCheck.contributionRecord) {
+          const targetContribId = syncCheck.contributionRecord.id;
+          const updatedContribList = contributions.map(c => c.id === targetContribId ? {
+            ...c,
+            notes: c.notes?.toLowerCase().includes('penalty') ? c.notes : `${c.notes || 'Monthly Contribution'} (Penalty Levied)`
+          } : c);
+          setContributions(updatedContribList);
+          try { localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedContribList)); } catch (e) {}
+        } else if (!syncCheck.found && syncCheck.monthName && syncCheck.year) {
+          // Initialize contribution record for this specific month with unsettled balance
+          const newContribRec = {
+            id: `CNT-${contributions.length + 1}`,
+            month: `01-${syncCheck.monthName.slice(0, 3)}-${syncCheck.year}`,
+            member: field1,
+            amount: 0.00,
+            unsettled: 6000.00,
+            payout: 0.00,
+            notes: `Late Payment & Penalty Levied (Member: ${field1})`
+          };
+          const updatedContribList = [newContribRec, ...contributions];
+          setContributions(updatedContribList);
+          try { localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedContribList)); } catch (e) {}
+        }
+
         fetch('/api/penalties', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userEmail: currentUser?.email,
             memberName: field1,
-            dateLevied: field2 || getEATISODate(),
+            dateLevied: fineDateToUse,
             penaltyAmount: Number(field3) || 500,
             paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
             reason: field4 || 'Late payment + penalty',
@@ -2811,7 +2898,7 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-3.5">
-                    {members.map((m) => (
+                    {automatedMembers.map((m) => (
                       <div key={m.id} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 shrink-0 ring-1 ring-slate-700">
                           <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
@@ -3113,7 +3200,7 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1E293B] font-mono">
-                      {members.map((m) => {
+                      {automatedMembers.map((m) => {
                         const memberUnsettled = memberUnsettledTotals[m.fullName] || 0;
                         return (
                           <tr key={m.id} className="hover:bg-[#142036] transition">
@@ -3131,7 +3218,7 @@ export default function Home() {
                         <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right text-amber-400 font-black">{grandTotalUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right text-rose-400 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-emerald-400 font-black">392,050.00</td>
+                        <td className="p-4 text-right text-emerald-400 font-black">{(grandTotalContributions - totalActiveLoansAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right text-sky-400 font-black">100.00%</td>
                       </tr>
                     </tbody>
@@ -3790,17 +3877,22 @@ export default function Home() {
                   </thead>
                   <tbody className="divide-y divide-[#1E293B] font-mono">
                     {filteredFines.map((f) => {
-                      const memberUnsettled = memberUnsettledTotals[f.member] || 0;
-                      const combinedTotal = memberUnsettled + f.amount;
+                      // Retrieve month-by-month unsettled contribution from Contributions (primary source of truth)
+                      const monthData = getMemberUnsettledForDate(contributions, f.member, f.date);
+                      const monthUnsettled = monthData.unsettled;
+                      const combinedTotal = monthUnsettled + (Number(f.amount) || 0);
                       return (
                         <tr key={f.id} className="hover:bg-[#142036] transition">
                           <td className="p-4 font-sans text-white font-medium">{f.member}</td>
-                          <td className="p-4 text-slate-400">{f.date}</td>
-                          <td className="p-4 text-right font-bold text-amber-400">{memberUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-white">{f.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-slate-400 font-sans">
+                            <span className="text-white block font-mono font-medium">{f.date}</span>
+                            <span className="text-[10px] text-emerald-400 font-bold block">{monthData.monthLabel}</span>
+                          </td>
+                          <td className="p-4 text-right font-bold text-amber-400">{monthUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right font-bold text-white">{(Number(f.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                           <td className="p-4 text-right font-black text-emerald-400">{combinedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                           <td className="p-4 font-sans text-slate-300">{f.reason}</td>
-                          <td className="p-4 text-slate-400">{f.datePaid || '-'}</td>
+                          <td className="p-4 text-slate-400 font-sans">{f.datePaid || '-'}</td>
                           <td className="p-4 text-center font-sans">
                             <button
                               onClick={() => handleToggleFineStatus(f.id)}
@@ -4830,6 +4922,109 @@ export default function Home() {
                     className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
+              )}
+
+              {/* Month-by-Month Synchronization Assistant for Fines & Penalties */}
+              {modalMode.includes('Fines') && (
+                (() => {
+                  const fineDateToUse = field2 || getEATISODate();
+                  const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
+                  const penaltyAmt = Number(field3) || 500;
+                  const totalObligation = syncCheck.unsettled + penaltyAmt;
+                  const isDuplicate = fines.some(f =>
+                    (!editingId || f.id !== editingId) &&
+                    field1 &&
+                    isSameMemberName(f.member, field1) &&
+                    matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
+                  );
+
+                  return (
+                    <div className={`p-3.5 rounded-xl border text-xs space-y-2 transition ${
+                      isDuplicate
+                        ? 'bg-rose-950/30 border-rose-500/40'
+                        : 'bg-emerald-950/20 border-emerald-500/30'
+                    }`}>
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className={`w-2 h-2 rounded-full ${isDuplicate ? 'bg-rose-400 animate-pulse' : 'bg-emerald-400'}`}></span>
+                          Month-by-Month Contributions Sync
+                        </span>
+                        <span className="text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                          {syncCheck.monthLabel}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">Month Dues</div>
+                          <div className="text-amber-400 font-bold mt-0.5">KES {syncCheck.unsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">Penalty</div>
+                          <div className="text-rose-400 font-bold mt-0.5">KES {penaltyAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">Total Due</div>
+                          <div className="text-emerald-400 font-black mt-0.5">KES {totalObligation.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                      </div>
+
+                      {isDuplicate ? (
+                        <div className="flex items-center gap-1.5 text-rose-300 font-medium text-[11px] bg-rose-500/10 p-2 rounded-lg border border-rose-500/30">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                          <span><strong>Duplicate Alert:</strong> A penalty is already registered for this member in {syncCheck.monthLabel}. Each member can only have ONE penalty per cycle.</span>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                          <span>Primary source: Contributions Register</span>
+                          <span className="text-emerald-400">✓ Isolated strictly to {syncCheck.monthLabel}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+
+              {/* Automated 10% Interest Calculator for Loan Portfolio */}
+              {modalMode.includes('Loan') && (
+                (() => {
+                  const pAmt = Number(field2) || 0;
+                  const iAmt = field3 ? Number(field3) : Math.round(pAmt * 0.10);
+                  const tAmt = pAmt + iAmt;
+
+                  return (
+                    <div className="p-3.5 rounded-xl border border-sky-500/30 bg-sky-950/20 text-xs space-y-2">
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                          Automated 10% Loan Interest
+                        </span>
+                        <span className="text-sky-400 font-mono font-bold bg-sky-950/60 px-2 py-0.5 rounded border border-sky-500/30">
+                          Standard 10%
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">Principal</div>
+                          <div className="text-white font-bold mt-0.5">KES {pAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">10% Interest</div>
+                          <div className="text-cyan-400 font-bold mt-0.5">KES {iAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                          <div className="text-slate-400 text-[10px] uppercase font-sans">Total Payable</div>
+                          <div className="text-emerald-400 font-black mt-0.5">KES {tAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                      </div>
+
+                      <div className="text-[10px] text-slate-400">
+                        Total loan payable = Principal + Interest. Active loans reduce member net balance.
+                      </div>
+                    </div>
+                  );
+                })()
               )}
 
               <div className="flex justify-between items-center pt-4 border-t border-[#1E293B]">

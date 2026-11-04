@@ -218,3 +218,69 @@ export function matchesMonthAndYear(
 
   return true;
 }
+
+/**
+ * Utility to match member names robustly (handling short vs full names).
+ */
+export function isSameMemberName(name1: string | null | undefined, name2: string | null | undefined): boolean {
+  if (!name1 || !name2) return false;
+  const n1 = name1.toLowerCase().trim();
+  const n2 = name2.toLowerCase().trim();
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+}
+
+/**
+ * Retrieves the specific month's unsettled contribution for a member.
+ * Strictly does NOT combine across different months.
+ * The Contributions page remains the primary source of truth.
+ */
+export function getMemberUnsettledForDate(
+  contributions: any[],
+  memberName: string | null | undefined,
+  dateStr: string | null | undefined
+): {
+  unsettled: number;
+  monthLabel: string;
+  monthName: string;
+  year: number;
+  found: boolean;
+  contributionRecord: any | null;
+} {
+  if (!memberName || !dateStr) {
+    return { unsettled: 0, monthLabel: '-', monthName: '', year: 2026, found: false, contributionRecord: null };
+  }
+
+  const parsed = parseDateToMonthYear(dateStr);
+  if (!parsed) {
+    return { unsettled: 0, monthLabel: '-', monthName: '', year: 2026, found: false, contributionRecord: null };
+  }
+
+  const monthName = ALL_MONTHS[parsed.monthIdx];
+  const year = parsed.year;
+  const monthLabel = `${monthName} ${year}`;
+
+  const match = contributions.find(c => {
+    if (c.payout) return false;
+    return isSameMemberName(c.member, memberName) && matchesMonthAndYear(c.month, monthName, year);
+  });
+
+  if (match) {
+    return {
+      unsettled: Number(match.unsettled) || 0,
+      monthLabel,
+      monthName,
+      year,
+      found: true,
+      contributionRecord: match
+    };
+  }
+
+  return {
+    unsettled: 0,
+    monthLabel,
+    monthName,
+    year,
+    found: false,
+    contributionRecord: null
+  };
+}
