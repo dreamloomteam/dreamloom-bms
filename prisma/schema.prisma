@@ -102,3 +102,50 @@ model Penalty {
   status        String   @default("Unpaid")
   reason        String
 }
+
+model Investment {
+  id             String   @id
+  asset          String
+  type           String
+  capital        Float
+  status         String   @default("Active")
+  expectedReturn String
+  createdAt      DateTime @default(now())
+}
+
+model Project {
+  id        String   @id
+  name      String
+  budget    Float
+  status    String   @default("Active")
+  manager   String
+  createdAt DateTime @default(now())
+}
+
+model Supplier {
+  id        String   @id
+  name      String
+  category  String
+  contact   String
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id        String   @id
+  name      String
+  category  String
+  link      String   @default("#")
+  status    String   @default("Available")
+  createdAt DateTime @default(now())
+}
+
+model Asset {
+  id        String   @id
+  name      String
+  category  String
+  valuation Float
+  location  String
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+}

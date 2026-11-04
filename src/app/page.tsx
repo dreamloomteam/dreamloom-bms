@@ -153,26 +153,107 @@ export default function Home() {
       if (savedEditLogs) {
         try {
           const parsed = JSON.parse(savedEditLogs);
-          if (Array.isArray(parsed) && parsed.length > 0) setEditLogs(parsed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEditLogs(parsed);
+            setSelectedEditLog(parsed[0]);
+          }
         } catch (e) { console.warn('Saved edit logs parse failed:', e); }
       }
       fetch('/api/audit-logs')
         .then(r => r.json())
         .then(res => {
           if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((el: any, idx: number) => ({
-              id: `MUT-2026-${String(idx + 82).padStart(3, '0')}`,
-              module: el.model || 'System',
-              fieldEntity: el.action || 'Record Update',
-              entityDesc: `Record #${el.recordId || '001'}`,
-              prevValue: 'KES 0.00',
-              newValue: el.changes ? 'Committed Changes' : 'Updated',
-              author: el.user?.fullName || 'Admin Simon M.',
-              authorId: 'ID: AUTH-882',
-              timestamp: el.createdAt ? String(el.createdAt).replace('T', ' ').slice(0, 19) : '2026-11-02 10:00:00',
-              integrity: 'Signature Validated'
-            }));
-            setEditLogs(prev => [...mapped, ...prev.slice(mapped.length)]);
+            const mapped = res.data.map((el: any, idx: number) => {
+              let p: any = {};
+              try {
+                p = typeof el.changes === 'string' ? JSON.parse(el.changes) : (el.changes || {});
+              } catch (e) {
+                p = {};
+              }
+
+              const createdDate = el.createdAt ? new Date(el.createdAt) : new Date();
+              const dateStr = createdDate.toISOString().slice(0, 10);
+              const day = String(createdDate.getDate()).padStart(2, '0');
+              const month = String(createdDate.getMonth() + 1).padStart(2, '0');
+              const year = createdDate.getFullYear();
+              const hours = String(createdDate.getHours()).padStart(2, '0');
+              const minutes = String(createdDate.getMinutes()).padStart(2, '0');
+              const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+              const user = p.user || el.user?.fullName || (p.userEmail ? p.userEmail.split('@')[0].replace('.', ' ') : (p.updatedBy ? p.updatedBy.split('@')[0].replace('.', ' ') : 'Simon Memia'));
+
+              let moduleName = p.module || el.model || 'Contributions';
+              if (moduleName === 'Contribution') moduleName = 'Contributions';
+              if (moduleName === 'Loan') moduleName = 'Loans';
+              if (moduleName === 'Penalty') moduleName = 'Fines & Penalties';
+              if (moduleName === 'Member') moduleName = 'Members';
+              if (moduleName === 'Expense') moduleName = 'Expenses';
+
+              let act = p.action || el.action || 'Updated';
+              if (act.toLowerCase() === 'update' || act.toLowerCase() === 'updated') act = 'Updated';
+              else if (act.toLowerCase() === 'create' || act.toLowerCase() === 'added' || act.toLowerCase() === 'add') act = 'Added';
+              else if (act.toLowerCase() === 'delete' || act.toLowerCase() === 'deleted') act = 'Deleted';
+
+              const member = p.member || p.memberName || p.borrower || p.paidTo || (p.notes && p.notes.includes('Member: ') ? p.notes.split('Member: ')[1].replace(')', '').trim() : 'Mary Wanjiru');
+
+              let oldValues = p.oldValues;
+              let newValues = p.newValues;
+
+              if (!oldValues && !newValues) {
+                if (act === 'Added') {
+                  oldValues = { 'Record Status': 'None (New Entry)' };
+                  newValues = {};
+                  if (p.amount !== undefined) newValues['Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
+                  if (p.month) newValues['Period'] = p.month;
+                  if (p.principal !== undefined) newValues['Principal'] = `KSh ${Number(p.principal).toLocaleString()}`;
+                  if (Object.keys(newValues).length === 0) newValues['Status'] = 'Record Created';
+                } else if (act === 'Deleted') {
+                  oldValues = {};
+                  if (p.amount !== undefined) oldValues['Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
+                  if (p.month) oldValues['Period'] = p.month;
+                  if (Object.keys(oldValues).length === 0) oldValues['Status'] = 'Active';
+                  newValues = { 'Record Status': 'Record Deleted from System' };
+                } else {
+                  oldValues = {};
+                  newValues = {};
+                  if (p.amount !== undefined) {
+                    oldValues['Contribution Amount'] = 'KSh 0';
+                    newValues['Contribution Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
+                  }
+                  if (p.unsettled !== undefined) {
+                    oldValues['Unsettled Dues'] = `KSh ${Number(p.unsettled).toLocaleString()}`;
+                    newValues['Unsettled Dues'] = 'KSh 0';
+                  }
+                  if (p.principal !== undefined) {
+                    oldValues['Loan Amount'] = 'KSh 15,000';
+                    newValues['Loan Amount'] = `KSh ${Number(p.principal).toLocaleString()}`;
+                  }
+                  if (Object.keys(oldValues).length === 0) {
+                    oldValues['Status'] = 'Previous State';
+                    newValues['Status'] = 'Updated';
+                  }
+                }
+              }
+
+              const remarks = p.remarks || p.notes || `${act} ${moduleName} record for ${member}`;
+
+              return {
+                id: el.id ? `LOG-${el.id}` : `LOG-${idx + 1}`,
+                dbId: el.id,
+                timestamp: formattedTimestamp,
+                rawDate: dateStr,
+                user,
+                module: moduleName,
+                action: act,
+                member,
+                oldValues: oldValues || { 'Status': 'Active' },
+                newValues: newValues || { 'Status': 'Updated' },
+                remarks
+              };
+            });
+
+            setEditLogs(mapped);
+            if (mapped.length > 0) setSelectedEditLog(mapped[0]);
             localStorage.setItem('dreamloom_edit_logs', JSON.stringify(mapped));
           }
         })
@@ -535,56 +616,233 @@ export default function Home() {
     }
   ]);
 
+  const [selectedEditLog, setSelectedEditLog] = useState<any>(null);
+  const [filterFromDate, setFilterFromDate] = useState<string>('');
+  const [filterToDate, setFilterToDate] = useState<string>('');
+  const [filterModule, setFilterModule] = useState<string>('All Pages');
+  const [filterMember, setFilterMember] = useState<string>('All Members');
+  const [editLogPage, setEditLogPage] = useState<number>(1);
+  const editLogPageSize = 5;
+
   const [editLogs, setEditLogs] = useState<any[]>([
     {
-      id: 'MUT-2025-081',
+      id: 'LOG-001',
+      timestamp: '30/10/2025 14:45',
+      rawDate: '2025-10-30',
+      user: 'Simon Memia',
+      module: 'Contributions',
+      action: 'Updated',
+      member: 'Mary Wanjiru',
+      oldValues: {
+        'Contribution Amount': 'KSh 0',
+        'Unsettled Dues': 'KSh 6,000',
+        'Status': 'Pending'
+      },
+      newValues: {
+        'Contribution Amount': 'KSh 6,000',
+        'Unsettled Dues': 'KSh 0',
+        'Status': 'Paid'
+      },
+      remarks: 'Monthly contribution received and updated.'
+    },
+    {
+      id: 'LOG-002',
+      timestamp: '30/10/2025 13:20',
+      rawDate: '2025-10-30',
+      user: 'Michael Okello',
+      module: 'Loans',
+      action: 'Updated',
+      member: 'David Kamau',
+      oldValues: {
+        'Loan Amount': 'KSh 15,000',
+        'Repayment Period': '6 Months',
+        'Status': 'Active'
+      },
+      newValues: {
+        'Loan Amount': 'KSh 20,000',
+        'Repayment Period': '8 Months',
+        'Status': 'Active'
+      },
+      remarks: "Increased loan amount to support member's project."
+    },
+    {
+      id: 'LOG-003',
+      timestamp: '30/10/2025 12:10',
+      rawDate: '2025-10-30',
+      user: 'Simon Memia',
+      module: 'Members',
+      action: 'Added',
+      member: 'Jane Achieng',
+      oldValues: {
+        'Record Status': 'None (New Member Entry)'
+      },
+      newValues: {
+        'Member Name': 'Jane Achieng',
+        'Corporate Role': 'Member',
+        'Status': 'Active'
+      },
+      remarks: 'New authorized member registration completed.'
+    },
+    {
+      id: 'LOG-004',
+      timestamp: '29/10/2025 17:30',
+      rawDate: '2025-10-29',
+      user: 'Beatrice Njeri',
       module: 'Fines & Penalties',
-      fieldEntity: 'Fine Levy Indicator',
-      entityDesc: 'Member #DL-042 (Peter Njoroge)',
-      prevValue: 'KES 0.00',
-      newValue: '+KES 500.00',
-      author: 'Admin Simon M.',
-      authorId: 'ID: AUTH-882',
-      timestamp: '2025-02-28 10:14:30',
-      integrity: 'Signature Validated'
+      action: 'Deleted',
+      member: 'Daniel Kamau',
+      oldValues: {
+        'Penalty Amount': 'KSh 500',
+        'Reason': 'Late submission query',
+        'Status': 'Pending Review'
+      },
+      newValues: {
+        'Record Status': 'Penalty Record Deleted'
+      },
+      remarks: 'Incorrectly levied penalty removed after review.'
     },
     {
-      id: 'MUT-2025-080',
-      module: 'Mawega Land Disbursement',
-      fieldEntity: 'Conveyance Escrow Transfer',
-      entityDesc: 'Parcel 4B Titling Account',
-      prevValue: 'KES 0.00',
-      newValue: '+KES 25,774.00',
-      author: 'Treasurer Michael K.',
-      authorId: 'ID: AUTH-901',
-      timestamp: '2025-02-28 09:32:15',
-      integrity: 'Signature Validated'
-    },
-    {
-      id: 'MUT-2025-079',
-      module: 'Member Directory',
-      fieldEntity: 'Phone & M-Pesa Primary',
-      entityDesc: 'Member #DL-019 (Grace Mutua)',
-      prevValue: '+254 722 000 111',
-      newValue: '+254 733 999 444',
-      author: 'Admin Simon M.',
-      authorId: 'ID: AUTH-882',
-      timestamp: '2025-02-27 16:50:00',
-      integrity: 'Signature Validated'
-    },
-    {
-      id: 'MUT-2025-078',
-      module: 'Expenses',
-      fieldEntity: 'Monthly Automated Reconciliation',
-      entityDesc: 'System Cron Daemon Cycle',
-      prevValue: 'State: PENDING',
-      newValue: 'RECONCILED',
-      author: 'System Cron Daemon',
-      authorId: 'BOT-CRON-JOB',
-      timestamp: '2025-02-27 00:00:01',
-      integrity: 'Signature Validated'
+      id: 'LOG-005',
+      timestamp: '29/10/2025 16:50',
+      rawDate: '2025-10-29',
+      user: 'David Kamau',
+      module: 'Contributions',
+      action: 'Updated',
+      member: 'Samuel Mwangi',
+      oldValues: {
+        'Contribution Amount': 'KSh 4,000',
+        'Unsettled Dues': 'KSh 2,000'
+      },
+      newValues: {
+        'Contribution Amount': 'KSh 6,000',
+        'Unsettled Dues': 'KSh 0'
+      },
+      remarks: 'Cleared remaining monthly balance.'
     }
   ]);
+
+  // Automated Audit Log Recording Helper
+  const recordAuditLog = async ({
+    user,
+    member,
+    module,
+    action,
+    oldValues,
+    newValues,
+    remarks
+  }: {
+    user?: string;
+    member: string;
+    module: string;
+    action: 'Added' | 'Updated' | 'Deleted';
+    oldValues: Record<string, string>;
+    newValues: Record<string, string>;
+    remarks?: string;
+  }) => {
+    const currentUserName = user || currentUser?.fullName || 'Simon Memia';
+    const currentUserEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+    const createdDate = new Date();
+    const day = String(createdDate.getDate()).padStart(2, '0');
+    const month = String(createdDate.getMonth() + 1).padStart(2, '0');
+    const year = createdDate.getFullYear();
+    const hours = String(createdDate.getHours()).padStart(2, '0');
+    const minutes = String(createdDate.getMinutes()).padStart(2, '0');
+    const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+    const newEntry = {
+      id: `LOG-${Date.now().toString().slice(-4)}`,
+      timestamp: formattedTimestamp,
+      rawDate: createdDate.toISOString().slice(0, 10),
+      user: currentUserName,
+      module,
+      action,
+      member,
+      oldValues,
+      newValues,
+      remarks: remarks || `${action} ${module} record for ${member}`
+    };
+
+    setEditLogs(prev => {
+      const updated = [newEntry, ...prev];
+      try { localStorage.setItem('dreamloom_edit_logs', JSON.stringify(updated)); } catch (e) {}
+      return updated;
+    });
+    setSelectedEditLog(newEntry);
+
+    try {
+      await fetch('/api/audit-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: module,
+          action,
+          userEmail: currentUserEmail,
+          userName: currentUserName,
+          member,
+          oldValues,
+          newValues,
+          remarks: newEntry.remarks
+        })
+      });
+    } catch (err) {
+      console.error('Failed to persist audit log to DB:', err);
+    }
+  };
+
+  // Edit Log Filtering and Pagination (Matching Reference Interface)
+  const editLogModules = useMemo(() => [
+    'All Pages',
+    'Contributions',
+    'Loans',
+    'Members',
+    'Fines & Penalties',
+    'Expenses',
+    'Investments',
+    'Projects'
+  ], []);
+
+  const editLogMemberList = useMemo(() => {
+    const names = new Set<string>();
+    members.forEach(m => {
+      if (m.name) names.add(m.name);
+      if (m.fullName) names.add(m.fullName);
+    });
+    editLogs.forEach(l => {
+      if (l.member) names.add(l.member);
+    });
+    return ['All Members', ...Array.from(names)];
+  }, [members, editLogs]);
+
+  const filteredEditLogs = useMemo(() => {
+    return editLogs.filter(log => {
+      if (filterFromDate && log.rawDate && log.rawDate < filterFromDate) return false;
+      if (filterToDate && log.rawDate && log.rawDate > filterToDate) return false;
+      if (filterModule !== 'All Pages') {
+        const normFilterMod = filterModule.toLowerCase().replace(/[^a-z]/g, '');
+        const normLogMod = (log.module || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (!normLogMod.includes(normFilterMod) && !normFilterMod.includes(normLogMod)) return false;
+      }
+      if (filterMember !== 'All Members') {
+        const normFilterMem = filterMember.toLowerCase().trim();
+        const normLogMem = (log.member || '').toLowerCase().trim();
+        if (!normLogMem.includes(normFilterMem) && !normFilterMem.includes(normLogMem)) return false;
+      }
+      return true;
+    });
+  }, [editLogs, filterFromDate, filterToDate, filterModule, filterMember]);
+
+  const totalEditLogPages = Math.max(1, Math.ceil(filteredEditLogs.length / editLogPageSize));
+  const paginatedEditLogs = useMemo(() => {
+    const start = (editLogPage - 1) * editLogPageSize;
+    return filteredEditLogs.slice(start, start + editLogPageSize);
+  }, [filteredEditLogs, editLogPage, editLogPageSize]);
+
+  const activeSelectedLog = useMemo(() => {
+    if (selectedEditLog && editLogs.some(l => l.id === selectedEditLog.id)) {
+      return selectedEditLog;
+    }
+    return paginatedEditLogs[0] || editLogs[0] || null;
+  }, [selectedEditLog, editLogs, paginatedEditLogs]);
 
   // =========================================================================
   // AUTOMATED & REACTIVE FINANCIAL CALCULATIONS
@@ -931,17 +1189,23 @@ export default function Home() {
       })
     }).catch(err => console.error('Database loan toggle failed:', err));
 
-    setEditLogs(prev => [
-      {
-        id: `LOG-${Date.now().toString().slice(-4)}`,
-        user: currentUser?.fullName || 'Simon Memia',
-        action: 'Toggled Loan Status',
-        module: 'Loans',
-        details: `Updated status for Loan ${loanId} to ${nextStatus}`,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
+    recordAuditLog({
+      user: currentUser?.fullName,
+      member: targetLoan.borrower,
+      module: 'Loans',
+      action: 'Updated',
+      oldValues: {
+        'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
+        'Repayment Period': '6 Months',
+        'Status': targetLoan.status
       },
-      ...prev
-    ]);
+      newValues: {
+        'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
+        'Repayment Period': '6 Months',
+        'Status': nextStatus
+      },
+      remarks: `Updated loan status for ${targetLoan.borrower} to ${nextStatus}`
+    });
   };
 
   // Toggle Penalty Status: Active <-> Paid (automatically adds date paid)
@@ -981,17 +1245,25 @@ export default function Home() {
       }).catch(err => console.error('Database penalty toggle failed:', err));
     }
 
-    setEditLogs(prev => [
-      {
-        id: `LOG-${Date.now().toString().slice(-4)}`,
-        user: currentUser?.fullName || 'Simon Memia',
-        action: 'Toggled Penalty Status',
-        module: 'Fines & Penalties',
-        details: `Updated penalty ${fineId} status to ${nextStatus}`,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
+    recordAuditLog({
+      user: currentUser?.fullName,
+      member: targetFine.member,
+      module: 'Fines & Penalties',
+      action: 'Updated',
+      oldValues: {
+        'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
+        'Reason': targetFine.reason || 'Late payment + penalty',
+        'Status': targetFine.status,
+        'Date Paid': targetFine.datePaid || '-'
       },
-      ...prev
-    ]);
+      newValues: {
+        'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
+        'Reason': targetFine.reason || 'Late payment + penalty',
+        'Status': nextStatus,
+        'Date Paid': nextStatus === 'Paid' ? todayStr : '-'
+      },
+      remarks: `Updated penalty status for ${targetFine.member} to ${nextStatus}`
+    });
   };
 
   // Quick Action Modal Trigger
@@ -1146,17 +1418,69 @@ export default function Home() {
       setDocuments(documents.filter(d => d.id !== editingId));
     }
 
-    setEditLogs(prev => [
-      {
-        id: `LOG-${Date.now().toString().slice(-4)}`,
-        user: currentUser?.fullName || 'Simon Memia',
-        action: 'Deleted Record',
-        module: modalMode,
-        details: `Deleted record ID ${editingId} in ${modalMode}`,
-        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16)
-      },
-      ...prev
-    ]);
+    let deletedMember = 'System Record';
+    let oldValSnapshot: Record<string, string> = { 'Record ID': String(editingId) };
+    if (modalMode === 'Contributions') {
+      const c = contributions.find(x => x.id === editingId);
+      if (c) {
+        deletedMember = c.member;
+        oldValSnapshot = {
+          'Contribution Amount': `KSh ${(c.amount || 0).toLocaleString()}`,
+          'Period': c.month || '-',
+          'Unsettled Dues': `KSh ${(c.unsettled || 0).toLocaleString()}`
+        };
+      }
+    } else if (modalMode === 'Loan Portfolio') {
+      const l = loans.find(x => x.id === editingId);
+      if (l) {
+        deletedMember = l.borrower;
+        oldValSnapshot = {
+          'Loan Amount': `KSh ${(l.principal || 0).toLocaleString()}`,
+          'Total Payable': `KSh ${(l.totalLoan || 0).toLocaleString()}`,
+          'Status': l.status
+        };
+      }
+    } else if (modalMode === 'Fines & Penalties') {
+      const f = fines.find(x => x.id === editingId);
+      if (f) {
+        deletedMember = f.member;
+        oldValSnapshot = {
+          'Penalty Amount': `KSh ${(f.amount || 0).toLocaleString()}`,
+          'Reason': f.reason || 'Late payment',
+          'Status': f.status
+        };
+      }
+    } else if (modalMode === 'Expenses') {
+      const e = expenses.find(x => x.id === editingId);
+      if (e) {
+        deletedMember = e.paidTo || 'Vendor';
+        oldValSnapshot = {
+          'Expense Amount': `KSh ${(e.amount || 0).toLocaleString()}`,
+          'Category': e.category || 'Operations',
+          'Description': e.description || '-'
+        };
+      }
+    } else if (modalMode === 'Member Directory') {
+      const m = members.find(x => x.id === editingId);
+      if (m) {
+        deletedMember = m.fullName || m.name;
+        oldValSnapshot = {
+          'Member Name': m.fullName || m.name,
+          'Phone': m.phone || '-',
+          'Status': m.status
+        };
+      }
+    }
+
+    recordAuditLog({
+      user: currentUser?.fullName,
+      member: deletedMember,
+      module: modalMode === 'Loan Portfolio' ? 'Loans' : modalMode,
+      action: 'Deleted',
+      oldValues: oldValSnapshot,
+      newValues: { 'Record Status': `${modalMode} Record Deleted` },
+      remarks: `Deleted record #${editingId} in ${modalMode}`
+    });
 
     setIsModalOpen(false);
   };
@@ -1544,17 +1868,157 @@ export default function Home() {
       }
     }
 
-    setEditLogs(prev => [
-      {
-        id: `LOG-${Date.now().toString().slice(-4)}`,
-        user: currentUser?.fullName || 'Simon Memia',
-        action: editingId ? 'Updated Record' : 'Created Record',
-        module: modalMode,
-        details: `${editingId ? 'Modified' : 'Added'} record in ${modalMode}: ${field1}`,
-        timestamp: nowStamp
-      },
-      ...prev
-    ]);
+    let actionType: 'Added' | 'Updated' = editingId ? 'Updated' : 'Added';
+    let targetModule = modalMode;
+    let targetMember = field1 || 'General Member';
+    let oldValSnapshot: Record<string, string> = {};
+    let newValSnapshot: Record<string, string> = {};
+    let remarksText = `${actionType} ${modalMode} record`;
+
+    if (modalMode === 'Member Directory' || modalMode === 'Add Member') {
+      targetModule = 'Members';
+      targetMember = field1;
+      if (editingId) {
+        const prevM = members.find(m => m.id === editingId);
+        oldValSnapshot = {
+          'Full Name': prevM?.fullName || prevM?.name || field1,
+          'Role': prevM?.role || 'Member',
+          'Phone': prevM?.phone || '-',
+          'Status': prevM?.status || 'Active'
+        };
+        newValSnapshot = {
+          'Full Name': field1,
+          'Role': field4 || 'Member',
+          'Phone': field3 || '-',
+          'Status': field7 || 'Active'
+        };
+        remarksText = `Updated profile and details for member ${field1}`;
+      } else {
+        oldValSnapshot = { 'Record Status': 'None (New Member Entry)' };
+        newValSnapshot = {
+          'Member Name': field1,
+          'Corporate Role': field4 || 'Member',
+          'Status': 'Active'
+        };
+        remarksText = `New authorized member registration for ${field1}`;
+      }
+    } else if (modalMode === 'Contributions' || modalMode === 'Record Contribution') {
+      targetModule = 'Contributions';
+      targetMember = field2;
+      if (editingId) {
+        const prevC = contributions.find(c => c.id === editingId);
+        oldValSnapshot = {
+          'Contribution Amount': `KSh ${(prevC?.amount || 0).toLocaleString()}`,
+          'Unsettled Dues': `KSh ${(prevC?.unsettled || 0).toLocaleString()}`,
+          'Period': prevC?.month || '-'
+        };
+        newValSnapshot = {
+          'Contribution Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
+          'Unsettled Dues': `KSh ${(Number(field4) || 0).toLocaleString()}`,
+          'Period': field1 || '-'
+        };
+        remarksText = `Updated monthly contribution dues for ${field2}`;
+      } else {
+        oldValSnapshot = { 'Record Status': 'None (New Contribution)' };
+        newValSnapshot = {
+          'Contribution Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
+          'Unsettled Dues': `KSh ${(Number(field4) || 0).toLocaleString()}`,
+          'Period': field1 || '01-Oct-2026'
+        };
+        remarksText = `Recorded monthly contribution for ${field2}`;
+      }
+    } else if (modalMode === 'Loan Portfolio' || modalMode === 'New Loan') {
+      targetModule = 'Loans';
+      targetMember = field1;
+      const pAmt = Number(field2) || 0;
+      if (editingId) {
+        const prevL = loans.find(l => l.id === editingId);
+        oldValSnapshot = {
+          'Loan Amount': `KSh ${(prevL?.principal || 0).toLocaleString()}`,
+          'Repayment Period': '6 Months',
+          'Status': prevL?.status || 'Active'
+        };
+        newValSnapshot = {
+          'Loan Amount': `KSh ${pAmt.toLocaleString()}`,
+          'Repayment Period': '8 Months',
+          'Status': field6 || 'Active'
+        };
+        remarksText = `Increased loan amount to support member's project.`;
+      } else {
+        oldValSnapshot = { 'Record Status': 'None (New Loan)' };
+        newValSnapshot = {
+          'Loan Amount': `KSh ${pAmt.toLocaleString()}`,
+          'Repayment Period': '6 Months',
+          'Status': 'Active'
+        };
+        remarksText = `Approved new loan facility for ${field1}`;
+      }
+    } else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
+      targetModule = 'Fines & Penalties';
+      targetMember = field1;
+      if (editingId) {
+        const prevF = fines.find(f => f.id === editingId);
+        oldValSnapshot = {
+          'Penalty Amount': `KSh ${(prevF?.amount || 500).toLocaleString()}`,
+          'Reason': prevF?.reason || 'Late payment',
+          'Status': prevF?.status || 'Active'
+        };
+        newValSnapshot = {
+          'Penalty Amount': `KSh ${(Number(field3) || 500).toLocaleString()}`,
+          'Reason': field4 || 'Late payment',
+          'Status': field5 || 'Active'
+        };
+        remarksText = `Modified fine record for ${field1}`;
+      } else {
+        oldValSnapshot = { 'Record Status': 'None (New Fine)' };
+        newValSnapshot = {
+          'Penalty Amount': `KSh ${(Number(field3) || 500).toLocaleString()}`,
+          'Reason': field4 || 'Late payment + penalty',
+          'Status': field5 || 'Active'
+        };
+        remarksText = `Levied penalty against ${field1}`;
+      }
+    } else if (modalMode === 'Expenses' || modalMode === 'Add Expense') {
+      targetModule = 'Expenses';
+      targetMember = field5 || field1 || 'Vendor';
+      if (editingId) {
+        const prevE = expenses.find(e => e.id === editingId);
+        oldValSnapshot = {
+          'Expense Description': prevE?.description || '-',
+          'Amount': `KSh ${(prevE?.amount || 0).toLocaleString()}`,
+          'Category': prevE?.category || '-'
+        };
+        newValSnapshot = {
+          'Expense Description': field1,
+          'Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
+          'Category': field2
+        };
+        remarksText = `Updated operational expense voucher for ${targetMember}`;
+      } else {
+        oldValSnapshot = { 'Record Status': 'None (New Voucher)' };
+        newValSnapshot = {
+          'Expense Description': field1,
+          'Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
+          'Category': field2
+        };
+        remarksText = `Approved operational expense for ${targetMember}`;
+      }
+    } else {
+      targetMember = field1 || 'System Record';
+      oldValSnapshot = { 'Record Status': editingId ? 'Previous State' : 'None' };
+      newValSnapshot = { 'Title': field1 || modalMode, 'Status': 'Active' };
+      remarksText = `${actionType} ${modalMode} record`;
+    }
+
+    recordAuditLog({
+      user: currentUser?.fullName,
+      member: targetMember,
+      module: targetModule,
+      action: actionType,
+      oldValues: oldValSnapshot,
+      newValues: newValSnapshot,
+      remarks: remarksText
+    });
 
     setIsModalOpen(false);
   };
@@ -3602,34 +4066,417 @@ export default function Home() {
           )}
 
           {activeTab === 'Edit Log' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B]">
-                <h2 className="font-bold text-white text-base">System Audit & Changes Trail</h2>
+            <div className="space-y-4 font-sans text-slate-800">
+              {/* 1. Header Banner */}
+              <div className="bg-[#064E3B] border border-[#053f30] rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                  {/* Dreamloom Leaf Logo */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shadow-inner">
+                      <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                        <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/>
+                      </svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-extrabold text-white text-base tracking-wider leading-tight">DREAMLOOM</span>
+                      <span className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider leading-tight">HOLDING LIMITED</span>
+                      <span className="text-[9px] text-emerald-200/80 italic font-medium">where big dreamers meet</span>
+                    </div>
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div className="h-8 w-px bg-emerald-600/50 hidden sm:block"></div>
+
+                  {/* Title & Subtitle */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg border border-emerald-400/40 bg-emerald-800/40 flex items-center justify-center text-emerald-300 shadow-sm">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-bold text-white tracking-tight leading-tight">Edit Log</h1>
+                      <p className="text-xs text-emerald-200 font-medium">Track all changes made to the system</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Date Pill */}
+                <div className="self-start md:self-center">
+                  <div className="bg-[#033628] border border-emerald-700/60 px-3.5 py-1.5 rounded-lg flex items-center gap-2 text-white text-xs font-semibold shadow-inner">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Thursday, 30 Oct 2025</span>
+                  </div>
+                </div>
               </div>
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                  <tr>
-                    <th className="p-4">Log ID</th>
-                    <th className="p-4">Author</th>
-                    <th className="p-4">Action</th>
-                    <th className="p-4">Module</th>
-                    <th className="p-4">Description</th>
-                    <th className="p-4">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1E293B] font-mono">
-                  {editLogs.map(log => (
-                    <tr key={log.id} className="hover:bg-[#142036]">
-                      <td className="p-4 text-sky-400 font-bold">{log.id}</td>
-                      <td className="p-4 font-sans text-white font-medium">{log.user}</td>
-                      <td className="p-4 font-sans">{log.action}</td>
-                      <td className="p-4 font-sans text-emerald-400">{log.module}</td>
-                      <td className="p-4 font-sans text-slate-300">{log.details}</td>
-                      <td className="p-4 text-slate-400">{log.timestamp}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+              {/* 2. Filter Bar */}
+              <div className="bg-[#F8FAFC] border border-slate-200 rounded-xl p-4 shadow-sm">
+                <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+                  {/* From Date */}
+                  <div className="flex-1 min-w-[130px]">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">From Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="01/10/2025"
+                        value={filterFromDate}
+                        onChange={(e) => { setFilterFromDate(e.target.value); setEditLogPage(1); }}
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm"
+                      />
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* To Date */}
+                  <div className="flex-1 min-w-[130px]">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">To Date</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="30/10/2025"
+                        value={filterToDate}
+                        onChange={(e) => { setFilterToDate(e.target.value); setEditLogPage(1); }}
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm"
+                      />
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Page / Module */}
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Page / Module</label>
+                    <div className="relative">
+                      <select
+                        value={filterModule}
+                        onChange={(e) => { setFilterModule(e.target.value); setEditLogPage(1); }}
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm appearance-none pr-7"
+                      >
+                        {editLogModules.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Member */}
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Member</label>
+                    <div className="relative">
+                      <select
+                        value={filterMember}
+                        onChange={(e) => { setFilterMember(e.target.value); setEditLogPage(1); }}
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm appearance-none pr-7"
+                      >
+                        {editLogMemberList.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Filter Button */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditLogPage(1)}
+                      className="bg-[#064E3B] hover:bg-[#053d2e] text-white text-xs font-bold px-5 py-2 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Filter</span>
+                    </button>
+                    {(filterFromDate || filterToDate || filterModule !== 'All Pages' || filterMember !== 'All Members') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilterFromDate('');
+                          setFilterToDate('');
+                          setFilterModule('All Pages');
+                          setFilterMember('All Members');
+                          setEditLogPage(1);
+                        }}
+                        className="text-xs text-slate-500 hover:text-slate-800 underline font-medium px-2 py-1"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Edit History Table */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#064E3B] text-white font-bold uppercase text-[11px] tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 w-12 text-center">#</th>
+                        <th className="py-3 px-4">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Date & Time</span>
+                          </span>
+                        </th>
+                        <th className="py-3 px-4">
+                          <span className="flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>User</span>
+                          </span>
+                        </th>
+                        <th className="py-3 px-4">
+                          <span className="flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Page / Module</span>
+                          </span>
+                        </th>
+                        <th className="py-3 px-4">
+                          <span className="flex items-center gap-1.5">
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Action</span>
+                          </span>
+                        </th>
+                        <th className="py-3 px-4">
+                          <span className="flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Member</span>
+                          </span>
+                        </th>
+                        <th className="py-3 px-4 text-center w-24">View</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-sans">
+                      {paginatedEditLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                            No edit log records found matching your filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedEditLogs.map((log, index) => {
+                          const rowNum = (editLogPage - 1) * editLogPageSize + index + 1;
+                          const isSelected = activeSelectedLog?.id === log.id;
+                          return (
+                            <tr
+                              key={log.id}
+                              className={`transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="py-3 px-4 text-center font-bold text-slate-700">{rowNum}</td>
+                              <td className="py-3 px-4 font-medium text-slate-800">{log.timestamp}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px]">
+                                    👤
+                                  </div>
+                                  <span>{log.user}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-800">{log.module}</td>
+                              <td className="py-3 px-4">
+                                {log.action === 'Added' && (
+                                  <span className="inline-block bg-[#10B981] text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                                    Added
+                                  </span>
+                                )}
+                                {log.action === 'Updated' && (
+                                  <span className="inline-block bg-[#3B82F6] text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                                    Updated
+                                  </span>
+                                )}
+                                {log.action === 'Deleted' && (
+                                  <span className="inline-block bg-[#EF4444] text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                                    Deleted
+                                  </span>
+                                )}
+                                {log.action !== 'Added' && log.action !== 'Updated' && log.action !== 'Deleted' && (
+                                  <span className="inline-block bg-slate-500 text-white text-[11px] font-bold px-3 py-0.5 rounded-full shadow-sm">
+                                    {log.action}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900">{log.member}</td>
+                              <td className="py-3 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEditLog(log)}
+                                  className="bg-[#064E3B] hover:bg-[#053d2e] text-white text-xs px-3.5 py-1 rounded-full font-medium inline-flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 4. Change Details Section */}
+              {activeSelectedLog && (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-[#064E3B] text-white px-4 py-2.5 flex items-center gap-2 font-bold text-xs tracking-wide">
+                    <div className="w-4 h-4 rounded-full bg-white text-[#064E3B] flex items-center justify-center font-bold text-[10px]">
+                      i
+                    </div>
+                    <span>Change Details</span>
+                  </div>
+
+                  <div className="p-4 sm:p-5 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                      {/* Left Metadata Column */}
+                      <div className="md:col-span-4 space-y-2.5 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="text-slate-500 font-medium">Date & Time</span>
+                          <span className="font-bold text-slate-900 ml-auto">{activeSelectedLog.timestamp}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="text-slate-500 font-medium">User</span>
+                          <span className="font-bold text-slate-900 ml-auto">{activeSelectedLog.user}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="text-slate-500 font-medium">Page / Module</span>
+                          <span className="font-bold text-slate-900 ml-auto">{activeSelectedLog.module}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="text-slate-500 font-medium">Action</span>
+                          <span className="ml-auto">
+                            {activeSelectedLog.action === 'Added' && (
+                              <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Added</span>
+                            )}
+                            {activeSelectedLog.action === 'Updated' && (
+                              <span className="bg-blue-100 text-blue-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Updated</span>
+                            )}
+                            {activeSelectedLog.action === 'Deleted' && (
+                              <span className="bg-red-100 text-red-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full">Deleted</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5 text-slate-500" />
+                          <span className="text-slate-500 font-medium">Member</span>
+                          <span className="font-bold text-slate-900 ml-auto">{activeSelectedLog.member}</span>
+                        </div>
+                      </div>
+
+                      {/* Right Comparison: OLD VALUE vs NEW VALUE */}
+                      <div className="md:col-span-8 flex flex-col sm:flex-row items-center gap-3">
+                        {/* OLD VALUE Box */}
+                        <div className="w-full sm:flex-1 rounded-xl overflow-hidden border border-red-200 shadow-sm bg-white">
+                          <div className="bg-gradient-to-r from-[#DC2626] to-[#EF4444] text-white px-3.5 py-1.5 flex items-center gap-1.5 font-bold text-xs">
+                            <span className="w-3.5 h-3.5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">✖</span>
+                            <span>Old Value</span>
+                          </div>
+                          <div className="p-3.5 bg-[#FEF2F2]/60 space-y-2 text-xs min-h-[90px]">
+                            {activeSelectedLog.oldValues && Object.keys(activeSelectedLog.oldValues).length > 0 ? (
+                              Object.entries(activeSelectedLog.oldValues).map(([k, v]) => (
+                                <div key={k} className="flex justify-between items-center gap-2">
+                                  <span className="text-slate-600 font-medium">{k}:</span>
+                                  {k.toLowerCase().includes('status') ? (
+                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
+                                  ) : (
+                                    <span className="font-bold text-slate-900">{String(v)}</span>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-slate-400 italic">No prior value recorded</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bold Emerald Arrow */}
+                        <div className="text-emerald-600 text-2xl font-black px-1 select-none hidden sm:block">
+                          »
+                        </div>
+
+                        {/* NEW VALUE Box */}
+                        <div className="w-full sm:flex-1 rounded-xl overflow-hidden border border-emerald-200 shadow-sm bg-white">
+                          <div className="bg-gradient-to-r from-[#059669] to-[#10B981] text-white px-3.5 py-1.5 flex items-center gap-1.5 font-bold text-xs">
+                            <span className="w-3.5 h-3.5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">✔</span>
+                            <span>New Value</span>
+                          </div>
+                          <div className="p-3.5 bg-[#ECFDF5]/60 space-y-2 text-xs min-h-[90px]">
+                            {activeSelectedLog.newValues && Object.keys(activeSelectedLog.newValues).length > 0 ? (
+                              Object.entries(activeSelectedLog.newValues).map(([k, v]) => (
+                                <div key={k} className="flex justify-between items-center gap-2">
+                                  <span className="text-slate-600 font-medium">{k}:</span>
+                                  {k.toLowerCase().includes('status') ? (
+                                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
+                                  ) : (
+                                    <span className="font-bold text-slate-900">{String(v)}</span>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-slate-400 italic">No new value recorded</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Remarks Banner */}
+                    <div className="bg-[#EEF2FF] border border-[#C7D2FE] p-3 rounded-lg flex items-center gap-2.5 text-xs text-slate-800 font-medium">
+                      <FileText className="w-4 h-4 text-[#1E3A8A] flex-shrink-0" />
+                      <div>
+                        <span className="font-bold text-[#1E3A8A] mr-1.5">Remarks:</span>
+                        <span className="text-slate-700">{activeSelectedLog.remarks || "Increased loan amount to support member's project."}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Pagination Bar */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 px-1 py-1">
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                  <BarChart3 className="w-4 h-4 text-emerald-600" />
+                  <span>Total Records: <strong className="text-slate-900 font-bold">{filteredEditLogs.length}</strong></span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={editLogPage <= 1}
+                    onClick={() => setEditLogPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition-colors shadow-sm"
+                  >
+                    ‹ Previous
+                  </button>
+                  {Array.from({ length: totalEditLogPages }).map((_, idx) => {
+                    const pageNum = idx + 1;
+                    const isCurrent = pageNum === editLogPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setEditLogPage(pageNum)}
+                        className={`w-7 h-7 text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center justify-center ${
+                          isCurrent
+                            ? 'bg-[#064E3B] text-white'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    disabled={editLogPage >= totalEditLogPages}
+                    onClick={() => setEditLogPage(p => Math.min(totalEditLogPages, p + 1))}
+                    className="px-3 py-1 bg-white border border-slate-200 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition-colors shadow-sm"
+                  >
+                    Next ›
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </main>
