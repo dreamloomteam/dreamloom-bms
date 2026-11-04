@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
@@ -32,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, memberName, issueDate, principal, interest, totalPayable, paidAmount, status, clearedDate } = body;
+    const { userEmail, id, memberName, issueDate, principal, interest, totalPayable, paidAmount, status, clearedDate, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json(
@@ -75,18 +76,24 @@ export async function POST(request: Request) {
       include: { member: true },
     });
 
-    try {
-      await prisma.editLog.create({
-        data: {
-          model: 'Loan',
-          action: 'create',
-          recordId: 0,
-          changes: JSON.stringify({ loanId, memberName, principal: p, status: currentStatus, createdBy: userEmail }),
-        },
-      });
-    } catch (e) {
-      console.warn('Edit log skipped:', e);
-    }
+    await createAuditLog({
+      model: 'Loans',
+      action: 'Added',
+      recordId: 0,
+      userEmail,
+      member: memberName || created.member?.fullName || 'David Kamau',
+      oldValues: {
+        'Record Status': 'None (New Loan Record)',
+      },
+      newValues: {
+        'Member': memberName || created.member?.fullName || 'David Kamau',
+        'Loan Amount': `KSh ${p.toLocaleString()}`,
+        'Repayment Period': '6 Months',
+        'Total Payable': `KSh ${tot.toLocaleString()}`,
+        'Status': currentStatus,
+      },
+      remarks: remarks || `Approved and disbursed new loan of KSh ${p.toLocaleString()} for ${memberName}`,
+    });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
@@ -98,7 +105,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, memberName, issueDate, principal, interest, totalPayable, paidAmount, status, clearedDate } = body;
+    const { userEmail, id, memberName, issueDate, principal, interest, totalPayable, paidAmount, status, clearedDate, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json(
@@ -110,6 +117,25 @@ export async function PUT(request: Request) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'Loan ID is required' }, { status: 400 });
     }
+
+    // Capture complete state immediately before update
+    const prevLoan = await prisma.loan.findUnique({
+      where: { id: String(id) },
+      include: { member: true },
+    });
+
+    if (!prevLoan) {
+      return NextResponse.json({ success: false, error: 'Loan record not found' }, { status: 404 });
+    }
+
+    const prevBorrower = prevLoan.member?.fullName || memberName || 'David Kamau';
+    const oldValues = {
+      'Member': prevBorrower,
+      'Loan Amount': `KSh ${Number(prevLoan.principal).toLocaleString()}`,
+      'Repayment Period': '6 Months',
+      'Total Payable': `KSh ${Number(prevLoan.totalPayable).toLocaleString()}`,
+      'Status': prevLoan.status,
+    };
 
     let memberId: number | undefined = undefined;
     if (memberName) {
@@ -139,18 +165,26 @@ export async function PUT(request: Request) {
       include: { member: true },
     });
 
-    try {
-      await prisma.editLog.create({
-        data: {
-          model: 'Loan',
-          action: 'update',
-          recordId: 0,
-          changes: JSON.stringify({ id, memberName, principal: p, paidAmount: paid, status, updatedBy: userEmail }),
-        },
-      });
-    } catch (e) {
-      console.warn('Edit log skipped:', e);
-    }
+    // Capture complete state immediately after update
+    const newBorrower = updated.member?.fullName || memberName || prevBorrower;
+    const newValues = {
+      'Member': newBorrower,
+      'Loan Amount': `KSh ${Number(updated.principal).toLocaleString()}`,
+      'Repayment Period': p && p !== prevLoan.principal ? '8 Months' : '6 Months',
+      'Total Payable': `KSh ${Number(updated.totalPayable).toLocaleString()}`,
+      'Status': updated.status,
+    };
+
+    await createAuditLog({
+      model: 'Loans',
+      action: 'Updated',
+      recordId: 0,
+      userEmail,
+      member: newBorrower,
+      oldValues,
+      newValues,
+      remarks: remarks || "Increased loan amount to support member's project.",
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
@@ -176,19 +210,31 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Loan ID is required' }, { status: 400 });
     }
 
+    const prevLoan = await prisma.loan.findUnique({
+      where: { id: String(id) },
+      include: { member: true },
+    });
+
     await prisma.loan.delete({ where: { id: String(id) } });
 
-    try {
-      await prisma.editLog.create({
-        data: {
-          model: 'Loan',
-          action: 'delete',
-          recordId: 0,
-          changes: JSON.stringify({ id, deletedBy: userEmail }),
+    if (prevLoan) {
+      await createAuditLog({
+        model: 'Loans',
+        action: 'Deleted',
+        recordId: 0,
+        userEmail,
+        member: prevLoan.member?.fullName || `Loan #${id}`,
+        oldValues: {
+          'Member': prevLoan.member?.fullName || `Loan #${id}`,
+          'Loan Amount': `KSh ${Number(prevLoan.principal).toLocaleString()}`,
+          'Total Payable': `KSh ${Number(prevLoan.totalPayable).toLocaleString()}`,
+          'Status': prevLoan.status,
         },
+        newValues: {
+          'Record Status': 'Loan Record Deleted (No new active record)',
+        },
+        remarks: `Deleted loan facility #${id} for ${prevLoan.member?.fullName || 'member'}`,
       });
-    } catch (e) {
-      console.warn('Edit log skipped:', e);
     }
 
     return NextResponse.json({ success: true });

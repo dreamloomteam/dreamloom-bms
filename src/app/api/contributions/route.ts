@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
-// Helper to check editor permissions: Simon Memia or Elijah Waitara
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
   const clean = email.toLowerCase().trim();
@@ -34,7 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, customId, memberName, month, amount, unsettled, payout, notes } = body;
+    const { userEmail, customId, memberName, month, amount, unsettled, payout, notes, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json(
@@ -43,7 +43,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Lookup member if provided
     let memberId: number | null = null;
     if (memberName) {
       const member = await prisma.member.findFirst({
@@ -62,21 +61,27 @@ export async function POST(request: Request) {
         remarks: notes || (memberName ? `Member: ${memberName}` : null),
         memberId: memberId,
       },
+      include: { member: true },
     });
 
-    // Record audit edit log
-    try {
-      await prisma.editLog.create({
-        data: {
-          model: 'Contribution',
-          action: 'create',
-          recordId: contribution.id,
-          changes: JSON.stringify({ customId, memberName, month, amount, unsettled, payout, notes, createdBy: userEmail }),
-        },
-      });
-    } catch (logErr) {
-      console.warn('Edit log creation skipped:', logErr);
-    }
+    await createAuditLog({
+      model: 'Contributions',
+      action: 'Added',
+      recordId: contribution.id,
+      userEmail,
+      member: memberName || contribution.member?.fullName || 'Mary Wanjiru',
+      oldValues: {
+        'Record Status': 'None (New Contribution Entry)',
+      },
+      newValues: {
+        'Member': memberName || contribution.member?.fullName || 'Mary Wanjiru',
+        'Contribution Amount': `KSh ${Number(amount || 0).toLocaleString()}`,
+        'Unsettled Dues': `KSh ${Number(unsettled || 0).toLocaleString()}`,
+        'Month / Period': month || '01-Oct-2026',
+        'Status': Number(amount || 0) > 0 ? 'Paid' : 'Pending',
+      },
+      remarks: remarks || `Recorded new monthly contribution of KSh ${Number(amount || 0).toLocaleString()} for ${memberName || 'member'}`,
+    });
 
     return NextResponse.json({ success: true, data: contribution }, { status: 201 });
   } catch (error) {
@@ -88,7 +93,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, customId, memberName, month, amount, unsettled, payout, notes } = body;
+    const { userEmail, id, customId, memberName, month, amount, unsettled, payout, notes, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json(
@@ -101,7 +106,25 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: 'Record ID or customId is required for update.' }, { status: 400 });
     }
 
-    // Lookup member if provided
+    // Capture complete state immediately before update
+    const prevContribution = await prisma.contribution.findFirst({
+      where: id ? { id: Number(id) } : { customId: String(customId) },
+      include: { member: true },
+    });
+
+    if (!prevContribution) {
+      return NextResponse.json({ success: false, error: 'Contribution record not found' }, { status: 404 });
+    }
+
+    const prevMember = prevContribution.member?.fullName || memberName || 'Mary Wanjiru';
+    const oldValues = {
+      'Member': prevMember,
+      'Contribution Amount': `KSh ${Number(prevContribution.amount).toLocaleString()}`,
+      'Unsettled Dues': `KSh ${Number(prevContribution.unsettled).toLocaleString()}`,
+      'Month / Period': prevContribution.monthYear,
+      'Status': Number(prevContribution.amount) > 0 ? 'Paid' : 'Pending',
+    };
+
     let memberId: number | undefined = undefined;
     if (memberName) {
       const member = await prisma.member.findFirst({
@@ -110,9 +133,9 @@ export async function PUT(request: Request) {
       if (member) memberId = member.id;
     }
 
-    const updated = await prisma.contribution.upsert({
-      where: id ? { id: Number(id) } : { customId: String(customId) },
-      update: {
+    const updated = await prisma.contribution.update({
+      where: { id: prevContribution.id },
+      data: {
         ...(month !== undefined && { monthYear: month }),
         ...(amount !== undefined && { amount: Number(amount) }),
         ...(unsettled !== undefined && { unsettled: Number(unsettled) }),
@@ -120,30 +143,29 @@ export async function PUT(request: Request) {
         ...(notes !== undefined && { remarks: notes }),
         ...(memberId !== undefined && { memberId }),
       },
-      create: {
-        customId: customId || (id ? `CNT-${id}` : `CNT-${Date.now()}`),
-        monthYear: month || '01-Oct-2026',
-        amount: Number(amount) || 0,
-        unsettled: Number(unsettled) || 0,
-        payout: Number(payout) || 0,
-        remarks: notes || (memberName ? `Member: ${memberName}` : null),
-        memberId: memberId || null,
-      },
+      include: { member: true },
     });
 
-    // Record audit edit log
-    try {
-      await prisma.editLog.create({
-        data: {
-          model: 'Contribution',
-          action: 'update',
-          recordId: updated.id,
-          changes: JSON.stringify({ id, customId, memberName, month, amount, unsettled, payout, notes, updatedBy: userEmail }),
-        },
-      });
-    } catch (logErr) {
-      console.warn('Edit log update skipped:', logErr);
-    }
+    // Capture complete state immediately after update
+    const newMember = updated.member?.fullName || memberName || prevMember;
+    const newValues = {
+      'Member': newMember,
+      'Contribution Amount': `KSh ${Number(updated.amount).toLocaleString()}`,
+      'Unsettled Dues': `KSh ${Number(updated.unsettled).toLocaleString()}`,
+      'Month / Period': updated.monthYear,
+      'Status': Number(updated.amount) > 0 ? 'Paid' : 'Pending',
+    };
+
+    await createAuditLog({
+      model: 'Contributions',
+      action: 'Updated',
+      recordId: updated.id,
+      userEmail,
+      member: newMember,
+      oldValues,
+      newValues,
+      remarks: remarks || `Monthly contribution received and updated for ${newMember}.`,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
@@ -170,10 +192,35 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'ID or customId required' }, { status: 400 });
     }
 
+    const prevContribution = await prisma.contribution.findFirst({
+      where: id ? { id: Number(id) } : { customId: String(customId) },
+      include: { member: true },
+    });
+
     if (id) {
       await prisma.contribution.delete({ where: { id: Number(id) } });
     } else if (customId) {
       await prisma.contribution.delete({ where: { customId } });
+    }
+
+    if (prevContribution) {
+      await createAuditLog({
+        model: 'Contributions',
+        action: 'Deleted',
+        recordId: prevContribution.id,
+        userEmail,
+        member: prevContribution.member?.fullName || `Contribution #${customId || id}`,
+        oldValues: {
+          'Member': prevContribution.member?.fullName || `Contribution #${customId || id}`,
+          'Contribution Amount': `KSh ${Number(prevContribution.amount).toLocaleString()}`,
+          'Unsettled Dues': `KSh ${Number(prevContribution.unsettled).toLocaleString()}`,
+          'Month / Period': prevContribution.monthYear,
+        },
+        newValues: {
+          'Record Status': 'Contribution Record Deleted (No new active record)',
+        },
+        remarks: `Deleted contribution record #${customId || id} for ${prevContribution.member?.fullName || 'member'}`,
+      });
     }
 
     return NextResponse.json({ success: true });

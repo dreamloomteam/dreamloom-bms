@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 export async function GET() {
   try {
@@ -27,31 +28,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { model, action, recordId, changes, userEmail, userName, member, oldValues, newValues, remarks } = body;
 
-    let userId: number | null = null;
-    if (userEmail) {
-      const user = await prisma.user.findFirst({
-        where: { username: { equals: userEmail, mode: 'insensitive' } },
-      });
-      if (user) userId = user.id;
-    }
-
     const payload = typeof changes === 'string' ? JSON.parse(changes) : (changes || {});
-    if (userName && !payload.user) payload.user = userName;
-    if (userEmail && !payload.userEmail) payload.userEmail = userEmail;
-    if (member && !payload.member) payload.member = member;
-    if (oldValues && !payload.oldValues) payload.oldValues = oldValues;
-    if (newValues && !payload.newValues) payload.newValues = newValues;
-    if (remarks && !payload.remarks) payload.remarks = remarks;
+    const effOld = oldValues || payload.oldValues || {};
+    const effNew = newValues || payload.newValues || {};
+    const effMember = member || payload.member || 'Mary Wanjiru';
+    const effRemarks = remarks || payload.remarks || undefined;
 
-    const log = await prisma.editLog.create({
-      data: {
-        userId,
-        model: model || 'System',
-        action: action || 'Updated',
-        recordId: recordId ? Number(recordId) : null,
-        changes: JSON.stringify(payload),
-      },
-      include: { user: true },
+    const log = await createAuditLog({
+      model: model || payload.module || 'Contributions',
+      action: action || payload.action || 'Updated',
+      recordId: recordId ? Number(recordId) : null,
+      userEmail: userEmail || payload.userEmail,
+      userName: userName || payload.user,
+      member: effMember,
+      oldValues: effOld,
+      newValues: effNew,
+      remarks: effRemarks,
     });
 
     return NextResponse.json({ success: true, data: log }, { status: 201 });

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { initialMembers, initialLoans, initialContributions, initialExpenses, initialFines } from '@/lib/initialData';
 import {
-  LayoutDashboard, Users, Wallet, AlertTriangle,
+  LayoutDashboard, Users, Wallet, AlertTriangle, AlertCircle,
   TrendingUp, Briefcase, Truck, Boxes, Building,
   BarChart3, Settings, Shield, LogIn, LogOut,
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
@@ -11,6 +11,7 @@ import {
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2
 } from 'lucide-react';
+import MemberAutocomplete from '@/components/MemberAutocomplete';
 
 export default function Home() {
   // 1. Authorized Member Credentials & Contact Register (Exact Requested PINs)
@@ -235,6 +236,20 @@ export default function Home() {
                 }
               }
 
+              // Compute changed fields if not explicitly stored
+              let changedFields = p.changedFields;
+              if ((!changedFields || Object.keys(changedFields).length === 0) && act === 'Updated' && oldValues && newValues) {
+                changedFields = {};
+                const allKeys = Array.from(new Set([...Object.keys(oldValues), ...Object.keys(newValues)]));
+                for (const k of allKeys) {
+                  const ov = oldValues[k] !== undefined ? String(oldValues[k]).trim() : '';
+                  const nv = newValues[k] !== undefined ? String(newValues[k]).trim() : '';
+                  if (ov && nv && ov !== nv) {
+                    changedFields[k] = { from: oldValues[k], to: newValues[k] };
+                  }
+                }
+              }
+
               const remarks = p.remarks || p.notes || `${act} ${moduleName} record for ${member}`;
 
               return {
@@ -248,6 +263,7 @@ export default function Home() {
                 member,
                 oldValues: oldValues || { 'Status': 'Active' },
                 newValues: newValues || { 'Status': 'Updated' },
+                changedFields: changedFields || {},
                 remarks
               };
             });
@@ -624,102 +640,7 @@ export default function Home() {
   const [editLogPage, setEditLogPage] = useState<number>(1);
   const editLogPageSize = 5;
 
-  const [editLogs, setEditLogs] = useState<any[]>([
-    {
-      id: 'LOG-001',
-      timestamp: '30/10/2025 14:45',
-      rawDate: '2025-10-30',
-      user: 'Simon Memia',
-      module: 'Contributions',
-      action: 'Updated',
-      member: 'Mary Wanjiru',
-      oldValues: {
-        'Contribution Amount': 'KSh 0',
-        'Unsettled Dues': 'KSh 6,000',
-        'Status': 'Pending'
-      },
-      newValues: {
-        'Contribution Amount': 'KSh 6,000',
-        'Unsettled Dues': 'KSh 0',
-        'Status': 'Paid'
-      },
-      remarks: 'Monthly contribution received and updated.'
-    },
-    {
-      id: 'LOG-002',
-      timestamp: '30/10/2025 13:20',
-      rawDate: '2025-10-30',
-      user: 'Michael Okello',
-      module: 'Loans',
-      action: 'Updated',
-      member: 'David Kamau',
-      oldValues: {
-        'Loan Amount': 'KSh 15,000',
-        'Repayment Period': '6 Months',
-        'Status': 'Active'
-      },
-      newValues: {
-        'Loan Amount': 'KSh 20,000',
-        'Repayment Period': '8 Months',
-        'Status': 'Active'
-      },
-      remarks: "Increased loan amount to support member's project."
-    },
-    {
-      id: 'LOG-003',
-      timestamp: '30/10/2025 12:10',
-      rawDate: '2025-10-30',
-      user: 'Simon Memia',
-      module: 'Members',
-      action: 'Added',
-      member: 'Jane Achieng',
-      oldValues: {
-        'Record Status': 'None (New Member Entry)'
-      },
-      newValues: {
-        'Member Name': 'Jane Achieng',
-        'Corporate Role': 'Member',
-        'Status': 'Active'
-      },
-      remarks: 'New authorized member registration completed.'
-    },
-    {
-      id: 'LOG-004',
-      timestamp: '29/10/2025 17:30',
-      rawDate: '2025-10-29',
-      user: 'Beatrice Njeri',
-      module: 'Fines & Penalties',
-      action: 'Deleted',
-      member: 'Daniel Kamau',
-      oldValues: {
-        'Penalty Amount': 'KSh 500',
-        'Reason': 'Late submission query',
-        'Status': 'Pending Review'
-      },
-      newValues: {
-        'Record Status': 'Penalty Record Deleted'
-      },
-      remarks: 'Incorrectly levied penalty removed after review.'
-    },
-    {
-      id: 'LOG-005',
-      timestamp: '29/10/2025 16:50',
-      rawDate: '2025-10-29',
-      user: 'David Kamau',
-      module: 'Contributions',
-      action: 'Updated',
-      member: 'Samuel Mwangi',
-      oldValues: {
-        'Contribution Amount': 'KSh 4,000',
-        'Unsettled Dues': 'KSh 2,000'
-      },
-      newValues: {
-        'Contribution Amount': 'KSh 6,000',
-        'Unsettled Dues': 'KSh 0'
-      },
-      remarks: 'Cleared remaining monthly balance.'
-    }
-  ]);
+  const [editLogs, setEditLogs] = useState<any[]>([]);
 
   // Automated Audit Log Recording Helper
   const recordAuditLog = async ({
@@ -749,6 +670,18 @@ export default function Home() {
     const minutes = String(createdDate.getMinutes()).padStart(2, '0');
     const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
 
+    const changedFields: Record<string, { from: any; to: any }> = {};
+    if (action === 'Updated') {
+      const allKeys = Array.from(new Set([...Object.keys(oldValues || {}), ...Object.keys(newValues || {})]));
+      for (const k of allKeys) {
+        const vOld = oldValues?.[k] !== undefined ? String(oldValues[k]).trim() : '';
+        const vNew = newValues?.[k] !== undefined ? String(newValues[k]).trim() : '';
+        if (vOld && vNew && vOld !== vNew) {
+          changedFields[k] = { from: oldValues[k], to: newValues[k] };
+        }
+      }
+    }
+
     const newEntry = {
       id: `LOG-${Date.now().toString().slice(-4)}`,
       timestamp: formattedTimestamp,
@@ -759,6 +692,7 @@ export default function Home() {
       member,
       oldValues,
       newValues,
+      changedFields,
       remarks: remarks || `${action} ${module} record for ${member}`
     };
 
@@ -781,6 +715,7 @@ export default function Home() {
           member,
           oldValues,
           newValues,
+          changedFields,
           remarks: newEntry.remarks
         })
       });
@@ -843,6 +778,31 @@ export default function Home() {
     }
     return paginatedEditLogs[0] || editLogs[0] || null;
   }, [selectedEditLog, editLogs, paginatedEditLogs]);
+
+  const changedFieldsList = useMemo(() => {
+    if (!activeSelectedLog) return [];
+    if (activeSelectedLog.action !== 'Updated') return [];
+    const cf = activeSelectedLog.changedFields;
+    if (cf && typeof cf === 'object' && Object.keys(cf).length > 0) {
+      return Object.entries(cf).map(([field, obj]: [string, any]) => ({
+        field,
+        from: typeof obj === 'object' && obj !== null && 'from' in obj ? obj.from : '-',
+        to: typeof obj === 'object' && obj !== null && 'to' in obj ? obj.to : obj,
+      }));
+    }
+    const ov = activeSelectedLog.oldValues || {};
+    const nv = activeSelectedLog.newValues || {};
+    const list: { field: string; from: any; to: any }[] = [];
+    const allKeys = Array.from(new Set([...Object.keys(ov), ...Object.keys(nv)]));
+    for (const k of allKeys) {
+      const vOld = ov[k] !== undefined ? String(ov[k]).trim() : '';
+      const vNew = nv[k] !== undefined ? String(nv[k]).trim() : '';
+      if (vOld && vNew && vOld !== vNew) {
+        list.push({ field: k, from: ov[k], to: nv[k] });
+      }
+    }
+    return list;
+  }, [activeSelectedLog]);
 
   // =========================================================================
   // AUTOMATED & REACTIVE FINANCIAL CALCULATIONS
@@ -3245,14 +3205,12 @@ export default function Home() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="relative flex-1 md:w-56">
-                          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
-                          <input
-                            type="text"
-                            placeholder="Search Member..."
+                        <div className="relative flex-1 md:w-64">
+                          <MemberAutocomplete
                             value={contributionSearchMember}
-                            onChange={(e) => setContributionSearchMember(e.target.value)}
-                            className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                            onChange={(val) => setContributionSearchMember(val)}
+                            members={members}
+                            placeholder="Search member name or ID..."
                           />
                         </div>
 
@@ -4258,7 +4216,8 @@ export default function Home() {
                           return (
                             <tr
                               key={log.id}
-                              className={`transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : 'hover:bg-slate-50'}`}
+                              onClick={() => setSelectedEditLog(log)}
+                              className={`cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : 'hover:bg-slate-50'}`}
                             >
                               <td className="py-3 px-4 text-center font-bold text-slate-700">{rowNum}</td>
                               <td className="py-3 px-4 font-medium text-slate-800">{log.timestamp}</td>
@@ -4297,7 +4256,10 @@ export default function Home() {
                               <td className="py-3 px-4 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedEditLog(log)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedEditLog(log);
+                                  }}
                                   className="bg-[#064E3B] hover:bg-[#053d2e] text-white text-xs px-3.5 py-1 rounded-full font-medium inline-flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -4374,18 +4336,26 @@ export default function Home() {
                           </div>
                           <div className="p-3.5 bg-[#FEF2F2]/60 space-y-2 text-xs min-h-[90px]">
                             {activeSelectedLog.oldValues && Object.keys(activeSelectedLog.oldValues).length > 0 ? (
-                              Object.entries(activeSelectedLog.oldValues).map(([k, v]) => (
-                                <div key={k} className="flex justify-between items-center gap-2">
-                                  <span className="text-slate-600 font-medium">{k}:</span>
-                                  {k.toLowerCase().includes('status') ? (
-                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
-                                  ) : (
-                                    <span className="font-bold text-slate-900">{String(v)}</span>
-                                  )}
-                                </div>
-                              ))
+                              Object.entries(activeSelectedLog.oldValues).map(([k, v]) => {
+                                const isFieldChanged = changedFieldsList.some((c: any) => c.field === k);
+                                return (
+                                  <div
+                                    key={k}
+                                    className={`flex justify-between items-center gap-2 p-1 rounded transition-colors ${
+                                      isFieldChanged ? 'bg-red-100/70 border border-red-200/80 font-bold' : ''
+                                    }`}
+                                  >
+                                    <span className="text-slate-600 font-medium">{k}:</span>
+                                    {k.toLowerCase().includes('status') ? (
+                                      <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
+                                    ) : (
+                                      <span className={`font-bold ${isFieldChanged ? 'text-red-700' : 'text-slate-900'}`}>{String(v)}</span>
+                                    )}
+                                  </div>
+                                );
+                              })
                             ) : (
-                              <p className="text-slate-400 italic">No prior value recorded</p>
+                              <p className="text-slate-400 italic">No prior value recorded (New Record)</p>
                             )}
                           </div>
                         </div>
@@ -4403,30 +4373,60 @@ export default function Home() {
                           </div>
                           <div className="p-3.5 bg-[#ECFDF5]/60 space-y-2 text-xs min-h-[90px]">
                             {activeSelectedLog.newValues && Object.keys(activeSelectedLog.newValues).length > 0 ? (
-                              Object.entries(activeSelectedLog.newValues).map(([k, v]) => (
-                                <div key={k} className="flex justify-between items-center gap-2">
-                                  <span className="text-slate-600 font-medium">{k}:</span>
-                                  {k.toLowerCase().includes('status') ? (
-                                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
-                                  ) : (
-                                    <span className="font-bold text-slate-900">{String(v)}</span>
-                                  )}
-                                </div>
-                              ))
+                              Object.entries(activeSelectedLog.newValues).map(([k, v]) => {
+                                const isFieldChanged = changedFieldsList.some((c: any) => c.field === k);
+                                return (
+                                  <div
+                                    key={k}
+                                    className={`flex justify-between items-center gap-2 p-1 rounded transition-colors ${
+                                      isFieldChanged ? 'bg-emerald-100/70 border border-emerald-200/80 font-bold' : ''
+                                    }`}
+                                  >
+                                    <span className="text-slate-600 font-medium">{k}:</span>
+                                    {k.toLowerCase().includes('status') ? (
+                                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">{String(v)}</span>
+                                    ) : (
+                                      <span className={`font-bold ${isFieldChanged ? 'text-emerald-800' : 'text-slate-900'}`}>{String(v)}</span>
+                                    )}
+                                  </div>
+                                );
+                              })
                             ) : (
-                              <p className="text-slate-400 italic">No new value recorded</p>
+                              <p className="text-slate-400 italic">No new active value (Record Deleted)</p>
                             )}
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* CHANGED FIELDS Section - Only lists fields that actually changed! */}
+                    {activeSelectedLog.action === 'Updated' && changedFieldsList.length > 0 && (
+                      <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 space-y-1.5 shadow-xs">
+                        <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                          <span>CHANGED FIELDS ({changedFieldsList.length}):</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                          {changedFieldsList.map(({ field, from, to }: any) => (
+                            <div key={field} className="flex items-center justify-between gap-2 bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-xs">
+                              <span className="font-semibold text-slate-700">{field}:</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-red-600 line-through font-mono">{String(from)}</span>
+                                <span className="text-emerald-700 font-bold">→</span>
+                                <span className="text-emerald-700 font-mono font-bold">{String(to)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Remarks Banner */}
                     <div className="bg-[#EEF2FF] border border-[#C7D2FE] p-3 rounded-lg flex items-center gap-2.5 text-xs text-slate-800 font-medium">
                       <FileText className="w-4 h-4 text-[#1E3A8A] flex-shrink-0" />
                       <div>
                         <span className="font-bold text-[#1E3A8A] mr-1.5">Remarks:</span>
-                        <span className="text-slate-700">{activeSelectedLog.remarks || "Increased loan amount to support member's project."}</span>
+                        <span className="text-slate-700">{activeSelectedLog.remarks || "Audit log entry recorded and verified."}</span>
                       </div>
                     </div>
                   </div>
@@ -4509,13 +4509,35 @@ export default function Home() {
                    modalMode.includes('Investment') ? 'Asset Name' :
                    modalMode.includes('Project') ? 'Project Title' : 'Name / Title'}
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={field1}
-                  onChange={(e) => setField1(e.target.value)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                {(modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Member')) ? (
+                  <MemberAutocomplete
+                    value={field1}
+                    required
+                    members={members}
+                    placeholder={
+                      modalMode.includes('Loan') ? 'Search borrower name or ID (e.g. David, 002)...' :
+                      modalMode.includes('Fines') ? 'Search member name or ID (e.g. Daniel, 006)...' :
+                      'Type member name or ID...'
+                    }
+                    onChange={(val, mem) => {
+                      setField1(val);
+                      if (mem && modalMode.includes('Member')) {
+                        if (mem.nationalId) setField2(mem.nationalId);
+                        if (mem.phone) setField3(mem.phone);
+                        if (mem.role) setField4(mem.role);
+                        if (mem.email) setField5(mem.email);
+                      }
+                    }}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={field1}
+                    onChange={(e) => setField1(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               {/* Field 2 */}
@@ -4529,13 +4551,26 @@ export default function Home() {
                    modalMode.includes('Investment') ? 'Investment Type' :
                    modalMode.includes('Project') ? 'Project Manager / Lead' : 'Category'}
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={field2}
-                  onChange={(e) => setField2(e.target.value)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                {(modalMode.includes('Contribution') || modalMode.includes('Project')) ? (
+                  <MemberAutocomplete
+                    value={field2}
+                    required
+                    members={members}
+                    placeholder={
+                      modalMode.includes('Contribution') ? 'Search contributing member or ID (e.g. Simon, 001)...' :
+                      'Search project manager name or ID...'
+                    }
+                    onChange={(val) => setField2(val)}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={field2}
+                    onChange={(e) => setField2(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               {/* Field 3 */}
@@ -4586,12 +4621,21 @@ export default function Home() {
                      modalMode.includes('Fines') ? 'Payment Status (Active / Paid)' :
                      modalMode.includes('Expense') ? 'Paid To / Reference' : 'Status'}
                   </label>
-                  <input
-                    type="text"
-                    value={field5}
-                    onChange={(e) => setField5(e.target.value)}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+                  {modalMode.includes('Expense') ? (
+                    <MemberAutocomplete
+                      value={field5}
+                      members={members}
+                      placeholder="Search member or enter vendor name (e.g. David, 002)..."
+                      onChange={(val) => setField5(val)}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={field5}
+                      onChange={(e) => setField5(e.target.value)}
+                      className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
                 </div>
               )}
 

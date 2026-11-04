@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createAuditLog } from '@/lib/audit';
 
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
@@ -32,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, memberName, dateLevied, penaltyAmount, paidAmount, reason, status } = body;
+    const { userEmail, memberName, dateLevied, penaltyAmount, paidAmount, reason, status, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
@@ -65,6 +66,24 @@ export async function POST(request: Request) {
       include: { member: true },
     });
 
+    await createAuditLog({
+      model: 'Fines & Penalties',
+      action: 'Added',
+      recordId: created.id,
+      userEmail,
+      member: memberName || created.member?.fullName || 'Daniel Kamau',
+      oldValues: {
+        'Record Status': 'None (New Penalty Levy)',
+      },
+      newValues: {
+        'Member': memberName || created.member?.fullName || 'Daniel Kamau',
+        'Penalty Amount': `KSh ${Number(penaltyAmount || 500).toLocaleString()}`,
+        'Reason': reason || 'Late payment + penalty',
+        'Status': status || 'Active',
+      },
+      remarks: remarks || `Levied penalty against ${memberName || 'member'}`,
+    });
+
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
@@ -75,11 +94,28 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, memberName, dateLevied, penaltyAmount, paidAmount, reason, status } = body;
+    const { userEmail, id, memberName, dateLevied, penaltyAmount, paidAmount, reason, status, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
+
+    const prevPenalty = await prisma.penalty.findUnique({
+      where: { id: Number(id) },
+      include: { member: true },
+    });
+
+    if (!prevPenalty) {
+      return NextResponse.json({ success: false, error: 'Penalty record not found' }, { status: 404 });
+    }
+
+    const prevMember = prevPenalty.member?.fullName || memberName || 'Daniel Kamau';
+    const oldValues = {
+      'Member': prevMember,
+      'Penalty Amount': `KSh ${Number(prevPenalty.penaltyAmount).toLocaleString()}`,
+      'Reason': prevPenalty.reason,
+      'Status': prevPenalty.status,
+    };
 
     let memberId: number | undefined = undefined;
     if (memberName) {
@@ -102,6 +138,25 @@ export async function PUT(request: Request) {
       include: { member: true },
     });
 
+    const newMember = updated.member?.fullName || memberName || prevMember;
+    const newValues = {
+      'Member': newMember,
+      'Penalty Amount': `KSh ${Number(updated.penaltyAmount).toLocaleString()}`,
+      'Reason': updated.reason,
+      'Status': updated.status,
+    };
+
+    await createAuditLog({
+      model: 'Fines & Penalties',
+      action: 'Updated',
+      recordId: updated.id,
+      userEmail,
+      member: newMember,
+      oldValues,
+      newValues,
+      remarks: remarks || `Updated penalty record status to ${updated.status} for ${newMember}.`,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
@@ -119,7 +174,33 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
+    const prevPenalty = await prisma.penalty.findUnique({
+      where: { id: Number(id) },
+      include: { member: true },
+    });
+
     await prisma.penalty.delete({ where: { id: Number(id) } });
+
+    if (prevPenalty) {
+      await createAuditLog({
+        model: 'Fines & Penalties',
+        action: 'Deleted',
+        recordId: prevPenalty.id,
+        userEmail,
+        member: prevPenalty.member?.fullName || `Penalty #${id}`,
+        oldValues: {
+          'Member': prevPenalty.member?.fullName || `Penalty #${id}`,
+          'Penalty Amount': `KSh ${Number(prevPenalty.penaltyAmount).toLocaleString()}`,
+          'Reason': prevPenalty.reason,
+          'Status': prevPenalty.status,
+        },
+        newValues: {
+          'Record Status': 'Penalty Record Deleted (No new active record)',
+        },
+        remarks: 'Incorrectly levied penalty removed after review.',
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
