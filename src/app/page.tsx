@@ -12,6 +12,18 @@ import {
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
+import {
+  ALL_MONTHS,
+  AVAILABLE_YEARS,
+  getEATHeaderDate,
+  getEATISODate,
+  getEATContributionDate,
+  getEATDateTimeString,
+  getEATCurrentMonthName,
+  getEATCurrentYear,
+  matchesMonthAndYear,
+  parseDateToMonthYear
+} from '@/lib/dateUtils';
 
 export default function Home() {
   // 1. Authorized Member Credentials & Contact Register (Exact Requested PINs)
@@ -173,13 +185,8 @@ export default function Home() {
               }
 
               const createdDate = el.createdAt ? new Date(el.createdAt) : new Date();
-              const dateStr = createdDate.toISOString().slice(0, 10);
-              const day = String(createdDate.getDate()).padStart(2, '0');
-              const month = String(createdDate.getMonth() + 1).padStart(2, '0');
-              const year = createdDate.getFullYear();
-              const hours = String(createdDate.getHours()).padStart(2, '0');
-              const minutes = String(createdDate.getMinutes()).padStart(2, '0');
-              const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+              const dateStr = getEATISODate(createdDate);
+              const formattedTimestamp = getEATDateTimeString(createdDate);
 
               const user = p.user || el.user?.fullName || (p.userEmail ? p.userEmail.split('@')[0].replace('.', ' ') : (p.updatedBy ? p.updatedBy.split('@')[0].replace('.', ' ') : 'Simon Memia'));
 
@@ -341,14 +348,26 @@ export default function Home() {
   // Core App States
   const [activeTab, setActiveTab] = useState('Overview');
 
+  // Dynamic Current Header Date in Africa/Nairobi (UTC+3, EAT)
+  const [currentHeaderDate, setCurrentHeaderDate] = useState(() => getEATHeaderDate());
+  useEffect(() => {
+    const updateHeader = () => setCurrentHeaderDate(getEATHeaderDate());
+    const interval = setInterval(updateHeader, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Universal Month & Year Filter States (Defaults dynamically to actual current month and year in EAT)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getEATCurrentMonthName());
+  const [selectedYear, setSelectedYear] = useState<number | string>(() => getEATCurrentYear());
+
+  // Fines & Expenses Period Filters (default to 'All' to allow full view or specific filter)
+  const [selectedPenaltyMonth, setSelectedPenaltyMonth] = useState<string>('All');
+  const [selectedPenaltyYear, setSelectedPenaltyYear] = useState<number | string>('All');
+  const [selectedExpenseMonth, setSelectedExpenseMonth] = useState<string>('All');
+  const [selectedExpenseYear, setSelectedExpenseYear] = useState<number | string>('All');
+
   // Monthly Contributions Entry State
-  const contributionMonthsList = [
-    'Oct 2025', 'Nov 2025', 'Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026',
-    'Apr 2026', 'May 2026', 'Jun 2026', 'Jul 2026', 'Aug 2026', 'Sep 2026',
-    'Oct 2026', 'Nov 2026', 'Dec 2026', 'Jan 2027', 'Feb 2027', 'Mar 2027',
-    'Apr 2027', 'May 2027', 'Jun 2027'
-  ];
-  const [selectedContributionCycle, setSelectedContributionCycle] = useState('October 2026');
+  const selectedContributionCycle = `${selectedMonth} ${selectedYear}`;
   const [contributionSearchMember, setContributionSearchMember] = useState('');
   const [contributionSubView, setContributionSubView] = useState<'monthly' | 'register'>('monthly');
 
@@ -361,7 +380,6 @@ export default function Home() {
 
   // Header & Controls States
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('October 2026');
   const [selectedCurrency, setSelectedCurrency] = useState('KES');
   const [selectedTrendRange, setSelectedTrendRange] = useState('Last 6 Months');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -663,12 +681,7 @@ export default function Home() {
     const currentUserName = user || currentUser?.fullName || 'Simon Memia';
     const currentUserEmail = currentUser?.email || 'simon@dreamloom.co.ke';
     const createdDate = new Date();
-    const day = String(createdDate.getDate()).padStart(2, '0');
-    const month = String(createdDate.getMonth() + 1).padStart(2, '0');
-    const year = createdDate.getFullYear();
-    const hours = String(createdDate.getHours()).padStart(2, '0');
-    const minutes = String(createdDate.getMinutes()).padStart(2, '0');
-    const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}`;
+    const formattedTimestamp = getEATDateTimeString(createdDate);
 
     const changedFields: Record<string, { from: any; to: any }> = {};
     if (action === 'Updated') {
@@ -907,12 +920,22 @@ export default function Home() {
   }, [loans, searchQuery]);
 
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(e =>
-      e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.paidTo.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [expenses, searchQuery]);
+    return expenses.filter(e => {
+      const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.paidTo.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPeriod = matchesMonthAndYear(e.date, selectedExpenseMonth, selectedExpenseYear);
+      return matchesSearch && matchesPeriod;
+    });
+  }, [expenses, searchQuery, selectedExpenseMonth, selectedExpenseYear]);
+
+  const filteredFines = useMemo(() => {
+    return fines.filter(f => {
+      const matchesSearch = !searchQuery || f.member.toLowerCase().includes(searchQuery.toLowerCase()) || (f.reason && f.reason.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesPeriod = matchesMonthAndYear(f.date, selectedPenaltyMonth, selectedPenaltyYear);
+      return matchesSearch && matchesPeriod;
+    });
+  }, [fines, searchQuery, selectedPenaltyMonth, selectedPenaltyYear]);
 
   // Fullscreen Handler
   const toggleFullscreen = () => {
@@ -1059,8 +1082,9 @@ export default function Home() {
       
       const newLoginEntry = {
         id: `AUTH-${Date.now().toString().slice(-4)}`,
-        date: new Date().toISOString().slice(0, 10),
-        time: new Date().toLocaleTimeString('en-US') + ' EAT',
+        date: getEATISODate(),
+        time: new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date()) + ' EAT',
+        timestamp: getEATDateTimeString(),
         user: targetUser.fullName,
         role: targetUser.role,
         ip: '197.232.84.' + Math.floor(Math.random() * 80 + 10),
@@ -1111,7 +1135,7 @@ export default function Home() {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update loan status.');
       return;
     }
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getEATISODate();
     const targetLoan = loans.find(l => l.id === loanId);
     if (!targetLoan) return;
 
@@ -1174,7 +1198,7 @@ export default function Home() {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update penalty status.');
       return;
     }
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getEATISODate();
     const targetFine = fines.find(f => f.id === fineId);
     if (!targetFine) return;
 
@@ -1226,7 +1250,7 @@ export default function Home() {
     });
   };
 
-  // Quick Action Modal Trigger
+  // Quick Action Modal Trigger (Defaults to today's actual date & time in Africa/Nairobi, decoupled from reporting filter)
   const handleOpenQuickModal = (targetMode: string) => {
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari are authorized to add new records.');
@@ -1234,7 +1258,44 @@ export default function Home() {
     }
     setModalMode(targetMode);
     setEditingId(null);
-    setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); setField6(''); setField7('');
+    const todayISO = getEATISODate();
+    const todayContrib = getEATContributionDate();
+
+    if (targetMode === 'Contributions' || targetMode === 'Record Contribution') {
+      setField1(todayContrib);
+      setField2('');
+      setField3('6000');
+      setField4('0');
+      setField5('0');
+      setField6('Monthly Contribution');
+      setField7('');
+    } else if (targetMode === 'Loan Portfolio' || targetMode === 'New Loan') {
+      setField1('');
+      setField2('');
+      setField3('');
+      setField4(todayISO);
+      setField5('-');
+      setField6('Active');
+      setField7('0');
+    } else if (targetMode === 'Fines & Penalties' || targetMode === 'Levy Penalty') {
+      setField1('');
+      setField2(todayISO);
+      setField3('500');
+      setField4('Late Contribution Penalty');
+      setField5('Pending');
+      setField6('-');
+      setField7('');
+    } else if (targetMode === 'Expenses' || targetMode === 'Record Expense') {
+      setField1('');
+      setField2('Operational');
+      setField3('');
+      setField4(todayISO);
+      setField5('');
+      setField6('');
+      setField7('');
+    } else {
+      setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); setField6(''); setField7('');
+    }
     setIsModalOpen(true);
   };
 
@@ -1525,7 +1586,7 @@ export default function Home() {
       } else {
         const newC = {
           id: `CNT-${contributions.length + 1}`,
-          month: field1 || '01-Oct-2026',
+          month: field1 || getEATContributionDate(),
           member: field2,
           amount: Number(field3) || 0.00,
           unsettled: Number(field4) || 0.00,
@@ -1548,7 +1609,7 @@ export default function Home() {
             userEmail: currentUser?.email,
             customId: newC.id,
             memberName: field2,
-            month: field1 || '01-Oct-2026',
+            month: field1 || getEATContributionDate(),
             amount: Number(field3) || 0,
             unsettled: Number(field4) || 0,
             payout: Number(field5) || 0,
@@ -1610,7 +1671,7 @@ export default function Home() {
           principal: pAmt,
           interest: iAmt,
           totalLoan: tAmt,
-          issueDate: field4 || new Date().toISOString().slice(0, 10),
+          issueDate: field4 || getEATISODate(),
           clearedDate: '-',
           status: 'Active',
           paid: 0.00,
@@ -1657,7 +1718,7 @@ export default function Home() {
           amount: Number(field3) || 500,
           reason: field4,
           status: field5,
-          datePaid: field5 === 'Paid' ? (field6 || new Date().toISOString().slice(0, 10)) : '-'
+          datePaid: field5 === 'Paid' ? (field6 && field6 !== '-' ? field6 : getEATISODate()) : '-'
         } : f);
         setFines(updatedFines);
         try { localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines)); } catch (e) {}
@@ -1682,11 +1743,11 @@ export default function Home() {
         const newF = {
           id: `FN-${String(fines.length + 1).padStart(2, '0')}`,
           member: field1,
-          date: field2 || new Date().toISOString().slice(0, 10),
+          date: field2 || getEATISODate(),
           amount: Number(field3) || 500,
           reason: field4 || 'Late payment + penalty',
           status: field5 || 'Active',
-          datePaid: field5 === 'Paid' ? (field6 || new Date().toISOString().slice(0, 10)) : '-'
+          datePaid: field5 === 'Paid' ? (field6 && field6 !== '-' ? field6 : getEATISODate()) : '-'
         };
         const updatedFines = [newF, ...fines];
         setFines(updatedFines);
@@ -1698,7 +1759,7 @@ export default function Home() {
           body: JSON.stringify({
             userEmail: currentUser?.email,
             memberName: field1,
-            dateLevied: field2 || new Date().toISOString().slice(0, 10),
+            dateLevied: field2 || getEATISODate(),
             penaltyAmount: Number(field3) || 500,
             paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
             reason: field4 || 'Late payment + penalty',
@@ -1748,7 +1809,7 @@ export default function Home() {
           description: field1,
           category: field2 || 'Operational',
           amount: Number(field3) || 1000.00,
-          date: field4 || new Date().toISOString().slice(0, 10),
+          date: field4 || getEATISODate(),
           paidTo: field5 || 'Vendor'
         };
         const updatedExpenses = [newExp, ...expenses];
@@ -1763,7 +1824,7 @@ export default function Home() {
             description: field1,
             expenseType: field2 || 'Operational',
             amount: Number(field3) || 1000.00,
-            expenseDate: field4 || new Date().toISOString().slice(0, 10),
+            expenseDate: field4 || getEATISODate(),
             referenceDetails: field5 || 'Vendor'
           })
         }).then(r => r.json()).then(res => {
@@ -2219,6 +2280,12 @@ export default function Home() {
 
           {/* Right Header Controls & User Profile */}
           <div className="flex items-center gap-4">
+            {/* Dynamic Nairobi Header Date Badge (Africa/Nairobi UTC+3) */}
+            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10192A] border border-[#1E2E4E] text-slate-200 text-xs font-semibold shadow-inner">
+              <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{currentHeaderDate}</span>
+            </div>
+
             {/* Role Badge Indicator */}
             {canEdit ? (
               <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wide">
@@ -2357,19 +2424,34 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              {/* Month Dropdown */}
+              {/* Universal Month Dropdown (All 12 Months) */}
               <div className="relative">
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition"
+                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-medium"
+                  title="Select Month"
                 >
-                  <option value="October 2026">October 2026</option>
-                  <option value="September 2026">September 2026</option>
-                  <option value="August 2026">August 2026</option>
-                  <option value="July 2026">July 2026</option>
-                  <option value="June 2026">June 2026</option>
-                  <option value="May 2026">May 2026</option>
+                  <option value="All">All Months</option>
+                  {ALL_MONTHS.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+              </div>
+
+              {/* Universal Year Dropdown (Past, Current, Future) */}
+              <div className="relative">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-bold"
+                  title="Select Year"
+                >
+                  <option value="All">All Years</option>
+                  {AVAILABLE_YEARS.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
               </div>
@@ -3101,7 +3183,9 @@ export default function Home() {
 
               {/* VIEW 1: MONTHLY CONTRIBUTIONS ENTRY TAB (EXACT DESIGN FROM SCREENSHOT) */}
               {contributionSubView === 'monthly' && (() => {
-                const cycleRecords = contributions.filter(c => c.month === selectedContributionCycle && !c.payout);
+                const cycleRecords = contributions.filter(c =>
+                  matchesMonthAndYear(c.month, selectedMonth, selectedYear) && !c.payout
+                );
                 const official7Members = [
                   'Simon Memia Wanjiru',
                   'David Wainaina Kinyua',
@@ -3115,11 +3199,10 @@ export default function Home() {
                 // Metrics for this selected month
                 const expectedThisMonth = 42000.00; // 7 members * 6000
                 const receivedThisMonth = cycleRecords.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-                const outstandingThisMonth = cycleRecords.reduce((s, c) => s + (Number(c.unsettled) || 0), 0);
+                const outstandingThisMonth = Math.max(0, expectedThisMonth - receivedThisMonth);
                 const penaltiesThisMonth = fines.filter(f => {
-                  const fDate = f.date || '';
-                  return fDate.includes(selectedContributionCycle.slice(0, 3)) || fDate.includes('2026-10');
-                }).reduce((s, f) => s + (f.amount || 500), 0) || (selectedContributionCycle.includes('Oct 2026') ? 1000 : 0);
+                  return matchesMonthAndYear(f.date, selectedMonth, selectedYear);
+                }).reduce((s, f) => s + (f.amount || 500), 0);
 
                 const paidCount = cycleRecords.filter(c => Number(c.amount) > 0).length;
                 const unpaidCount = 7 - paidCount;
@@ -3182,21 +3265,36 @@ export default function Home() {
                     <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-4 shadow-xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-slate-400">Cycle / Month:</label>
+                          <label className="text-xs font-semibold text-slate-400">Month:</label>
                           <select
-                            value={selectedContributionCycle}
-                            onChange={(e) => setSelectedContributionCycle(e.target.value)}
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
                             className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
                           >
-                            {contributionMonthsList.map(m => (
+                            <option value="All">All Months</option>
+                            {ALL_MONTHS.map(m => (
                               <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-slate-400">Year:</label>
+                          <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                            className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                          >
+                            <option value="All">All Years</option>
+                            {AVAILABLE_YEARS.map(y => (
+                              <option key={y} value={y}>{y}</option>
                             ))}
                           </select>
                         </div>
 
                         {canEdit && (
                           <button
-                            onClick={() => handleSaveMonthlyContributions(selectedContributionCycle)}
+                            onClick={() => handleSaveMonthlyContributions(`${selectedMonth} ${selectedYear}`)}
                             className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/60 transition"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Save Month Entries
@@ -3631,19 +3729,49 @@ export default function Home() {
           {/* ===================================================================== */}
           {activeTab === 'Fines & Penalties' && (
             <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B] flex justify-between items-center">
+              <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h2 className="font-bold text-white text-base">Fines & Late Payment Penalties Register</h2>
                   <p className="text-xs text-slate-400">Click &apos;Active&apos; status to change to &apos;Paid&apos; and automatically record settlement date</p>
                 </div>
-                {canEdit && (
-                  <button
-                    onClick={() => handleOpenQuickModal('Fines & Penalties')}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Levy Penalty
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-400">Month:</label>
+                    <select
+                      value={selectedPenaltyMonth}
+                      onChange={(e) => setSelectedPenaltyMonth(e.target.value)}
+                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                    >
+                      <option value="All">All Months</option>
+                      {ALL_MONTHS.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-400">Year:</label>
+                    <select
+                      value={selectedPenaltyYear}
+                      onChange={(e) => setSelectedPenaltyYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                    >
+                      <option value="All">All Years</option>
+                      {AVAILABLE_YEARS.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      onClick={() => handleOpenQuickModal('Fines & Penalties')}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Levy Penalty
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
@@ -3661,7 +3789,7 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1E293B] font-mono">
-                    {fines.map((f) => {
+                    {filteredFines.map((f) => {
                       const memberUnsettled = memberUnsettledTotals[f.member] || 0;
                       const combinedTotal = memberUnsettled + f.amount;
                       return (
@@ -3718,19 +3846,49 @@ export default function Home() {
           {/* ===================================================================== */}
           {activeTab === 'Expenses' && (
             <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h2 className="font-bold text-white text-base">Operational Expenses & Payouts Log</h2>
                   <p className="text-xs text-slate-400">Total Expenses: KES {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Page 8 of 17)</p>
                 </div>
-                {canEdit && (
-                  <button
-                    onClick={() => handleOpenQuickModal('Expenses')}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Record Expense
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-400">Month:</label>
+                    <select
+                      value={selectedExpenseMonth}
+                      onChange={(e) => setSelectedExpenseMonth(e.target.value)}
+                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                    >
+                      <option value="All">All Months</option>
+                      {ALL_MONTHS.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-semibold text-slate-400">Year:</label>
+                    <select
+                      value={selectedExpenseYear}
+                      onChange={(e) => setSelectedExpenseYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                    >
+                      <option value="All">All Years</option>
+                      {AVAILABLE_YEARS.map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {canEdit && (
+                    <button
+                      onClick={() => handleOpenQuickModal('Expenses')}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Record Expense
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto max-h-[650px]">
                 <table className="w-full text-left text-xs text-slate-300">
@@ -4061,7 +4219,7 @@ export default function Home() {
                 <div className="self-start md:self-center">
                   <div className="bg-[#033628] border border-emerald-700/60 px-3.5 py-1.5 rounded-lg flex items-center gap-2 text-white text-xs font-semibold shadow-inner">
                     <Calendar className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Thursday, 30 Oct 2025</span>
+                    <span>{currentHeaderDate}</span>
                   </div>
                 </div>
               </div>
@@ -4075,7 +4233,7 @@ export default function Home() {
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="01/10/2025"
+                        placeholder="DD/MM/YYYY"
                         value={filterFromDate}
                         onChange={(e) => { setFilterFromDate(e.target.value); setEditLogPage(1); }}
                         className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm"
@@ -4090,7 +4248,7 @@ export default function Home() {
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="30/10/2025"
+                        placeholder="DD/MM/YYYY"
                         value={filterToDate}
                         onChange={(e) => { setFilterToDate(e.target.value); setEditLogPage(1); }}
                         className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-600 shadow-sm"
@@ -4546,7 +4704,7 @@ export default function Home() {
                   {modalMode.includes('Member') ? 'National ID Number' :
                    modalMode.includes('Contribution') ? 'Member Full Name' :
                    modalMode.includes('Loan') ? 'Principal Amount (KES)' :
-                   modalMode.includes('Fines') ? 'Date Levied (e.g. 16th June)' :
+                   modalMode.includes('Fines') ? 'Date Levied (YYYY-MM-DD)' :
                    modalMode.includes('Expense') ? 'Expense Category' :
                    modalMode.includes('Investment') ? 'Investment Type' :
                    modalMode.includes('Project') ? 'Project Manager / Lead' : 'Category'}
@@ -4561,6 +4719,14 @@ export default function Home() {
                       'Search project manager name or ID...'
                     }
                     onChange={(val) => setField2(val)}
+                  />
+                ) : modalMode.includes('Fines') ? (
+                  <input
+                    type="date"
+                    required
+                    value={field2}
+                    onChange={(e) => setField2(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 ) : (
                   <input
@@ -4597,18 +4763,28 @@ export default function Home() {
                 <label className="block text-xs font-medium text-slate-400 mb-1">
                   {modalMode.includes('Member') ? 'Role (Director / Member)' :
                    modalMode.includes('Contribution') ? 'Unsettled Contributions (KES)' :
-                   modalMode.includes('Loan') ? 'Issue Date' :
+                   modalMode.includes('Loan') ? 'Issue Date (YYYY-MM-DD)' :
                    modalMode.includes('Fines') ? 'Reason / Cause' :
-                   modalMode.includes('Expense') ? 'Date' :
+                   modalMode.includes('Expense') ? 'Expense Date (YYYY-MM-DD)' :
                    modalMode.includes('Investment') ? 'Expected Return (e.g. 15%)' :
                    modalMode.includes('Project') ? 'Project Status (Active / Completed)' : 'Status'}
                 </label>
-                <input
-                  type="text"
-                  value={field4}
-                  onChange={(e) => setField4(e.target.value)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                {(modalMode.includes('Loan') || modalMode.includes('Expense')) ? (
+                  <input
+                    type="date"
+                    required
+                    value={field4}
+                    onChange={(e) => setField4(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={field4}
+                    onChange={(e) => setField4(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               {/* Field 5 */}
