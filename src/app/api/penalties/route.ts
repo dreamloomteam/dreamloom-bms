@@ -4,6 +4,16 @@ import { createAuditLog } from '@/lib/audit';
 import { normalizePeriod, syncAllContributions, isContributionDeadlinePassed } from '@/lib/syncService';
 import { getEATISODate } from '@/lib/dateUtils';
 
+const MEMBER_ID_TO_NAME: Record<number, string> = {
+  1: 'Simon Memia Wanjiru',
+  2: 'David Wainaina Kinyua',
+  3: 'Elijah Waitara Gichari',
+  4: 'Samuel Kamau Nguuro',
+  5: 'Michael Kiarie Wanjiru',
+  6: 'Daniel Kamau Njiriri',
+  7: 'Beatrice Njoki Muthoni',
+};
+
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
   const clean = email.toLowerCase().trim();
@@ -32,12 +42,25 @@ export async function GET() {
       const isPaid = p.status?.toUpperCase() === 'PAID' || (Number(p.paidAmount) >= 500 && p.status?.toUpperCase() !== 'UNPAID' && p.status?.toUpperCase() !== 'ACTIVE');
       const normalizedStatus = isPaid ? 'Paid' : 'Unpaid';
       const period = normalizePeriod(p.monthYear);
+      const memberFullName = p.member?.fullName || MEMBER_ID_TO_NAME[p.memberId] || 'Member';
 
       return {
         id: p.id,
         dbId: p.id,
-        member: p.member?.fullName || 'Member',
+        member: memberFullName,
+        memberName: memberFullName,
         memberId: p.memberId,
+        memberObj: p.member ? {
+          id: p.member.id,
+          fullName: p.member.fullName,
+          email: p.member.email,
+          nationalId: p.member.nationalId,
+        } : (p.memberId && MEMBER_ID_TO_NAME[p.memberId] ? {
+          id: p.memberId,
+          fullName: MEMBER_ID_TO_NAME[p.memberId],
+          email: '',
+          nationalId: '',
+        } : null),
         monthYear: period.periodKey,
         month: period.monthName,
         year: period.year,
@@ -157,18 +180,24 @@ export async function POST(request: Request) {
     }
 
     // 3. Manual Penalty Entry
-    const { memberName, monthYear, status } = body;
+    const { memberId, memberName, monthYear, status } = body;
 
-    if (!memberName) {
-      return NextResponse.json({ success: false, error: 'Member Name is required.' }, { status: 400 });
+    let member = null;
+    if (memberId) {
+      const numId = typeof memberId === 'number' ? memberId : parseInt(String(memberId).replace(/\D/g, ''), 10);
+      if (numId) {
+        member = await prisma.member.findUnique({ where: { id: numId } });
+      }
     }
 
-    const member = await prisma.member.findFirst({
-      where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
-    });
+    if (!member && memberName) {
+      member = await prisma.member.findFirst({
+        where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
+      });
+    }
 
     if (!member) {
-      return NextResponse.json({ success: false, error: `Member "${memberName}" not found in system.` }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Valid Member Name or Member ID is required.' }, { status: 400 });
     }
 
     const period = normalizePeriod(monthYear || new Date());
@@ -246,7 +275,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, memberName, monthYear, status } = body;
+    const { userEmail, id, memberId, memberName, monthYear, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json(
@@ -270,8 +299,18 @@ export async function PUT(request: Request) {
     }
 
     let targetMemberId = prev.memberId;
-    let targetMemberName = prev.member.fullName;
-    if (memberName && memberName.trim() !== prev.member.fullName) {
+    let targetMemberName = prev.member?.fullName || MEMBER_ID_TO_NAME[prev.memberId] || 'Member';
+
+    if (memberId) {
+      const numMemId = typeof memberId === 'number' ? memberId : parseInt(String(memberId).replace(/\D/g, ''), 10);
+      if (numMemId && numMemId !== prev.memberId) {
+        const foundMem = await prisma.member.findUnique({ where: { id: numMemId } });
+        if (foundMem) {
+          targetMemberId = foundMem.id;
+          targetMemberName = foundMem.fullName;
+        }
+      }
+    } else if (memberName && memberName.trim() !== prev.member?.fullName) {
       const foundMem = await prisma.member.findFirst({
         where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
       });

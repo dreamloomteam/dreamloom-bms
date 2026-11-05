@@ -28,6 +28,33 @@ import {
   isSameMemberName
 } from '@/lib/dateUtils';
 
+const DREAMLOOM_MEMBER_NAMES: Record<number, string> = {
+  1: 'Simon Memia Wanjiru',
+  2: 'David Wainaina Kinyua',
+  3: 'Elijah Waitara Gichari',
+  4: 'Samuel Kamau Nguuro',
+  5: 'Michael Kiarie Wanjiru',
+  6: 'Daniel Kamau Njiriri',
+  7: 'Beatrice Njoki Muthoni',
+};
+
+const resolvePenaltyMemberName = (p: any): string => {
+  if (p && p.member && typeof p.member === 'object' && p.member.fullName) {
+    return p.member.fullName;
+  }
+  if (p && typeof p.member === 'string' && p.member.trim() !== '' && p.member !== 'Member') {
+    return p.member.trim();
+  }
+  if (p && typeof p.memberName === 'string' && p.memberName.trim() !== '' && p.memberName !== 'Member') {
+    return p.memberName.trim();
+  }
+  const mid = p ? (p.memberId || p.member?.id || p.memberObj?.id) : null;
+  if (mid && DREAMLOOM_MEMBER_NAMES[Number(mid)]) {
+    return DREAMLOOM_MEMBER_NAMES[Number(mid)];
+  }
+  return 'Simon Memia Wanjiru';
+};
+
 export default function Home() {
   // 1. Authorized Member Credentials & Contact Register (Exact Requested PINs)
   const authorizedUsers = [
@@ -108,39 +135,42 @@ export default function Home() {
         })
         .catch(err => console.warn('Could not fetch server loans:', err));
 
-      // 3. Fines & Penalties
+      // 3. Fines & Penalties (strictly KSh 500 late-fee management)
       const savedFines = localStorage.getItem('dreamloom_fines');
       if (savedFines) {
         try {
           const parsed = JSON.parse(savedFines);
-          if (Array.isArray(parsed) && parsed.length > 0) setFines(parsed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const sanitized = parsed.map((f: any) => ({
+              ...f,
+              member: resolvePenaltyMemberName(f)
+            }));
+            setFines(sanitized);
+          }
         } catch (e) { console.warn('Saved fines parse failed:', e); }
       }
       fetch('/api/penalties')
         .then(r => r.json())
         .then(res => {
           if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((p: any, idx: number) => ({
-              id: `FN-${String(idx + 1).padStart(2, '0')}`,
-              dbId: p.id,
-              date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-',
-              monthYear: p.monthYear,
-              member: p.member?.fullName || 'Member',
-              reason: p.reason || 'Late payment + penalty',
-              unsettledContribution: Number(p.unsettledContribution) || 0,
-              penaltyAmount: Number(p.penaltyAmount) || 500,
-              amount: Number(p.penaltyAmount) || 500,
-              totalOutstanding: Number(p.totalOutstanding) || ((Number(p.unsettledContribution) || 0) + (Number(p.penaltyAmount) || 500)),
-              paidContribution: Number(p.paidContribution) || 0,
-              paidFine: Number(p.paidFine) || 0,
-              paidAmount: Number(p.paidAmount) || 0,
-              remainingContribution: Number(p.remainingContribution) || 0,
-              remainingFine: Number(p.remainingFine) || 0,
-              remainingBalance: Number(p.remainingBalance) || 0,
-              status: p.status, // "UNPAID" | "PARTIALLY PAID" | "PAID"
-              datePaid: p.datePaid || '-',
-              payments: p.payments || []
-            }));
+            const mapped = res.data.map((p: any, idx: number) => {
+              const resolvedName = resolvePenaltyMemberName(p);
+              const isPaid = p.status?.toUpperCase() === 'PAID' || p.status === 'Paid';
+              return {
+                id: `FN-${String(idx + 1).padStart(2, '0')}`,
+                dbId: p.id || p.dbId,
+                memberId: p.memberId || p.member?.id || p.memberObj?.id,
+                date: p.date ? String(p.date).slice(0, 10) : (p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-'),
+                monthYear: p.monthYear,
+                member: resolvedName,
+                memberName: resolvedName,
+                reason: p.reason || 'Late payment penalty',
+                penaltyAmount: 500,
+                amount: 500,
+                status: isPaid ? 'Paid' : 'Unpaid',
+                datePaid: p.datePaid || '-',
+              };
+            });
             setFines(mapped);
             localStorage.setItem('dreamloom_fines', JSON.stringify(mapped));
           }
@@ -1164,7 +1194,10 @@ export default function Home() {
   }, [expenses, searchQuery, selectedExpenseMonth, selectedExpenseYear]);
 
   const filteredFines = useMemo(() => {
-    return fines.filter(f => {
+    return fines.map(f => ({
+      ...f,
+      member: resolvePenaltyMemberName(f)
+    })).filter(f => {
       const matchesSearch = !searchQuery ||
         f.member.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (f.monthYear && f.monthYear.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -1602,18 +1635,24 @@ export default function Home() {
     try {
       const res = await fetch('/api/penalties').then(r => r.json());
       if (res.success && Array.isArray(res.data)) {
-        const mapped = res.data.map((p: any, idx: number) => ({
-          id: `FN-${String(idx + 1).padStart(2, '0')}`,
-          dbId: p.id || p.dbId,
-          date: p.date ? String(p.date).slice(0, 10) : (p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-'),
-          monthYear: p.monthYear,
-          member: p.member || p.member?.fullName || 'Member',
-          reason: p.reason || 'Late payment penalty',
-          penaltyAmount: 500,
-          amount: 500,
-          status: (p.status?.toUpperCase() === 'PAID' || p.status === 'Paid') ? 'Paid' : 'Unpaid',
-          datePaid: p.datePaid || '-',
-        }));
+        const mapped = res.data.map((p: any, idx: number) => {
+          const resolvedName = resolvePenaltyMemberName(p);
+          const isPaid = (p.status?.toUpperCase() === 'PAID' || p.status === 'Paid');
+          return {
+            id: `FN-${String(idx + 1).padStart(2, '0')}`,
+            dbId: p.id || p.dbId,
+            memberId: p.memberId || p.member?.id || p.memberObj?.id,
+            date: p.date ? String(p.date).slice(0, 10) : (p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-'),
+            monthYear: p.monthYear,
+            member: resolvedName,
+            memberName: resolvedName,
+            reason: p.reason || 'Late payment penalty',
+            penaltyAmount: 500,
+            amount: 500,
+            status: isPaid ? 'Paid' : 'Unpaid',
+            datePaid: p.datePaid || '-',
+          };
+        });
         setFines(mapped);
         try { localStorage.setItem('dreamloom_fines', JSON.stringify(mapped)); } catch (e) {}
       }
@@ -1884,7 +1923,8 @@ export default function Home() {
       setField6(item.status || 'Active');
       setField7(String(item.balance || 0));
     } else if (mode === 'Fines & Penalties') {
-      setField1(item.member || '');
+      const resolvedName = resolvePenaltyMemberName(item);
+      setField1(resolvedName);
       setField2(item.monthYear || item.date || 'Aug 2026');
       setField3('500');
       setField4(item.status === 'Paid' ? 'Paid' : 'Unpaid');
@@ -2155,13 +2195,23 @@ export default function Home() {
         const targetFine = editingId ? fines.find(f => f.id === editingId || f.dbId === editingId) : null;
         const fineDbId = targetFine?.dbId || editingId;
 
+        // Resolve member ID from field1
+        const matchedMember = members.find(m =>
+          isSameMemberName(m.fullName, field1) ||
+          String(m.dbId) === String(field1) ||
+          String(m.id) === String(field1)
+        );
+        const resolvedMemberId = matchedMember?.dbId || (matchedMember as any)?.id;
+        const resolvedMemberName = matchedMember?.fullName || field1.trim();
+
         const res = await fetch('/api/penalties', {
           method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userEmail,
             id: editingId ? fineDbId : undefined,
-            memberName: field1.trim(),
+            memberId: resolvedMemberId,
+            memberName: resolvedMemberName,
             monthYear: field2.trim(),
             status: field4 === 'Paid' ? 'Paid' : 'Unpaid',
             penaltyAmount: 500
@@ -4205,10 +4255,11 @@ export default function Home() {
                           filteredFines.map((f) => {
                             const isPaid = f.status === 'Paid';
                             const displayMonth = f.monthYear || f.date;
+                            const memberName = resolvePenaltyMemberName(f);
 
                             return (
                               <tr key={f.id} className="hover:bg-[#142036] transition">
-                                <td className="p-4 font-sans text-white font-medium">{f.member}</td>
+                                <td className="p-4 font-sans text-white font-medium">{memberName}</td>
                                 <td className="p-4 text-slate-300 font-sans font-semibold">
                                   <span className="text-white block font-mono font-medium">{displayMonth}</span>
                                 </td>
@@ -4258,7 +4309,7 @@ export default function Home() {
                                       </button>
                                       <button
                                         onClick={async () => {
-                                          const confirmDel = window.confirm(`Permanently delete penalty record for ${f.member} (${displayMonth})?`);
+                                          const confirmDel = window.confirm(`Permanently delete penalty record for ${memberName} (${displayMonth})?`);
                                           if (!confirmDel) return;
                                           try {
                                             const targetDbId = f.dbId || f.id;
@@ -5133,14 +5184,14 @@ export default function Home() {
                       Member Name <span className="text-rose-400">*</span>
                     </label>
                     <select
-                      value={field1}
+                      value={field1 || (members[0]?.fullName || 'Simon Memia Wanjiru')}
                       onChange={(e) => setField1(e.target.value)}
                       required
                       className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium cursor-pointer"
                     >
                       <option value="" disabled>Select Member</option>
-                      {members.map(m => (
-                        <option key={m.id || m.fullName} value={m.fullName}>
+                      {(members.length >= 7 ? members : initialMembers).map(m => (
+                        <option key={m.dbId || m.id || m.fullName} value={m.fullName}>
                           {m.fullName}
                         </option>
                       ))}
