@@ -91,16 +91,40 @@ model Expense {
 }
 
 model Penalty {
-  id            Int      @id @default(autoincrement())
-  memberId      Int
-  member        Member   @relation(fields: [memberId], references: [id])
-  monthYear     String
-  dueDate       DateTime
-  dateLevied    DateTime
-  penaltyAmount Float    @default(500.0)
-  paidAmount    Float    @default(0.0)
-  status        String   @default("Unpaid")
-  reason        String
+  id                    Int                  @id @default(autoincrement())
+  memberId              Int
+  member                Member               @relation(fields: [memberId], references: [id])
+  monthYear             String
+  dueDate               DateTime             @default(now())
+  dateLevied            DateTime             @default(now())
+  unsettledContribution Float                @default(0.0)
+  penaltyAmount         Float                @default(500.0)
+  paidAmount            Float                @default(0.0)
+  paidContribution      Float                @default(0.0)
+  paidFine              Float                @default(0.0)
+  remainingBalance      Float                @default(0.0)
+  status                String               @default("UNPAID")
+  reason                String               @default("Late Contribution & Unsettled Dues")
+  duesType              String               @default("Contribution & Fine")
+  contributionId        Int?
+  datePaid              String?
+  payments              PaymentTransaction[]
+
+  @@unique([memberId, monthYear, duesType])
+}
+
+model PaymentTransaction {
+  id                    Int      @id @default(autoincrement())
+  penaltyId             Int
+  penalty               Penalty  @relation(fields: [penaltyId], references: [id], onDelete: Cascade)
+  amount                Float
+  allocatedContribution Float    @default(0.0)
+  allocatedFine         Float    @default(0.0)
+  paymentDate           DateTime @default(now())
+  paymentMethod         String   @default("M-PESA")
+  reference             String?
+  notes                 String?
+  createdByUser         String?
 }
 
 model Investment {

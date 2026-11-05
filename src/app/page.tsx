@@ -9,7 +9,7 @@ import {
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
-  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2
+  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import {
@@ -123,11 +123,22 @@ export default function Home() {
               id: `FN-${String(idx + 1).padStart(2, '0')}`,
               dbId: p.id,
               date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-',
+              monthYear: p.monthYear,
               member: p.member?.fullName || 'Member',
               reason: p.reason || 'Late payment + penalty',
+              unsettledContribution: Number(p.unsettledContribution) || 0,
+              penaltyAmount: Number(p.penaltyAmount) || 500,
               amount: Number(p.penaltyAmount) || 500,
-              status: p.status === 'Settled' ? 'Paid' : 'Active',
-              datePaid: p.status === 'Settled' ? '2026-11-01' : '-'
+              totalOutstanding: Number(p.totalOutstanding) || ((Number(p.unsettledContribution) || 0) + (Number(p.penaltyAmount) || 500)),
+              paidContribution: Number(p.paidContribution) || 0,
+              paidFine: Number(p.paidFine) || 0,
+              paidAmount: Number(p.paidAmount) || 0,
+              remainingContribution: Number(p.remainingContribution) || 0,
+              remainingFine: Number(p.remainingFine) || 0,
+              remainingBalance: Number(p.remainingBalance) || 0,
+              status: p.status, // "UNPAID" | "PARTIALLY PAID" | "PAID"
+              datePaid: p.datePaid || '-',
+              payments: p.payments || []
             }));
             setFines(mapped);
             localStorage.setItem('dreamloom_fines', JSON.stringify(mapped));
@@ -397,6 +408,15 @@ export default function Home() {
   const [field5, setField5] = useState('');
   const [field6, setField6] = useState('');
   const [field7, setField7] = useState('');
+
+  // Payment Modal States for Fines & Penalties Dues Settlement
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPenaltyForPayment, setSelectedPenaltyForPayment] = useState<any>(null);
+  const [paymentAmountInput, setPaymentAmountInput] = useState('');
+  const [paymentMethodInput, setPaymentMethodInput] = useState('M-PESA');
+  const [paymentRefInput, setPaymentRefInput] = useState('');
+  const [paymentNotesInput, setPaymentNotesInput] = useState('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // 1. Official Membership Directory & Summary (PDF Page 1 & Page 10)
   const [members, setMembers] = useState([
@@ -828,11 +848,6 @@ export default function Home() {
     return contributions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   }, [contributions]);
 
-  // Total Unsettled Contributions
-  const grandTotalUnsettled = useMemo(() => {
-    return contributions.reduce((sum, c) => sum + (Number(c.unsettled) || 0), 0);
-  }, [contributions]);
-
   // Total Mawega Land Payouts
   const grandTotalMawegaPayouts = useMemo(() => {
     return contributions.reduce((sum, c) => sum + (Number(c.payout) || 0), 0);
@@ -857,9 +872,9 @@ export default function Home() {
     return loans.filter(l => l.status === 'Active').length;
   }, [loans]);
 
-  // Total Penalties Paid
+  // Total Penalties Paid (Dynamically calculated from all settled & partial payments)
   const totalPaidPenalties = useMemo(() => {
-    return fines.filter(f => f.status === 'Paid').reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
+    return fines.reduce((sum, f) => sum + (Number(f.paidAmount) || (f.status === 'Paid' ? Number(f.amount) || 0 : 0)), 0);
   }, [fines]);
 
   // Total Interest Paid from Settled Loans
@@ -905,16 +920,30 @@ export default function Home() {
     });
   }, [members, contributions, loans, grandTotalContributions]);
 
-  // Member Unsettled Contributions Map (Automatically synced from main contributions page)
+  // Member Unsettled Dues (Section 4: Retrieved directly from Fines & Late Payment Penalties Register)
+  // Sums remaining balance for UNPAID and PARTIALLY PAID records; excludes fully PAID records.
   const memberUnsettledTotals = useMemo(() => {
     const map: Record<string, number> = {};
-    contributions.forEach(c => {
-      if (c.member && c.unsettled) {
-        map[c.member] = (map[c.member] || 0) + Number(c.unsettled);
-      }
+    members.forEach(m => {
+      const activeDues = fines
+        .filter(f => {
+          const isMember = isSameMemberName(f.member, m.fullName);
+          const isOutstanding = f.status === 'UNPAID' || f.status === 'PARTIALLY PAID' || (f.status !== 'PAID' && f.status !== 'Settled' && (Number(f.remainingBalance) > 0 || (f.remainingBalance === undefined && Number(f.amount) > 0)));
+          return isMember && isOutstanding;
+        })
+        .reduce((sum, f) => {
+          const rem = f.remainingBalance !== undefined ? Number(f.remainingBalance) : (Number(f.amount) || 0);
+          return sum + rem;
+        }, 0);
+      map[m.fullName] = activeDues;
     });
     return map;
-  }, [contributions]);
+  }, [members, fines]);
+
+  // Total Unsettled Dues (Section 4 & 5: Directly derived from active dues in Penalties Register)
+  const grandTotalUnsettled = useMemo(() => {
+    return Object.values(memberUnsettledTotals).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }, [memberUnsettledTotals]);
 
   // Trend Chart Data
   const trendData = useMemo(() => [
@@ -1224,6 +1253,114 @@ export default function Home() {
       },
       remarks: `Updated loan status for ${targetLoan.borrower} to ${nextStatus}`
     });
+  };
+
+  // Real-time Database Penalty & Unsettled Dues Synchronization
+  const refreshPenalties = async () => {
+    try {
+      const res = await fetch('/api/penalties').then(r => r.json());
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map((p: any, idx: number) => ({
+          id: `FN-${String(idx + 1).padStart(2, '0')}`,
+          dbId: p.id,
+          date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-',
+          monthYear: p.monthYear,
+          member: p.member?.fullName || 'Member',
+          reason: p.reason || 'Late payment + penalty',
+          unsettledContribution: Number(p.unsettledContribution) || 0,
+          penaltyAmount: Number(p.penaltyAmount) || 500,
+          amount: Number(p.penaltyAmount) || 500,
+          totalOutstanding: Number(p.totalOutstanding) || ((Number(p.unsettledContribution) || 0) + (Number(p.penaltyAmount) || 500)),
+          paidContribution: Number(p.paidContribution) || 0,
+          paidFine: Number(p.paidFine) || 0,
+          paidAmount: Number(p.paidAmount) || 0,
+          remainingContribution: Number(p.remainingContribution) || 0,
+          remainingFine: Number(p.remainingFine) || 0,
+          remainingBalance: Number(p.remainingBalance) || 0,
+          status: p.status, // "UNPAID" | "PARTIALLY PAID" | "PAID"
+          datePaid: p.datePaid || '-',
+          payments: p.payments || []
+        }));
+        setFines(mapped);
+        try { localStorage.setItem('dreamloom_fines', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh penalties:', e);
+    }
+  };
+
+  const handleOpenPaymentModal = (fineRecord: any) => {
+    setSelectedPenaltyForPayment(fineRecord);
+    const rem = fineRecord.remainingBalance !== undefined ? fineRecord.remainingBalance : (Number(fineRecord.amount) || 0);
+    setPaymentAmountInput(rem > 0 ? String(rem) : '');
+    setPaymentMethodInput('M-PESA');
+    setPaymentRefInput('');
+    setPaymentNotesInput('');
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleExecutePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPenaltyForPayment) return;
+    const pAmt = Number(paymentAmountInput);
+    if (!pAmt || pAmt <= 0) {
+      alert('Please enter a valid payment amount greater than zero.');
+      return;
+    }
+    const maxAllowed = selectedPenaltyForPayment.remainingBalance !== undefined
+      ? Number(selectedPenaltyForPayment.remainingBalance)
+      : Number(selectedPenaltyForPayment.amount) || 0;
+
+    if (pAmt > maxAllowed) {
+      alert(`Payment cannot exceed the remaining balance of KES ${maxAllowed.toLocaleString()}.`);
+      return;
+    }
+
+    setIsSubmittingPayment(true);
+    try {
+      const res = await fetch('/api/penalties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'payment',
+          penaltyId: selectedPenaltyForPayment.dbId,
+          amount: pAmt,
+          paymentMethod: paymentMethodInput,
+          reference: paymentRefInput,
+          notes: paymentNotesInput,
+          userEmail: currentUser?.email || 'simon@dreamloom.co.ke'
+        })
+      }).then(r => r.json());
+
+      if (res.success) {
+        setIsPaymentModalOpen(false);
+        await refreshPenalties();
+        try {
+          const cRes = await fetch('/api/contributions').then(r => r.json());
+          if (cRes.success && Array.isArray(cRes.data)) {
+            const mapped = cRes.data.map((c: any) => ({
+              id: c.customId || `CNT-${c.id}`,
+              dbId: c.id,
+              month: c.monthYear,
+              member: c.member?.fullName || (c.remarks?.includes('Member:') ? c.remarks.replace('Member:', '').trim() : 'Member'),
+              amount: Number(c.amount) || 0,
+              unsettled: Number(c.unsettled) || 0,
+              payout: Number(c.payout) || 0,
+              notes: c.remarks || ''
+            }));
+            setContributions(mapped);
+            try { localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped)); } catch (e) {}
+          }
+        } catch (e) {}
+        alert(`Payment of KSh ${pAmt.toLocaleString()} successfully recorded and allocated!`);
+      } else {
+        alert(res.error || 'Failed to record payment');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Payment processing failed');
+    } finally {
+      setIsSubmittingPayment(false);
+    }
   };
 
   // Toggle Penalty Status: Active <-> Paid (automatically adds date paid)
@@ -1616,7 +1753,9 @@ export default function Home() {
             payout: Number(field5) || 0,
             notes: field6
           })
-        }).catch(err => console.error('Database update failed:', err));
+        })
+        .then(() => refreshPenalties())
+        .catch(err => console.error('Database update failed:', err));
       } else {
         const newC = {
           id: `CNT-${contributions.length + 1}`,
@@ -1649,7 +1788,9 @@ export default function Home() {
             payout: Number(field5) || 0,
             notes: field6 || ''
           })
-        }).catch(err => console.error('Database create failed:', err));
+        })
+        .then(() => refreshPenalties())
+        .catch(err => console.error('Database create failed:', err));
 
         setTransactions([
           { id: `TX-${Date.now()}`, title: `${field2.split(' ')[0]} - Contribution`, time: 'Just now', amount: `+ KES ${Number(field3 || 0).toLocaleString()}`, type: 'income', icon: Users, iconColor: 'bg-blue-600/20 text-sky-400' },
@@ -3851,12 +3992,36 @@ export default function Home() {
                   </div>
 
                   {canEdit && (
-                    <button
-                      onClick={() => handleOpenQuickModal('Fines & Penalties')}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Levy Penalty
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/penalties', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'sync', userEmail: currentUser?.email })
+                            }).then(r => r.json());
+                            if (res.success) {
+                              await refreshPenalties();
+                              alert(res.message || 'Synchronized with contributions successfully!');
+                            }
+                          } catch (e) {
+                            alert('Sync failed');
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+                        title="Synchronize all contributions with fines & penalties register"
+                      >
+                        <RotateCw className="w-3.5 h-3.5 text-emerald-400" /> Sync Contributions
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenQuickModal('Fines & Penalties')}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Levy Penalty
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -3865,58 +4030,75 @@ export default function Home() {
                   <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
                     <tr>
                       <th className="p-4">Member Name</th>
-                      <th className="p-4">Date Levied</th>
-                      <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
-                      <th className="p-4 text-right">Penalty Amount (KES)</th>
-                      <th className="p-4 text-right text-emerald-300">Total (KES)</th>
-                      <th className="p-4">Reason / Cause</th>
-                      <th className="p-4 text-slate-400">Date Paid</th>
+                      <th className="p-4">Contribution Month & Year</th>
+                      <th className="p-4 text-right text-amber-300">Unsettled Contribution (KES)</th>
+                      <th className="p-4 text-right text-rose-300">Unsettled Fine (KES)</th>
+                      <th className="p-4 text-right text-white">Total Outstanding (KES)</th>
+                      <th className="p-4 text-right text-sky-300">Amount Paid (KES)</th>
+                      <th className="p-4 text-right text-emerald-300">Remaining Balance (KES)</th>
                       <th className="p-4 text-center">Payment Status</th>
                       {canEdit && <th className="p-4 text-center">Action</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1E293B] font-mono">
                     {filteredFines.map((f) => {
-                      // Retrieve month-by-month unsettled contribution from Contributions (primary source of truth)
-                      const monthData = getMemberUnsettledForDate(contributions, f.member, f.date);
-                      const monthUnsettled = monthData.unsettled;
-                      const combinedTotal = monthUnsettled + (Number(f.amount) || 0);
+                      const unsettledContrib = Number(f.unsettledContribution) || 0;
+                      const fineAmt = Number(f.penaltyAmount) || Number(f.amount) || 500;
+                      const totalOut = f.totalOutstanding !== undefined ? Number(f.totalOutstanding) : (unsettledContrib + fineAmt);
+                      const paidTotal = Number(f.paidAmount) || 0;
+                      const remBal = f.remainingBalance !== undefined ? Number(f.remainingBalance) : Math.max(0, totalOut - paidTotal);
+                      const statusBadge = remBal === 0 && (paidTotal > 0 || totalOut === 0) ? 'PAID' : (paidTotal > 0 ? 'PARTIALLY PAID' : (f.status === 'Paid' ? 'PAID' : 'UNPAID'));
+                      const displayPeriod = f.monthYear || f.date;
+
                       return (
                         <tr key={f.id} className="hover:bg-[#142036] transition">
                           <td className="p-4 font-sans text-white font-medium">{f.member}</td>
                           <td className="p-4 text-slate-400 font-sans">
-                            <span className="text-white block font-mono font-medium">{f.date}</span>
-                            <span className="text-[10px] text-emerald-400 font-bold block">{monthData.monthLabel}</span>
+                            <span className="text-white block font-mono font-medium">{displayPeriod}</span>
+                            <span className="text-[10px] text-slate-400 block font-sans">{f.date}</span>
                           </td>
-                          <td className="p-4 text-right font-bold text-amber-400">{monthUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-white">{(Number(f.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-black text-emerald-400">{combinedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 font-sans text-slate-300">{f.reason}</td>
-                          <td className="p-4 text-slate-400 font-sans">{f.datePaid || '-'}</td>
+                          <td className="p-4 text-right font-bold text-amber-400">{unsettledContrib.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right font-bold text-rose-400">{fineAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right font-bold text-white">{totalOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right font-bold text-sky-400">{paidTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                          <td className="p-4 text-right font-black text-emerald-400">{remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                           <td className="p-4 text-center font-sans">
                             <button
-                              onClick={() => handleToggleFineStatus(f.id)}
-                              disabled={!canEdit}
+                              onClick={() => canEdit && remBal > 0 && handleOpenPaymentModal(f)}
+                              disabled={!canEdit || remBal === 0}
                               className={`px-3 py-1 rounded-full text-[10px] font-bold transition flex items-center justify-center gap-1 mx-auto ${
-                                f.status === 'Paid'
+                                statusBadge === 'PAID'
                                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-emerald-500/20 hover:text-emerald-400 cursor-pointer'
+                                  : statusBadge === 'PARTIALLY PAID'
+                                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 cursor-pointer'
+                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 cursor-pointer'
                               }`}
-                              title={canEdit ? 'Click to toggle Active / Paid' : 'View only'}
+                              title={remBal > 0 ? 'Click to record payment' : 'Fully settled and recorded'}
                             >
-                              <span>{f.status}</span>
-                              {f.status === 'Paid' ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                              <span>{statusBadge}</span>
+                              {statusBadge === 'PAID' ? <CheckCircle className="w-3 h-3" /> : <Coins className="w-3 h-3" />}
                             </button>
                           </td>
                           {canEdit && (
                             <td className="p-4 text-center font-sans">
-                              <button
-                                onClick={() => handleOpenEditModal(f, 'Fines & Penalties')}
-                                className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                title="Edit Penalty Record"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                {remBal > 0 && (
+                                  <button
+                                    onClick={() => handleOpenPaymentModal(f)}
+                                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-lg text-[10px] font-bold transition border border-emerald-500/30 flex items-center gap-1"
+                                    title="Record payment against this record"
+                                  >
+                                    <DollarSign className="w-3 h-3" /> Pay
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleOpenEditModal(f, 'Fines & Penalties')}
+                                  className="p-1.5 hover:text-white text-slate-400 hover:bg-slate-700/50 rounded-lg transition"
+                                  title="Edit Penalty Record"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>
@@ -5056,6 +5238,148 @@ export default function Home() {
                     Save Entry
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. DUES & PENALTIES PAYMENT MODAL WITH ALLOCATION PREVIEW */}
+      {/* ========================================================================= */}
+      {isPaymentModalOpen && selectedPenaltyForPayment && (
+        <div className="fixed inset-0 bg-[#070D18]/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-5 border-b border-[#1E293B]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Record Dues Payment</h3>
+                  <p className="text-xs text-slate-400">{selectedPenaltyForPayment.member} — {selectedPenaltyForPayment.monthYear || selectedPenaltyForPayment.date}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExecutePayment} className="p-6 space-y-4">
+              {/* Outstanding Breakdown Card */}
+              <div className="grid grid-cols-3 gap-2 p-3 bg-[#142036] rounded-xl border border-[#1E2D4A] text-xs font-mono">
+                <div>
+                  <div className="text-[10px] text-slate-400 font-sans uppercase">Contribution</div>
+                  <div className="text-amber-400 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.unsettledContribution || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 font-sans uppercase">Late Fine</div>
+                  <div className="text-rose-400 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.penaltyAmount || 500).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 font-sans uppercase">Remaining Due</div>
+                  <div className="text-emerald-400 font-black mt-0.5">KES {Number(selectedPenaltyForPayment.remainingBalance !== undefined ? selectedPenaltyForPayment.remainingBalance : (selectedPenaltyForPayment.amount || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                </div>
+              </div>
+
+              {/* Payment Amount Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Payment Amount (KES)
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  max={selectedPenaltyForPayment.remainingBalance !== undefined ? selectedPenaltyForPayment.remainingBalance : selectedPenaltyForPayment.amount}
+                  min={1}
+                  value={paymentAmountInput}
+                  onChange={(e) => setPaymentAmountInput(e.target.value)}
+                  placeholder="Enter payment amount e.g. 2000"
+                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Transparent Allocation Live Preview */}
+              {(() => {
+                const amt = Number(paymentAmountInput) || 0;
+                const remC = Math.max(0, (Number(selectedPenaltyForPayment.unsettledContribution) || 0) - (Number(selectedPenaltyForPayment.paidContribution) || 0));
+                const allocC = Math.min(amt, remC);
+                const remAfter = amt - allocC;
+                const remF = Math.max(0, (Number(selectedPenaltyForPayment.penaltyAmount) || 500) - (Number(selectedPenaltyForPayment.paidFine) || 0));
+                const allocF = Math.min(remAfter, remF);
+                const currentRem = Number(selectedPenaltyForPayment.remainingBalance !== undefined ? selectedPenaltyForPayment.remainingBalance : selectedPenaltyForPayment.amount);
+                const newRemTotal = Math.max(0, currentRem - amt);
+                const newStatus = newRemTotal === 0 ? 'PAID' : 'PARTIALLY PAID';
+
+                return (
+                  <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+                      <span>Payment Allocation Preview</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${newStatus === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                        Resulting Status: {newStatus}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                        <span className="text-slate-400 block text-[10px] font-sans">To Contribution:</span>
+                        <span className="text-emerald-400 font-bold">KES {allocC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
+                        <span className="text-slate-400 block text-[10px] font-sans">To Late Fine:</span>
+                        <span className="text-cyan-400 font-bold">KES {allocF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] pt-1 border-t border-emerald-500/20 text-slate-300">
+                      <span>New Remaining Balance:</span>
+                      <span className="font-mono font-bold text-white">KES {newRemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Payment Method & Reference */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Payment Method</label>
+                  <select
+                    value={paymentMethodInput}
+                    onChange={(e) => setPaymentMethodInput(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="M-PESA">M-PESA</option>
+                    <option value="Equity Bank">Equity Bank</option>
+                    <option value="Cash">Cash</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Reference / Code</label>
+                  <input
+                    type="text"
+                    value={paymentRefInput}
+                    onChange={(e) => setPaymentRefInput(e.target.value)}
+                    placeholder="e.g. QKH489291"
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end items-center gap-3 pt-3 border-t border-[#1E293B]">
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="px-4 py-2 bg-[#142036] text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-950/50 flex items-center gap-1.5"
+                >
+                  {isSubmittingPayment ? 'Recording...' : 'Confirm & Record Payment'}
+                </button>
               </div>
             </form>
           </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
+import { syncContributionToPenalty } from '@/lib/syncService';
 
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
@@ -82,6 +83,12 @@ export async function POST(request: Request) {
       },
       remarks: remarks || `Recorded new monthly contribution of KSh ${Number(amount || 0).toLocaleString()} for ${memberName || 'member'}`,
     });
+
+    try {
+      await syncContributionToPenalty(contribution.id);
+    } catch (syncErr) {
+      console.warn('Penalty sync warning on contribution create:', syncErr);
+    }
 
     return NextResponse.json({ success: true, data: contribution }, { status: 201 });
   } catch (error) {
@@ -166,6 +173,12 @@ export async function PUT(request: Request) {
       newValues,
       remarks: remarks || `Monthly contribution received and updated for ${newMember}.`,
     });
+
+    try {
+      await syncContributionToPenalty(updated.id);
+    } catch (syncErr) {
+      console.warn('Penalty sync warning on contribution update:', syncErr);
+    }
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
