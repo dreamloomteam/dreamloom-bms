@@ -210,11 +210,21 @@ export async function DELETE(request: Request) {
       include: { member: true },
     });
 
-    if (id) {
-      await prisma.contribution.delete({ where: { id: Number(id) } });
-    } else if (customId) {
-      await prisma.contribution.delete({ where: { customId } });
+    if (!prevContribution) {
+      return NextResponse.json({ success: false, error: 'Contribution record not found' }, { status: 404 });
     }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.deposit.updateMany({
+        where: { contributionId: prevContribution.id },
+        data: { contributionId: null },
+      });
+      await tx.penalty.updateMany({
+        where: { contributionId: prevContribution.id },
+        data: { contributionId: null },
+      });
+      await tx.contribution.delete({ where: { id: prevContribution.id } });
+    });
 
     if (prevContribution) {
       await createAuditLog({

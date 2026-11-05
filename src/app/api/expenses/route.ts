@@ -74,11 +74,16 @@ export async function PUT(request: Request) {
     const { userEmail, id, expenseDate, description, amount, expenseType, referenceDetails, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can update expenses.' }, { status: 403 });
+    }
+
+    const numId = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, ''), 10);
+    if (!numId || isNaN(numId)) {
+      return NextResponse.json({ success: false, error: 'Valid Expense ID is required' }, { status: 400 });
     }
 
     const prevExpense = await prisma.expense.findUnique({
-      where: { id: Number(id) },
+      where: { id: numId },
     });
 
     if (!prevExpense) {
@@ -93,7 +98,7 @@ export async function PUT(request: Request) {
     };
 
     const updated = await prisma.expense.update({
-      where: { id: Number(id) },
+      where: { id: numId },
       data: {
         ...(expenseDate && { expenseDate: new Date(expenseDate) }),
         ...(description && { description }),
@@ -131,38 +136,45 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const rawId = searchParams.get('id');
     const userEmail = searchParams.get('userEmail');
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can delete expenses.' }, { status: 403 });
+    }
+
+    const numId = rawId ? (isNaN(Number(rawId)) ? parseInt(rawId.replace(/\D/g, ''), 10) : Number(rawId)) : null;
+    if (!numId || isNaN(numId)) {
+      return NextResponse.json({ success: false, error: 'Valid Expense ID is required' }, { status: 400 });
     }
 
     const prevExpense = await prisma.expense.findUnique({
-      where: { id: Number(id) },
+      where: { id: numId },
     });
 
-    await prisma.expense.delete({ where: { id: Number(id) } });
-
-    if (prevExpense) {
-      await createAuditLog({
-        model: 'Expenses',
-        action: 'Deleted',
-        recordId: prevExpense.id,
-        userEmail,
-        member: prevExpense.referenceDetails || prevExpense.description || `Expense #${id}`,
-        oldValues: {
-          'Description': prevExpense.description,
-          'Expense Amount': `KSh ${Number(prevExpense.amount).toLocaleString()}`,
-          'Category': prevExpense.expenseType,
-          'Paid To / Reference': prevExpense.referenceDetails || '-',
-        },
-        newValues: {
-          'Record Status': 'Expense Record Deleted (No new active record)',
-        },
-        remarks: `Deleted expense voucher #${id}`,
-      });
+    if (!prevExpense) {
+      return NextResponse.json({ success: false, error: 'Expense record not found' }, { status: 404 });
     }
+
+    await prisma.expense.delete({ where: { id: numId } });
+
+    await createAuditLog({
+      model: 'Expenses',
+      action: 'Deleted',
+      recordId: prevExpense.id,
+      userEmail,
+      member: prevExpense.referenceDetails || prevExpense.description || `Expense #${numId}`,
+      oldValues: {
+        'Description': prevExpense.description,
+        'Expense Amount': `KSh ${Number(prevExpense.amount).toLocaleString()}`,
+        'Category': prevExpense.expenseType,
+        'Paid To / Reference': prevExpense.referenceDetails || '-',
+      },
+      newValues: {
+        'Record Status': 'Expense Record Deleted (No new active record)',
+      },
+      remarks: `Deleted expense voucher #${numId}`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

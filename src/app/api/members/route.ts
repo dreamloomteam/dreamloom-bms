@@ -77,10 +77,15 @@ export async function PUT(request: Request) {
     const { userEmail, id, fullName, nationalId, phone, email, role, remarks } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can update member records.' }, { status: 403 });
     }
 
-    const prev = await prisma.member.findUnique({ where: { id: Number(id) } });
+    const numId = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, ''), 10);
+    if (!numId || isNaN(numId)) {
+      return NextResponse.json({ success: false, error: 'Valid Member ID is required' }, { status: 400 });
+    }
+
+    const prev = await prisma.member.findUnique({ where: { id: numId } });
     if (!prev) {
       return NextResponse.json({ success: false, error: 'Member not found' }, { status: 404 });
     }
@@ -95,7 +100,7 @@ export async function PUT(request: Request) {
     };
 
     const updated = await prisma.member.update({
-      where: { id: Number(id) },
+      where: { id: numId },
       data: {
         ...(fullName && { fullName }),
         ...(nationalId && { nationalId }),
@@ -135,36 +140,52 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const rawId = searchParams.get('id');
     const userEmail = searchParams.get('userEmail');
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can delete member records.' }, { status: 403 });
     }
 
-    const prev = await prisma.member.findUnique({ where: { id: Number(id) } });
-    await prisma.member.delete({ where: { id: Number(id) } });
+    const numId = rawId ? (isNaN(Number(rawId)) ? parseInt(rawId.replace(/\D/g, ''), 10) : Number(rawId)) : null;
+    if (!numId || isNaN(numId)) {
+      return NextResponse.json({ success: false, error: 'Valid Member ID is required' }, { status: 400 });
+    }
 
-    if (prev) {
-      await createAuditLog({
-        model: 'Members',
-        action: 'Deleted',
-        recordId: Number(id),
-        userEmail,
-        member: prev.fullName,
-        oldValues: {
-          'Member Name': prev.fullName,
-          'Corporate Role': prev.role,
-          'National ID': prev.nationalId,
-          'Phone Number': prev.phone,
-          'Status': 'Active',
-        },
-        newValues: {
-          'Record Status': 'Member Record Deleted (No new active record)',
-        },
-        remarks: `Member registration terminated for ${prev.fullName}.`,
+    const prev = await prisma.member.findUnique({ where: { id: numId } });
+    if (!prev) {
+      return NextResponse.json({ success: false, error: 'Member record not found' }, { status: 404 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.paymentTransaction.deleteMany({
+        where: { penalty: { memberId: numId } }
       });
-    }
+      await tx.penalty.deleteMany({ where: { memberId: numId } });
+      await tx.loan.deleteMany({ where: { memberId: numId } });
+      await tx.contribution.deleteMany({ where: { memberId: numId } });
+      await tx.deposit.deleteMany({ where: { memberId: numId } });
+      await tx.member.delete({ where: { id: numId } });
+    });
+
+    await createAuditLog({
+      model: 'Members',
+      action: 'Deleted',
+      recordId: numId,
+      userEmail,
+      member: prev.fullName,
+      oldValues: {
+        'Member Name': prev.fullName,
+        'Corporate Role': prev.role,
+        'National ID': prev.nationalId,
+        'Phone Number': prev.phone,
+        'Status': 'Active',
+      },
+      newValues: {
+        'Record Status': 'Member Record Deleted (No new active record)',
+      },
+      remarks: `Member registration terminated for ${prev.fullName}.`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

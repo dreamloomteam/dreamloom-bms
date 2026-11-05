@@ -215,7 +215,17 @@ export async function DELETE(request: Request) {
       include: { member: true },
     });
 
-    await prisma.loan.delete({ where: { id: String(id) } });
+    if (!prevLoan) {
+      return NextResponse.json({ success: false, error: 'Loan record not found' }, { status: 404 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.deposit.updateMany({
+        where: { loanId: String(id) },
+        data: { loanId: null },
+      });
+      await tx.loan.delete({ where: { id: String(id) } });
+    });
 
     if (prevLoan) {
       await createAuditLog({

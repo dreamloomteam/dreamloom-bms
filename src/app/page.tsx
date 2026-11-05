@@ -340,6 +340,138 @@ export default function Home() {
           }
         })
         .catch(err => console.warn('Could not fetch server expenses:', err));
+
+      // 5. Members Persistence from Database
+      const savedMembers = localStorage.getItem('dreamloom_members');
+      if (savedMembers) {
+        try {
+          const parsed = JSON.parse(savedMembers);
+          if (Array.isArray(parsed) && parsed.length > 0) setMembers(parsed);
+        } catch (e) { console.warn('Saved members parse failed:', e); }
+      }
+      fetch('/api/members')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const avatarMap: Record<string, string> = {
+              'Simon': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+              'David': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+              'Elijah': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+              'Samuel': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+              'Michael': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+              'Daniel': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+              'Beatrice': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+            };
+            const colorMap: Record<string, string> = {
+              'Simon': 'from-emerald-400 to-teal-400',
+              'David': 'from-sky-400 to-cyan-400',
+              'Elijah': 'from-blue-500 to-sky-400',
+              'Samuel': 'from-indigo-400 to-blue-400',
+              'Michael': 'from-purple-400 to-indigo-400',
+              'Daniel': 'from-amber-400 to-yellow-400',
+              'Beatrice': 'from-teal-400 to-emerald-400',
+            };
+            const mapped = res.data.map((m: any) => {
+              const firstName = m.fullName ? m.fullName.split(' ')[0] : 'Member';
+              const totContrib = m.contributions?.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0) || 0;
+              const actLoans = m.loans?.filter((l: any) => l.status === 'Active')
+                .reduce((sum: number, l: any) => sum + ((Number(l.totalPayable) || Number(l.principal) || 0) - (Number(l.paidAmount) || 0)), 0) || 0;
+              return {
+                id: `MEM-${String(m.id).padStart(3, '0')}`,
+                dbId: m.id,
+                name: firstName,
+                fullName: m.fullName,
+                nationalId: m.nationalId || '-',
+                phone: m.phone || '-',
+                role: m.role || 'Member',
+                email: m.email || '',
+                totalContribution: totContrib,
+                activeLoans: actLoans,
+                netBalance: totContrib - actLoans,
+                shares: '14.28%',
+                percentage: 95,
+                status: 'Active',
+                avatar: avatarMap[firstName] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                color: colorMap[firstName] || 'from-emerald-400 to-teal-400',
+              };
+            });
+            setMembers(mapped);
+            localStorage.setItem('dreamloom_members', JSON.stringify(mapped));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server members:', err));
+
+      // 6. Investments Persistence from Database
+      const savedInvestments = localStorage.getItem('dreamloom_investments');
+      if (savedInvestments) {
+        try {
+          const parsed = JSON.parse(savedInvestments);
+          if (Array.isArray(parsed) && parsed.length > 0) setInvestments(parsed);
+        } catch (e) { console.warn('Saved investments parse failed:', e); }
+      }
+      fetch('/api/investments')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setInvestments(res.data);
+            localStorage.setItem('dreamloom_investments', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server investments:', err));
+
+      // 7. Projects Persistence from Database
+      const savedProjects = localStorage.getItem('dreamloom_projects');
+      if (savedProjects) {
+        try {
+          const parsed = JSON.parse(savedProjects);
+          if (Array.isArray(parsed) && parsed.length > 0) setProjects(parsed);
+        } catch (e) { console.warn('Saved projects parse failed:', e); }
+      }
+      fetch('/api/projects')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setProjects(res.data);
+            localStorage.setItem('dreamloom_projects', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server projects:', err));
+
+      // 8. Suppliers Persistence from Database
+      const savedSuppliers = localStorage.getItem('dreamloom_suppliers');
+      if (savedSuppliers) {
+        try {
+          const parsed = JSON.parse(savedSuppliers);
+          if (Array.isArray(parsed) && parsed.length > 0) setSuppliers(parsed);
+        } catch (e) { console.warn('Saved suppliers parse failed:', e); }
+      }
+      fetch('/api/suppliers')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setSuppliers(res.data);
+            localStorage.setItem('dreamloom_suppliers', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server suppliers:', err));
+
+      // 9. Documents Persistence from Database
+      const savedDocuments = localStorage.getItem('dreamloom_documents');
+      if (savedDocuments) {
+        try {
+          const parsed = JSON.parse(savedDocuments);
+          if (Array.isArray(parsed) && parsed.length > 0) setDocuments(parsed);
+        } catch (e) { console.warn('Saved documents parse failed:', e); }
+      }
+      fetch('/api/documents')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setDocuments(res.data);
+            localStorage.setItem('dreamloom_documents', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server documents:', err));
     } catch (e) {
       console.error(e);
     }
@@ -442,7 +574,7 @@ export default function Home() {
   const [depositsLoading, setDepositsLoading] = useState(false);
 
   // 1. Official Membership Directory & Summary (PDF Page 1 & Page 10)
-  const [members, setMembers] = useState([
+  const [members, setMembers] = useState<any[]>([
     {
       id: 'MEM-001',
       name: 'Simon',
@@ -1128,7 +1260,10 @@ export default function Home() {
           })
         });
       }
-      alert(`Successfully saved contributions for ${monthName} to database and local system.`);
+      await refreshContributions();
+      await refreshPenalties();
+      await refreshAuditLogs();
+      alert(`Successfully saved contributions for ${monthName} to database and verified.`);
     } catch (err) {
       console.error('Failed to save monthly records to database:', err);
       alert(`Saved locally, but server update had a warning: ${(err as Error).message}`);
@@ -1216,8 +1351,8 @@ export default function Home() {
     setCurrentUser(null);
   };
 
-  // Toggle Loan Status: Active <-> Settled
-  const handleToggleLoanStatus = (loanId: string) => {
+  // Toggle Loan Status: Active <-> Settled (Awaits database persistence)
+  const handleToggleLoanStatus = async (loanId: string) => {
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update loan status.');
       return;
@@ -1229,54 +1364,219 @@ export default function Home() {
     const isCurrentlyActive = targetLoan.status === 'Active';
     const nextStatus = isCurrentlyActive ? 'Settled' : 'Active';
     const nextPaid = isCurrentlyActive ? targetLoan.totalLoan : 0.00;
-    const nextBal = isCurrentlyActive ? 0.00 : targetLoan.totalLoan;
-    const nextCleared = isCurrentlyActive ? todayStr : '-';
+    const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
 
-    const updatedLoans = loans.map(l => l.id === loanId ? {
-      ...l,
-      status: nextStatus,
-      clearedDate: nextCleared,
-      paid: nextPaid,
-      balance: nextBal
-    } : l);
-
-    setLoans(updatedLoans);
     try {
-      localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
-    } catch (e) {
-      console.warn('LocalStorage save failed:', e);
+      const res = await fetch('/api/loans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userEmail,
+          id: loanId,
+          status: nextStatus,
+          paidAmount: nextPaid,
+          clearedDate: isCurrentlyActive ? todayStr : null
+        })
+      }).then(r => r.json());
+
+      if (!res.success) {
+        alert('Failed to update loan status: ' + (res.error || 'Server error.'));
+        return;
+      }
+
+      await refreshLoans();
+
+      await recordAuditLog({
+        user: currentUser?.fullName,
+        member: targetLoan.borrower,
+        module: 'Loans',
+        action: 'Updated',
+        oldValues: {
+          'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
+          'Repayment Period': '6 Months',
+          'Status': targetLoan.status
+        },
+        newValues: {
+          'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
+          'Repayment Period': '6 Months',
+          'Status': nextStatus
+        },
+        remarks: `Updated loan status for ${targetLoan.borrower} to ${nextStatus}`
+      });
+      await refreshAuditLogs();
+    } catch (err: any) {
+      alert('Error updating loan status: ' + err.message);
     }
+  };
 
-    // Persist to Neon DB
-    fetch('/api/loans', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userEmail: currentUser?.email,
-        id: loanId,
-        status: nextStatus,
-        paidAmount: nextPaid,
-        clearedDate: isCurrentlyActive ? todayStr : null
-      })
-    }).catch(err => console.error('Database loan toggle failed:', err));
+  // Real-time Database Synchronization Helpers across ALL Modules
+  const refreshMembers = async () => {
+    try {
+      const res = await fetch('/api/members').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const avatarMap: Record<string, string> = {
+          'Simon': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+          'David': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+          'Elijah': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+          'Samuel': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          'Michael': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+          'Daniel': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+          'Beatrice': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+        };
+        const colorMap: Record<string, string> = {
+          'Simon': 'from-emerald-400 to-teal-400',
+          'David': 'from-sky-400 to-cyan-400',
+          'Elijah': 'from-blue-500 to-sky-400',
+          'Samuel': 'from-indigo-400 to-blue-400',
+          'Michael': 'from-purple-400 to-indigo-400',
+          'Daniel': 'from-amber-400 to-yellow-400',
+          'Beatrice': 'from-teal-400 to-emerald-400',
+        };
+        const mapped = res.data.map((m: any) => {
+          const firstName = m.fullName ? m.fullName.split(' ')[0] : 'Member';
+          const totContrib = m.contributions?.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0) || 0;
+          const actLoans = m.loans?.filter((l: any) => l.status === 'Active')
+            .reduce((sum: number, l: any) => sum + ((Number(l.totalPayable) || Number(l.principal) || 0) - (Number(l.paidAmount) || 0)), 0) || 0;
+          return {
+            id: `MEM-${String(m.id).padStart(3, '0')}`,
+            dbId: m.id,
+            name: firstName,
+            fullName: m.fullName,
+            nationalId: m.nationalId || '-',
+            phone: m.phone || '-',
+            role: m.role || 'Member',
+            email: m.email || '',
+            totalContribution: totContrib,
+            activeLoans: actLoans,
+            netBalance: totContrib - actLoans,
+            shares: '14.28%',
+            percentage: 95,
+            status: 'Active',
+            avatar: avatarMap[firstName] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            color: colorMap[firstName] || 'from-emerald-400 to-teal-400',
+          };
+        });
+        setMembers(mapped);
+        try { localStorage.setItem('dreamloom_members', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh members:', e);
+    }
+  };
 
-    recordAuditLog({
-      user: currentUser?.fullName,
-      member: targetLoan.borrower,
-      module: 'Loans',
-      action: 'Updated',
-      oldValues: {
-        'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
-        'Repayment Period': '6 Months',
-        'Status': targetLoan.status
-      },
-      newValues: {
-        'Loan Amount': `KSh ${Number(targetLoan.principal).toLocaleString()}`,
-        'Repayment Period': '6 Months',
-        'Status': nextStatus
-      },
-      remarks: `Updated loan status for ${targetLoan.borrower} to ${nextStatus}`
-    });
+  const refreshContributions = async () => {
+    try {
+      const res = await fetch('/api/contributions').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((c: any) => ({
+          id: c.customId || ('CNT-' + c.id),
+          dbId: c.id,
+          month: c.monthYear,
+          member: c.member?.fullName || (c.remarks?.replace('Member: ', '') || 'Simon Memia Wanjiru'),
+          amount: Number(c.amount) || 0,
+          unsettled: Number(c.unsettled) || 0,
+          payout: Number(c.payout) || 0,
+          notes: c.remarks || ''
+        }));
+        setContributions(mapped);
+        try { localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh contributions:', e);
+    }
+  };
+
+  const refreshLoans = async () => {
+    try {
+      const res = await fetch('/api/loans').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((l: any) => ({
+          id: l.id,
+          issueDate: l.issueDate ? String(l.issueDate).slice(0, 10) : '-',
+          borrower: l.member?.fullName || 'Member',
+          principal: Number(l.principal) || 0,
+          interest: Number(l.interest) || 0,
+          totalLoan: Number(l.totalPayable) || 0,
+          paid: Number(l.paidAmount) || 0,
+          balance: (Number(l.totalPayable) || 0) - (Number(l.paidAmount) || 0),
+          status: l.status,
+          clearedDate: l.clearedDate ? String(l.clearedDate).slice(0, 10) : '-'
+        }));
+        setLoans(mapped);
+        try { localStorage.setItem('dreamloom_loans', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh loans:', e);
+    }
+  };
+
+  const refreshExpenses = async () => {
+    try {
+      const res = await fetch('/api/expenses').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((e: any, idx: number) => ({
+          id: `EXP-${String(idx + 1).padStart(2, '0')}`,
+          dbId: e.id,
+          date: e.expenseDate ? String(e.expenseDate).slice(0, 10) : '-',
+          description: e.description,
+          amount: Number(e.amount) || 0,
+          category: e.expenseType || 'Operational',
+          paidTo: e.referenceDetails || 'Operational Outflow'
+        }));
+        setExpenses(mapped);
+        try { localStorage.setItem('dreamloom_expenses', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh expenses:', e);
+    }
+  };
+
+  const refreshInvestments = async () => {
+    try {
+      const res = await fetch('/api/investments').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setInvestments(res.data);
+        try { localStorage.setItem('dreamloom_investments', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh investments:', e);
+    }
+  };
+
+  const refreshProjects = async () => {
+    try {
+      const res = await fetch('/api/projects').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setProjects(res.data);
+        try { localStorage.setItem('dreamloom_projects', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh projects:', e);
+    }
+  };
+
+  const refreshSuppliers = async () => {
+    try {
+      const res = await fetch('/api/suppliers').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setSuppliers(res.data);
+        try { localStorage.setItem('dreamloom_suppliers', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh suppliers:', e);
+    }
+  };
+
+  const refreshDocuments = async () => {
+    try {
+      const res = await fetch('/api/documents').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setDocuments(res.data);
+        try { localStorage.setItem('dreamloom_documents', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh documents:', e);
+    }
   };
 
   // Real-time Database Penalty & Unsettled Dues Synchronization
@@ -1326,6 +1626,49 @@ export default function Home() {
       console.warn('Could not refresh deposits:', e);
     } finally {
       setDepositsLoading(false);
+    }
+  };
+
+  const refreshAuditLogs = async () => {
+    try {
+      const res = await fetch('/api/audit-logs').then(r => r.json());
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((el: any, idx: number) => {
+          let p: any = {};
+          try {
+            p = typeof el.changes === 'string' ? JSON.parse(el.changes) : (el.changes || {});
+          } catch (e) { p = {}; }
+
+          const createdDate = el.createdAt ? new Date(el.createdAt) : new Date();
+          const dateStr = getEATISODate(createdDate);
+          const formattedTimestamp = getEATDateTimeString(createdDate);
+          const user = p.user || el.user?.fullName || (p.userEmail ? p.userEmail.split('@')[0].replace('.', ' ') : 'Simon Memia');
+
+          let moduleName = p.module || el.model || 'Contributions';
+          let act = p.action || el.action || 'Updated';
+          const member = p.member || p.memberName || p.borrower || p.paidTo || 'Mary Wanjiru';
+
+          return {
+            id: el.id ? `LOG-${el.id}` : `LOG-${idx + 1}`,
+            dbId: el.id,
+            timestamp: formattedTimestamp,
+            rawDate: dateStr,
+            user,
+            module: moduleName,
+            action: act,
+            member,
+            oldValues: p.oldValues || { 'Status': 'Active' },
+            newValues: p.newValues || { 'Status': 'Updated' },
+            changedFields: p.changedFields || {},
+            remarks: p.remarks || `${act} ${moduleName} record for ${member}`
+          };
+        });
+        setEditLogs(mapped);
+        if (mapped.length > 0 && !selectedEditLog) setSelectedEditLog(mapped[0]);
+        try { localStorage.setItem('dreamloom_edit_logs', JSON.stringify(mapped)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh audit logs:', e);
     }
   };
 
@@ -1403,8 +1746,8 @@ export default function Home() {
     }
   };
 
-  // Toggle Penalty Status: Active <-> Paid (automatically adds date paid)
-  const handleToggleFineStatus = (fineId: string) => {
+  // Toggle Penalty Status: Active <-> Paid (Awaits database persistence)
+  const handleToggleFineStatus = async (fineId: string) => {
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update penalty status.');
       return;
@@ -1414,51 +1757,52 @@ export default function Home() {
     if (!targetFine) return;
 
     const nextStatus = targetFine.status === 'Active' ? 'Paid' : 'Active';
-    const updatedFines = fines.map(f => f.id === fineId ? {
-      ...f,
-      status: nextStatus,
-      datePaid: nextStatus === 'Paid' ? todayStr : '-'
-    } : f);
+    const delId = (targetFine as any).dbId || fineId;
+    const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
 
-    setFines(updatedFines);
     try {
-      localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines));
-    } catch (e) {
-      console.warn('LocalStorage save failed:', e);
-    }
-
-    if ((targetFine as any).dbId) {
-      fetch('/api/penalties', {
+      const res = await fetch('/api/penalties', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userEmail: currentUser?.email,
-          id: (targetFine as any).dbId,
+          userEmail,
+          id: delId,
           status: nextStatus === 'Paid' ? 'Settled' : 'Active',
           paidAmount: nextStatus === 'Paid' ? targetFine.amount : 0
         })
-      }).catch(err => console.error('Database penalty toggle failed:', err));
-    }
+      }).then(r => r.json());
 
-    recordAuditLog({
-      user: currentUser?.fullName,
-      member: targetFine.member,
-      module: 'Fines & Penalties',
-      action: 'Updated',
-      oldValues: {
-        'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
-        'Reason': targetFine.reason || 'Late payment + penalty',
-        'Status': targetFine.status,
-        'Date Paid': targetFine.datePaid || '-'
-      },
-      newValues: {
-        'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
-        'Reason': targetFine.reason || 'Late payment + penalty',
-        'Status': nextStatus,
-        'Date Paid': nextStatus === 'Paid' ? todayStr : '-'
-      },
-      remarks: `Updated penalty status for ${targetFine.member} to ${nextStatus}`
-    });
+      if (!res.success) {
+        alert('Failed to toggle penalty status: ' + (res.error || 'Server error.'));
+        return;
+      }
+
+      await refreshPenalties();
+      await refreshContributions();
+
+      await recordAuditLog({
+        user: currentUser?.fullName,
+        member: targetFine.member,
+        module: 'Fines & Penalties',
+        action: 'Updated',
+        oldValues: {
+          'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
+          'Reason': targetFine.reason || 'Late payment + penalty',
+          'Status': targetFine.status,
+          'Date Paid': targetFine.datePaid || '-'
+        },
+        newValues: {
+          'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
+          'Reason': targetFine.reason || 'Late payment + penalty',
+          'Status': nextStatus,
+          'Date Paid': nextStatus === 'Paid' ? todayStr : '-'
+        },
+        remarks: `Updated penalty status for ${targetFine.member} to ${nextStatus}`
+      });
+      await refreshAuditLogs();
+    } catch (err: any) {
+      alert('Error updating penalty status: ' + err.message);
+    }
   };
 
   // Quick Action Modal Trigger (Defaults to today's actual date & time in Africa/Nairobi, decoupled from reporting filter)
@@ -1594,359 +1938,235 @@ export default function Home() {
     setIsModalOpen(true);
   };
 
-  // Delete Action for Records
+  // Delete Action for Records (Awaits database confirmation before UI update)
   const handleDeleteCurrentRecord = async () => {
     if (!editingId) return;
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can delete records.');
       return;
     }
-    const confirmDelete = window.confirm(`Are you sure you want to permanently delete this ${modalMode} record? This action will update the database.`);
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete this ${modalMode} record (#${editingId})? This action cannot be undone.`);
     if (!confirmDelete) return;
 
-    if (modalMode === 'Contributions') {
-      const remaining = contributions.filter(c => c.id !== editingId);
-      setContributions(remaining);
-      try {
-        localStorage.setItem('dreamloom_contributions', JSON.stringify(remaining));
-      } catch (e) {
-        console.warn('LocalStorage save failed:', e);
-      }
-      fetch(`/api/contributions?customId=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
-        method: 'DELETE'
-      }).catch(err => console.error('Database delete failed:', err));
-    } else if (modalMode === 'Loan Portfolio') {
-      const remaining = loans.filter(l => l.id !== editingId);
-      setLoans(remaining);
-      try {
-        localStorage.setItem('dreamloom_loans', JSON.stringify(remaining));
-      } catch (e) {
-        console.warn('LocalStorage save failed:', e);
-      }
-      fetch(`/api/loans?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
-        method: 'DELETE'
-      }).catch(err => console.error('Database loan delete failed:', err));
-    } else if (modalMode === 'Fines & Penalties') {
-      const targetFine = fines.find(f => f.id === editingId);
-      const remaining = fines.filter(f => f.id !== editingId);
-      setFines(remaining);
-      try {
-        localStorage.setItem('dreamloom_fines', JSON.stringify(remaining));
-      } catch (e) {
-        console.warn('LocalStorage save failed:', e);
-      }
-      if (targetFine && (targetFine as any).dbId) {
-        fetch(`/api/penalties?id=${encodeURIComponent(String((targetFine as any).dbId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+    try {
+      const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+      let deleteSuccess = false;
+
+      if (modalMode === 'Contributions') {
+        const res = await fetch(`/api/contributions?customId=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
           method: 'DELETE'
-        }).catch(err => console.error('Database penalty delete failed:', err));
-      }
-    } else if (modalMode === 'Expenses') {
-      const targetExp = expenses.find(exp => exp.id === editingId);
-      const remaining = expenses.filter(exp => exp.id !== editingId);
-      setExpenses(remaining);
-      try {
-        localStorage.setItem('dreamloom_expenses', JSON.stringify(remaining));
-      } catch (e) {
-        console.warn('LocalStorage save failed:', e);
-      }
-      if (targetExp && (targetExp as any).dbId) {
-        fetch(`/api/expenses?id=${encodeURIComponent(String((targetExp as any).dbId))}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, {
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting contribution.'));
+          return;
+        }
+        await refreshContributions();
+        await refreshPenalties();
+        deleteSuccess = true;
+      } else if (modalMode === 'Loan Portfolio') {
+        const res = await fetch(`/api/loans?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
           method: 'DELETE'
-        }).catch(err => console.error('Database expense delete failed:', err));
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting loan record.'));
+          return;
+        }
+        await refreshLoans();
+        deleteSuccess = true;
+      } else if (modalMode === 'Fines & Penalties') {
+        const targetFine = fines.find(f => f.id === editingId);
+        const delId = targetFine?.dbId || editingId;
+        const res = await fetch(`/api/penalties?id=${encodeURIComponent(String(delId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting penalty record.'));
+          return;
+        }
+        await refreshPenalties();
+        deleteSuccess = true;
+      } else if (modalMode === 'Expenses') {
+        const targetExp = expenses.find(exp => exp.id === editingId);
+        const delId = targetExp?.dbId || editingId;
+        const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(delId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting expense voucher.'));
+          return;
+        }
+        await refreshExpenses();
+        deleteSuccess = true;
+      } else if (modalMode === 'Member Directory') {
+        const targetMem = members.find(m => m.id === editingId);
+        const delId = targetMem?.dbId || editingId;
+        const res = await fetch(`/api/members?id=${encodeURIComponent(String(delId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting member.'));
+          return;
+        }
+        await refreshMembers();
+        deleteSuccess = true;
+      } else if (modalMode === 'Investments') {
+        const res = await fetch(`/api/investments?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting investment.'));
+          return;
+        }
+        await refreshInvestments();
+        deleteSuccess = true;
+      } else if (modalMode === 'Projects') {
+        const res = await fetch(`/api/projects?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting project.'));
+          return;
+        }
+        await refreshProjects();
+        deleteSuccess = true;
+      } else if (modalMode === 'Suppliers') {
+        const res = await fetch(`/api/suppliers?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting supplier.'));
+          return;
+        }
+        await refreshSuppliers();
+        deleteSuccess = true;
+      } else if (modalMode === 'Documents') {
+        const res = await fetch(`/api/documents?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting document.'));
+          return;
+        }
+        await refreshDocuments();
+        deleteSuccess = true;
+      } else if (modalMode === 'Deposits') {
+        const res = await fetch(`/api/deposits?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting deposit.'));
+          return;
+        }
+        await refreshDeposits();
+        deleteSuccess = true;
       }
-    } else if (modalMode === 'Member Directory') {
-      setMembers(members.filter(m => m.id !== editingId));
-    } else if (modalMode === 'Investments') {
-      setInvestments(investments.filter(inv => inv.id !== editingId));
-    } else if (modalMode === 'Projects') {
-      setProjects(projects.filter(p => p.id !== editingId));
-    } else if (modalMode === 'Suppliers') {
-      setSuppliers(suppliers.filter(s => s.id !== editingId));
-    } else if (modalMode === 'Documents') {
-      setDocuments(documents.filter(d => d.id !== editingId));
+
+      if (deleteSuccess) {
+        await refreshAuditLogs();
+        setIsModalOpen(false);
+        setEditingId(null);
+      }
+    } catch (err: any) {
+      alert('Network error while deleting record: ' + err.message);
     }
-
-    let deletedMember = 'System Record';
-    let oldValSnapshot: Record<string, string> = { 'Record ID': String(editingId) };
-    if (modalMode === 'Contributions') {
-      const c = contributions.find(x => x.id === editingId);
-      if (c) {
-        deletedMember = c.member;
-        oldValSnapshot = {
-          'Contribution Amount': `KSh ${(c.amount || 0).toLocaleString()}`,
-          'Period': c.month || '-',
-          'Unsettled Dues': `KSh ${(c.unsettled || 0).toLocaleString()}`
-        };
-      }
-    } else if (modalMode === 'Loan Portfolio') {
-      const l = loans.find(x => x.id === editingId);
-      if (l) {
-        deletedMember = l.borrower;
-        oldValSnapshot = {
-          'Loan Amount': `KSh ${(l.principal || 0).toLocaleString()}`,
-          'Total Payable': `KSh ${(l.totalLoan || 0).toLocaleString()}`,
-          'Status': l.status
-        };
-      }
-    } else if (modalMode === 'Fines & Penalties') {
-      const f = fines.find(x => x.id === editingId);
-      if (f) {
-        deletedMember = f.member;
-        oldValSnapshot = {
-          'Penalty Amount': `KSh ${(f.amount || 0).toLocaleString()}`,
-          'Reason': f.reason || 'Late payment',
-          'Status': f.status
-        };
-      }
-    } else if (modalMode === 'Expenses') {
-      const e = expenses.find(x => x.id === editingId);
-      if (e) {
-        deletedMember = e.paidTo || 'Vendor';
-        oldValSnapshot = {
-          'Expense Amount': `KSh ${(e.amount || 0).toLocaleString()}`,
-          'Category': e.category || 'Operations',
-          'Description': e.description || '-'
-        };
-      }
-    } else if (modalMode === 'Member Directory') {
-      const m = members.find(x => x.id === editingId);
-      if (m) {
-        deletedMember = m.fullName || m.name;
-        oldValSnapshot = {
-          'Member Name': m.fullName || m.name,
-          'Phone': m.phone || '-',
-          'Status': m.status
-        };
-      }
-    }
-
-    recordAuditLog({
-      user: currentUser?.fullName,
-      member: deletedMember,
-      module: modalMode === 'Loan Portfolio' ? 'Loans' : modalMode,
-      action: 'Deleted',
-      oldValues: oldValSnapshot,
-      newValues: { 'Record Status': `${modalMode} Record Deleted` },
-      remarks: `Deleted record #${editingId} in ${modalMode}`
-    });
-
-    setIsModalOpen(false);
   };
 
-  // Submit Modal for All Modules (Add & Edit)
-  const handleSubmitModal = (e: React.FormEvent) => {
+  // Submit Modal for All Modules (Add & Edit - Connected directly to PostgreSQL Neon DB with awaiting confirmation)
+  const handleSubmitModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can modify records.');
       return;
     }
-    const nowStamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
 
-    // 1. Members
-    if (modalMode === 'Member Directory' || modalMode === 'Add Member') {
-      if (editingId) {
-        setMembers(members.map(m => m.id === editingId ? {
-          ...m,
-          fullName: field1,
-          nationalId: field2,
-          phone: field3,
-          role: field4,
-          email: field5,
-          totalContribution: Number(field6) || m.totalContribution,
-          status: field7 || m.status
-        } : m));
-      } else {
-        const newM = {
-          id: `MEM-00${members.length + 1}`,
-          name: field1.split(' ')[0],
-          fullName: field1,
-          nationalId: field2 || '40000000',
-          phone: field3 || '0700000000',
-          role: field4 || 'Member',
-          email: field5 || `${field1.split(' ')[0].toLowerCase()}@dreamloom.co.ke`,
-          totalContribution: 65000.00,
-          activeLoans: 0.00,
-          netBalance: 65000.00,
-          shares: '13.80%',
-          percentage: 90,
-          status: 'Active',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          color: 'from-emerald-400 to-teal-400'
-        };
-        setMembers([...members, newM]);
-      }
-    }
-    // 2. Contributions
-    else if (modalMode === 'Contributions' || modalMode === 'Record Contribution') {
-      if (editingId) {
-        const updatedList = contributions.map(c => c.id === editingId ? {
-          ...c,
-          month: field1,
-          member: field2,
-          amount: Number(field3) || 0,
-          unsettled: Number(field4) || 0,
-          payout: Number(field5) || 0,
-          notes: field6
-        } : c);
-        setContributions(updatedList);
-        try {
-          localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedList));
-        } catch (e) {
-          console.warn('LocalStorage save failed:', e);
-        }
+    try {
+      const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
 
-        // Asynchronously persist to Postgres via secure API
-        fetch('/api/contributions', {
-          method: 'PUT',
+      // 1. Members
+      if (modalMode === 'Member Directory' || modalMode === 'Add Member') {
+        const targetMem = editingId ? members.find(m => m.id === editingId) : null;
+        const memDbId = targetMem?.dbId || editingId;
+        const res = await fetch('/api/members', {
+          method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userEmail: currentUser?.email,
-            customId: editingId,
-            memberName: field2,
-            month: field1,
-            amount: Number(field3) || 0,
-            unsettled: Number(field4) || 0,
-            payout: Number(field5) || 0,
-            notes: field6
+            userEmail,
+            id: editingId ? memDbId : undefined,
+            fullName: field1.trim(),
+            nationalId: field2?.trim(),
+            phone: field3?.trim(),
+            role: field4 || 'Member',
+            email: field5?.trim(),
           })
-        })
-        .then(() => refreshPenalties())
-        .catch(err => console.error('Database update failed:', err));
-      } else {
-        const newC = {
-          id: `CNT-${contributions.length + 1}`,
-          month: field1 || getEATContributionDate(),
-          member: field2,
-          amount: Number(field3) || 0.00,
-          unsettled: Number(field4) || 0.00,
-          payout: Number(field5) || 0.00,
-          notes: field6 || ''
-        };
-        const updatedList = [newC, ...contributions];
-        setContributions(updatedList);
-        try {
-          localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedList));
-        } catch (e) {
-          console.warn('LocalStorage save failed:', e);
-        }
+        }).then(r => r.json());
 
-        // Asynchronously persist to Postgres via secure API
-        fetch('/api/contributions', {
-          method: 'POST',
+        if (!res.success) {
+          alert('Failed to save member: ' + (res.error || 'Server validation error.'));
+          return;
+        }
+        await refreshMembers();
+      }
+      // 2. Contributions
+      else if (modalMode === 'Contributions' || modalMode === 'Record Contribution') {
+        const res = await fetch('/api/contributions', {
+          method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userEmail: currentUser?.email,
-            customId: newC.id,
-            memberName: field2,
+            userEmail,
+            customId: editingId || `CNT-${Date.now()}`,
+            memberName: field2.trim(),
             month: field1 || getEATContributionDate(),
             amount: Number(field3) || 0,
             unsettled: Number(field4) || 0,
             payout: Number(field5) || 0,
             notes: field6 || ''
           })
-        })
-        .then(() => refreshPenalties())
-        .catch(err => console.error('Database create failed:', err));
+        }).then(r => r.json());
 
-        setTransactions([
-          { id: `TX-${Date.now()}`, title: `${field2.split(' ')[0]} - Contribution`, time: 'Just now', amount: `+ KES ${Number(field3 || 0).toLocaleString()}`, type: 'income', icon: Users, iconColor: 'bg-blue-600/20 text-sky-400' },
-          ...transactions
-        ]);
-      }
-    }
-    // 3. Loans
-    else if (modalMode === 'Loan Portfolio' || modalMode === 'New Loan') {
-      const pAmt = Number(field2) || 0;
-      const iAmt = field3 ? Number(field3) : pAmt * 0.10;
-      const tAmt = pAmt + iAmt;
-      if (editingId) {
-        const updatedLoans = loans.map(l => l.id === editingId ? {
-          ...l,
-          borrower: field1,
-          principal: pAmt,
-          interest: iAmt,
-          totalLoan: tAmt,
-          issueDate: field4,
-          clearedDate: field5,
-          status: field6,
-          balance: field6 === 'Settled' ? 0.00 : (field7 ? Number(field7) : tAmt),
-          paid: field6 === 'Settled' ? tAmt : l.paid
-        } : l);
-        setLoans(updatedLoans);
-        try {
-          localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
-        } catch (e) {
-          console.warn('LocalStorage save failed:', e);
+        if (!res.success) {
+          alert('Failed to save contribution: ' + (res.error || 'Server error.'));
+          return;
         }
+        await refreshContributions();
+        await refreshPenalties();
+      }
+      // 3. Loans
+      else if (modalMode === 'Loan Portfolio' || modalMode === 'New Loan') {
+        const pAmt = Number(field2) || 0;
+        const iAmt = field3 ? Number(field3) : pAmt * 0.10;
+        const tAmt = pAmt + iAmt;
 
-        fetch('/api/loans', {
-          method: 'PUT',
+        const res = await fetch('/api/loans', {
+          method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userEmail: currentUser?.email,
-            id: editingId,
-            memberName: field1,
+            userEmail,
+            id: editingId || `L0${loans.length + 1}`,
+            memberName: field1.trim(),
             principal: pAmt,
             interest: iAmt,
             totalPayable: tAmt,
-            issueDate: field4,
-            clearedDate: field5 !== '-' ? field5 : null,
-            status: field6,
+            issueDate: field4 || getEATISODate(),
+            clearedDate: field5 && field5 !== '-' ? field5 : null,
+            status: field6 || 'Active',
             paidAmount: field6 === 'Settled' ? tAmt : (tAmt - (field7 ? Number(field7) : tAmt))
           })
-        }).catch(err => console.error('Database loan update failed:', err));
-      } else {
-        const newL = {
-          id: `L0${loans.length + 1}`,
-          borrower: field1,
-          principal: pAmt,
-          interest: iAmt,
-          totalLoan: tAmt,
-          issueDate: field4 || getEATISODate(),
-          clearedDate: '-',
-          status: 'Active',
-          paid: 0.00,
-          balance: tAmt
-        };
-        const updatedLoans = [...loans, newL];
-        setLoans(updatedLoans);
-        try {
-          localStorage.setItem('dreamloom_loans', JSON.stringify(updatedLoans));
-        } catch (e) {
-          console.warn('LocalStorage save failed:', e);
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save loan: ' + (res.error || 'Server error.'));
+          return;
         }
-
-        fetch('/api/loans', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userEmail: currentUser?.email,
-            id: newL.id,
-            memberName: field1,
-            principal: pAmt,
-            interest: iAmt,
-            totalPayable: tAmt,
-            issueDate: newL.issueDate,
-            status: 'Active',
-            paidAmount: 0
-          })
-        }).catch(err => console.error('Database loan create failed:', err));
-
-        setTransactions([
-          { id: `TX-${Date.now()}`, title: `${field1.split(' ')[0]} - Loan Approved`, time: 'Just now', amount: `+ KES ${pAmt.toLocaleString()}`, type: 'income', icon: CreditCard, iconColor: 'bg-cyan-600/20 text-cyan-400' },
-          ...transactions
-        ]);
+        await refreshLoans();
       }
-    }
-    // 4. Fines & Penalties
-    else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
-      if (editingId) {
+      // 4. Fines & Penalties
+      else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
         const fineDateToUse = field2 || getEATISODate();
         const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
 
         // Enforce rule: Each member can only have ONE late-payment penalty per contribution month
         const hasDuplicate = fines.some(f =>
-          f.id !== editingId &&
+          (!editingId || f.id !== editingId) &&
           isSameMemberName(f.member, field1) &&
           matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
         );
@@ -1955,411 +2175,179 @@ export default function Home() {
           return;
         }
 
-        const targetFine = fines.find(f => f.id === editingId);
-        const updatedFines = fines.map(f => f.id === editingId ? {
-          ...f,
-          member: field1,
-          date: fineDateToUse,
-          amount: Number(field3) || 500,
-          reason: field4,
-          status: field5,
-          datePaid: field5 === 'Paid' ? (field6 && field6 !== '-' ? field6 : getEATISODate()) : '-'
-        } : f);
-        setFines(updatedFines);
-        try { localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines)); } catch (e) {}
+        const targetFine = editingId ? fines.find(f => f.id === editingId) : null;
+        const fineDbId = targetFine?.dbId || editingId;
 
-        if (targetFine && (targetFine as any).dbId) {
-          fetch('/api/penalties', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userEmail: currentUser?.email,
-              id: (targetFine as any).dbId,
-              memberName: field1,
-              dateLevied: fineDateToUse,
-              penaltyAmount: Number(field3) || 500,
-              paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
-              reason: field4,
-              status: field5 === 'Paid' ? 'Settled' : 'Active'
-            })
-          }).catch(err => console.error('Database penalty update failed:', err));
-        }
-      } else {
-        // Month-by-Month Synchronization Check
-        const fineDateToUse = field2 || getEATISODate();
-        const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
-
-        // Enforce rule: Each member can only have ONE late-payment penalty per contribution month
-        const hasDuplicate = fines.some(f =>
-          isSameMemberName(f.member, field1) &&
-          matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
-        );
-        if (hasDuplicate) {
-          alert(`Duplicate Blocked: A late-payment penalty is already recorded for ${field1} in ${syncCheck.monthLabel}. Each member can only have ONE late-payment penalty per contribution month.`);
-          return;
-        }
-
-        const newF = {
-          id: `FN-${String(fines.length + 1).padStart(2, '0')}`,
-          member: field1,
-          date: fineDateToUse,
-          amount: Number(field3) || 500,
-          reason: field4 || 'Late payment + penalty',
-          status: field5 || 'Active',
-          datePaid: field5 === 'Paid' ? (field6 && field6 !== '-' ? field6 : getEATISODate()) : '-'
-        };
-        const updatedFines = [newF, ...fines];
-        setFines(updatedFines);
-        try { localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines)); } catch (e) {}
-
-        // Month-by-month synchronization with Contributions page
-        if (syncCheck.found && syncCheck.contributionRecord) {
-          const targetContribId = syncCheck.contributionRecord.id;
-          const updatedContribList = contributions.map(c => c.id === targetContribId ? {
-            ...c,
-            notes: c.notes?.toLowerCase().includes('penalty') ? c.notes : `${c.notes || 'Monthly Contribution'} (Penalty Levied)`
-          } : c);
-          setContributions(updatedContribList);
-          try { localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedContribList)); } catch (e) {}
-        } else if (!syncCheck.found && syncCheck.monthName && syncCheck.year) {
-          // Initialize contribution record for this specific month with unsettled balance
-          const newContribRec = {
-            id: `CNT-${contributions.length + 1}`,
-            month: `01-${syncCheck.monthName.slice(0, 3)}-${syncCheck.year}`,
-            member: field1,
-            amount: 0.00,
-            unsettled: 6000.00,
-            payout: 0.00,
-            notes: `Late Payment & Penalty Levied (Member: ${field1})`
-          };
-          const updatedContribList = [newContribRec, ...contributions];
-          setContributions(updatedContribList);
-          try { localStorage.setItem('dreamloom_contributions', JSON.stringify(updatedContribList)); } catch (e) {}
-        }
-
-        fetch('/api/penalties', {
-          method: 'POST',
+        const res = await fetch('/api/penalties', {
+          method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userEmail: currentUser?.email,
-            memberName: field1,
+            userEmail,
+            id: editingId ? fineDbId : undefined,
+            memberName: field1.trim(),
             dateLevied: fineDateToUse,
             penaltyAmount: Number(field3) || 500,
             paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
             reason: field4 || 'Late payment + penalty',
             status: field5 === 'Paid' ? 'Settled' : 'Active'
           })
-        }).then(r => r.json()).then(res => {
-          if (res.success && res.data?.id) {
-            (newF as any).dbId = res.data.id;
-            try { localStorage.setItem('dreamloom_fines', JSON.stringify(updatedFines)); } catch (e) {}
-          }
-        }).catch(err => console.error('Database penalty create failed:', err));
-      }
-    }
-    // 5. Expenses
-    else if (modalMode === 'Expenses' || modalMode === 'Add Expense') {
-      if (editingId) {
-        const targetExp = expenses.find(e => e.id === editingId);
-        const updatedExpenses = expenses.map(exp => exp.id === editingId ? {
-          ...exp,
-          description: field1,
-          category: field2,
-          amount: Number(field3) || 0,
-          date: field4,
-          paidTo: field5
-        } : exp);
-        setExpenses(updatedExpenses);
-        try { localStorage.setItem('dreamloom_expenses', JSON.stringify(updatedExpenses)); } catch (e) {}
+        }).then(r => r.json());
 
-        if (targetExp && (targetExp as any).dbId) {
-          fetch('/api/expenses', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userEmail: currentUser?.email,
-              id: (targetExp as any).dbId,
-              description: field1,
-              expenseType: field2,
-              amount: Number(field3) || 0,
-              expenseDate: field4,
-              referenceDetails: field5
-            })
-          }).catch(err => console.error('Database expense update failed:', err));
+        if (!res.success) {
+          alert('Failed to save penalty: ' + (res.error || 'Server error.'));
+          return;
         }
-      } else {
-        const newExp = {
-          id: `EXP-${String(expenses.length + 1).padStart(2, '0')}`,
-          description: field1,
-          category: field2 || 'Operational',
-          amount: Number(field3) || 1000.00,
-          date: field4 || getEATISODate(),
-          paidTo: field5 || 'Vendor'
-        };
-        const updatedExpenses = [newExp, ...expenses];
-        setExpenses(updatedExpenses);
-        try { localStorage.setItem('dreamloom_expenses', JSON.stringify(updatedExpenses)); } catch (e) {}
+        await refreshPenalties();
+        await refreshContributions();
+      }
+      // 5. Expenses
+      else if (modalMode === 'Expenses' || modalMode === 'Add Expense') {
+        const targetExp = editingId ? expenses.find(e => e.id === editingId) : null;
+        const expDbId = targetExp?.dbId || editingId;
 
-        fetch('/api/expenses', {
-          method: 'POST',
+        const res = await fetch('/api/expenses', {
+          method: editingId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userEmail: currentUser?.email,
-            description: field1,
+            userEmail,
+            id: editingId ? expDbId : undefined,
+            description: field1.trim(),
             expenseType: field2 || 'Operational',
-            amount: Number(field3) || 1000.00,
+            amount: Number(field3) || 0,
             expenseDate: field4 || getEATISODate(),
             referenceDetails: field5 || 'Vendor'
           })
-        }).then(r => r.json()).then(res => {
-          if (res.success && res.data?.id) {
-            (newExp as any).dbId = res.data.id;
-            try { localStorage.setItem('dreamloom_expenses', JSON.stringify(updatedExpenses)); } catch (e) {}
-          }
-        }).catch(err => console.error('Database expense create failed:', err));
+        }).then(r => r.json());
 
-        setTransactions([
-          { id: `TX-${Date.now()}`, title: `${field1} - Expense`, time: 'Just now', amount: `- KES ${Number(field3 || 1000).toLocaleString()}`, type: 'expense', icon: Receipt, iconColor: 'bg-rose-600/20 text-rose-400' },
-          ...transactions
-        ]);
-      }
-    }
-    // 6. Strategic Investments
-    else if (modalMode === 'Investments') {
-      if (editingId) {
-        setInvestments(investments.map(inv => inv.id === editingId ? {
-          ...inv,
-          asset: field1,
-          type: field2,
-          capital: Number(field3) || inv.capital,
-          expectedReturn: field4,
-          status: field5
-        } : inv));
-      }
-    }
-    // 7. Projects
-    else if (modalMode === 'Projects') {
-      if (editingId) {
-        setProjects(projects.map(p => p.id === editingId ? {
-          ...p,
-          name: field1,
-          manager: field2,
-          budget: Number(field3) || p.budget,
-          status: field4
-        } : p));
-      }
-    }
-    // 8. Suppliers
-    else if (modalMode === 'Suppliers') {
-      if (editingId) {
-        setSuppliers(suppliers.map(s => s.id === editingId ? {
-          ...s,
-          name: field1,
-          category: field2,
-          contact: field3,
-          status: field4
-        } : s));
-      }
-    }
-    // 9. Documents
-    else if (modalMode === 'Documents') {
-      if (editingId) {
-        setDocuments(documents.map(d => d.id === editingId ? {
-          ...d,
-          name: field1,
-          category: field2,
-          status: field3
-        } : d));
-      }
-    }
-    // 10. Deposits
-    else if (modalMode === 'Deposits' || modalMode === 'Record Deposit') {
-      const numAmt = parseFloat(field3);
-      if (!field3 || isNaN(numAmt) || numAmt <= 0) {
-        alert('Validation Error: AMOUNT DEPOSITED (KES) is mandatory and must be a valid positive amount greater than zero.');
-        return;
-      }
-      const depDate = field2 ? new Date(field2) : new Date();
-      fetch('/api/deposits', {
-        method: editingId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingId ? Number(editingId) : undefined,
-          depositorName: field1.trim(),
-          date: depDate.toISOString(),
-          amount: numAmt,
-          transactionType: field4 || 'Member Deposit',
-          reason: field5 || 'Direct Deposit Received',
-          paymentMethod: field6 || 'M-Pesa',
-          reference: field7 ? field7.trim() : null,
-          userEmail: currentUser?.email,
-          userName: currentUser?.name
-        })
-      })
-      .then(r => r.json())
-      .then(res => {
-        if (res.success) {
-          refreshDeposits();
-        } else {
-          alert(res.error || 'Failed to save deposit');
+        if (!res.success) {
+          alert('Failed to save expense: ' + (res.error || 'Server error.'));
+          return;
         }
-      })
-      .catch(err => console.error('Deposit save failed:', err));
+        await refreshExpenses();
+      }
+      // 6. Strategic Investments
+      else if (modalMode === 'Investments') {
+        const res = await fetch('/api/investments', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            id: editingId || `INV-0${investments.length + 1}`,
+            asset: field1.trim(),
+            type: field2 || 'Strategic Capital',
+            capital: Number(field3) || 0,
+            expectedReturn: field4 || '12%',
+            status: field5 || 'Active'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save investment: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshInvestments();
+      }
+      // 7. Projects
+      else if (modalMode === 'Projects') {
+        const res = await fetch('/api/projects', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            id: editingId || `PRJ-0${projects.length + 1}`,
+            name: field1.trim(),
+            manager: field2 || 'Simon Memia',
+            budget: Number(field3) || 0,
+            status: field4 || 'Active'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save project: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshProjects();
+      }
+      // 8. Suppliers
+      else if (modalMode === 'Suppliers') {
+        const res = await fetch('/api/suppliers', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            id: editingId || `SUP-0${suppliers.length + 1}`,
+            name: field1.trim(),
+            category: field2 || 'General Operations',
+            contact: field3 || 'Nairobi Office',
+            status: field4 || 'Active'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save supplier: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshSuppliers();
+      }
+      // 9. Documents
+      else if (modalMode === 'Documents') {
+        const res = await fetch('/api/documents', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            id: editingId || `DOC-0${documents.length + 1}`,
+            name: field1.trim(),
+            category: field2 || 'General',
+            status: field3 || 'Available',
+            link: '#'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save document: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshDocuments();
+      }
+      // 10. Deposits
+      else if (modalMode === 'Deposits' || modalMode === 'Record Deposit') {
+        const numAmt = parseFloat(field3);
+        if (!field3 || isNaN(numAmt) || numAmt <= 0) {
+          alert('Validation Error: AMOUNT DEPOSITED (KES) is mandatory and must be a valid positive amount greater than zero.');
+          return;
+        }
+        const depDate = field2 ? new Date(field2) : new Date();
+        const res = await fetch('/api/deposits', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingId ? Number(editingId) : undefined,
+            depositorName: field1.trim(),
+            date: depDate.toISOString(),
+            amount: numAmt,
+            transactionType: field4 || 'Member Deposit',
+            reason: field5 || 'Direct Deposit Received',
+            paymentMethod: field6 || 'M-Pesa',
+            reference: field7 ? field7.trim() : null,
+            userEmail,
+            userName: currentUser?.name
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert(res.error || 'Failed to save deposit');
+          return;
+        }
+        await refreshDeposits();
+      }
+
+      await refreshAuditLogs();
+      setIsModalOpen(false);
+      setEditingId(null);
+    } catch (err: any) {
+      alert('Error saving record to database: ' + err.message);
     }
-
-    let actionType: 'Added' | 'Updated' = editingId ? 'Updated' : 'Added';
-    let targetModule = modalMode;
-    let targetMember = field1 || 'General Member';
-    let oldValSnapshot: Record<string, string> = {};
-    let newValSnapshot: Record<string, string> = {};
-    let remarksText = `${actionType} ${modalMode} record`;
-
-    if (modalMode === 'Member Directory' || modalMode === 'Add Member') {
-      targetModule = 'Members';
-      targetMember = field1;
-      if (editingId) {
-        const prevM = members.find(m => m.id === editingId);
-        oldValSnapshot = {
-          'Full Name': prevM?.fullName || prevM?.name || field1,
-          'Role': prevM?.role || 'Member',
-          'Phone': prevM?.phone || '-',
-          'Status': prevM?.status || 'Active'
-        };
-        newValSnapshot = {
-          'Full Name': field1,
-          'Role': field4 || 'Member',
-          'Phone': field3 || '-',
-          'Status': field7 || 'Active'
-        };
-        remarksText = `Updated profile and details for member ${field1}`;
-      } else {
-        oldValSnapshot = { 'Record Status': 'None (New Member Entry)' };
-        newValSnapshot = {
-          'Member Name': field1,
-          'Corporate Role': field4 || 'Member',
-          'Status': 'Active'
-        };
-        remarksText = `New authorized member registration for ${field1}`;
-      }
-    } else if (modalMode === 'Contributions' || modalMode === 'Record Contribution') {
-      targetModule = 'Contributions';
-      targetMember = field2;
-      if (editingId) {
-        const prevC = contributions.find(c => c.id === editingId);
-        oldValSnapshot = {
-          'Contribution Amount': `KSh ${(prevC?.amount || 0).toLocaleString()}`,
-          'Unsettled Dues': `KSh ${(prevC?.unsettled || 0).toLocaleString()}`,
-          'Period': prevC?.month || '-'
-        };
-        newValSnapshot = {
-          'Contribution Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
-          'Unsettled Dues': `KSh ${(Number(field4) || 0).toLocaleString()}`,
-          'Period': field1 || '-'
-        };
-        remarksText = `Updated monthly contribution dues for ${field2}`;
-      } else {
-        oldValSnapshot = { 'Record Status': 'None (New Contribution)' };
-        newValSnapshot = {
-          'Contribution Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
-          'Unsettled Dues': `KSh ${(Number(field4) || 0).toLocaleString()}`,
-          'Period': field1 || '01-Oct-2026'
-        };
-        remarksText = `Recorded monthly contribution for ${field2}`;
-      }
-    } else if (modalMode === 'Loan Portfolio' || modalMode === 'New Loan') {
-      targetModule = 'Loans';
-      targetMember = field1;
-      const pAmt = Number(field2) || 0;
-      if (editingId) {
-        const prevL = loans.find(l => l.id === editingId);
-        oldValSnapshot = {
-          'Loan Amount': `KSh ${(prevL?.principal || 0).toLocaleString()}`,
-          'Repayment Period': '6 Months',
-          'Status': prevL?.status || 'Active'
-        };
-        newValSnapshot = {
-          'Loan Amount': `KSh ${pAmt.toLocaleString()}`,
-          'Repayment Period': '8 Months',
-          'Status': field6 || 'Active'
-        };
-        remarksText = `Increased loan amount to support member's project.`;
-      } else {
-        oldValSnapshot = { 'Record Status': 'None (New Loan)' };
-        newValSnapshot = {
-          'Loan Amount': `KSh ${pAmt.toLocaleString()}`,
-          'Repayment Period': '6 Months',
-          'Status': 'Active'
-        };
-        remarksText = `Approved new loan facility for ${field1}`;
-      }
-    } else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
-      targetModule = 'Fines & Penalties';
-      targetMember = field1;
-      if (editingId) {
-        const prevF = fines.find(f => f.id === editingId);
-        oldValSnapshot = {
-          'Penalty Amount': `KSh ${(prevF?.amount || 500).toLocaleString()}`,
-          'Reason': prevF?.reason || 'Late payment',
-          'Status': prevF?.status || 'Active'
-        };
-        newValSnapshot = {
-          'Penalty Amount': `KSh ${(Number(field3) || 500).toLocaleString()}`,
-          'Reason': field4 || 'Late payment',
-          'Status': field5 || 'Active'
-        };
-        remarksText = `Modified fine record for ${field1}`;
-      } else {
-        oldValSnapshot = { 'Record Status': 'None (New Fine)' };
-        newValSnapshot = {
-          'Penalty Amount': `KSh ${(Number(field3) || 500).toLocaleString()}`,
-          'Reason': field4 || 'Late payment + penalty',
-          'Status': field5 || 'Active'
-        };
-        remarksText = `Levied penalty against ${field1}`;
-      }
-    } else if (modalMode === 'Expenses' || modalMode === 'Add Expense') {
-      targetModule = 'Expenses';
-      targetMember = field5 || field1 || 'Vendor';
-      if (editingId) {
-        const prevE = expenses.find(e => e.id === editingId);
-        oldValSnapshot = {
-          'Expense Description': prevE?.description || '-',
-          'Amount': `KSh ${(prevE?.amount || 0).toLocaleString()}`,
-          'Category': prevE?.category || '-'
-        };
-        newValSnapshot = {
-          'Expense Description': field1,
-          'Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
-          'Category': field2
-        };
-        remarksText = `Updated operational expense voucher for ${targetMember}`;
-      } else {
-        oldValSnapshot = { 'Record Status': 'None (New Voucher)' };
-        newValSnapshot = {
-          'Expense Description': field1,
-          'Amount': `KSh ${(Number(field3) || 0).toLocaleString()}`,
-          'Category': field2
-        };
-        remarksText = `Approved operational expense for ${targetMember}`;
-      }
-    } else {
-      targetMember = field1 || 'System Record';
-      oldValSnapshot = { 'Record Status': editingId ? 'Previous State' : 'None' };
-      newValSnapshot = { 'Title': field1 || modalMode, 'Status': 'Active' };
-      remarksText = `${actionType} ${modalMode} record`;
-    }
-
-    recordAuditLog({
-      user: currentUser?.fullName,
-      member: targetMember,
-      module: targetModule,
-      action: actionType,
-      oldValues: oldValSnapshot,
-      newValues: newValSnapshot,
-      remarks: remarksText
-    });
-
-    setIsModalOpen(false);
   };
 
   // Sidebar Menu Items
