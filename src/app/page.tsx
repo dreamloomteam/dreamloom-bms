@@ -1504,6 +1504,14 @@ export default function Home() {
       setField5('');
       setField6('');
       setField7('');
+    } else if (targetMode === 'Deposits' || targetMode === 'Record Deposit') {
+      setField1('');
+      setField2(todayISO);
+      setField3('');
+      setField4('Member Deposit');
+      setField5('Direct Deposit Received');
+      setField6('M-Pesa');
+      setField7('');
     } else {
       setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); setField6(''); setField7('');
     }
@@ -1574,6 +1582,14 @@ export default function Home() {
       setField1(item.name || '');
       setField2(item.category || '');
       setField3(item.status || 'Available');
+    } else if (mode === 'Deposits') {
+      setField1(item.depositorName || '');
+      setField2(item.date ? String(item.date).slice(0, 10) : getEATISODate());
+      setField3(String(item.amount || ''));
+      setField4(item.transactionType || 'Member Deposit');
+      setField5(item.reason || '');
+      setField6(item.paymentMethod || 'M-Pesa');
+      setField7(item.reference || '');
     }
     setIsModalOpen(true);
   };
@@ -2155,6 +2171,40 @@ export default function Home() {
           status: field3
         } : d));
       }
+    }
+    // 10. Deposits
+    else if (modalMode === 'Deposits' || modalMode === 'Record Deposit') {
+      const numAmt = parseFloat(field3);
+      if (!field3 || isNaN(numAmt) || numAmt <= 0) {
+        alert('Validation Error: AMOUNT DEPOSITED (KES) is mandatory and must be a valid positive amount greater than zero.');
+        return;
+      }
+      const depDate = field2 ? new Date(field2) : new Date();
+      fetch('/api/deposits', {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingId ? Number(editingId) : undefined,
+          depositorName: field1.trim(),
+          date: depDate.toISOString(),
+          amount: numAmt,
+          transactionType: field4 || 'Member Deposit',
+          reason: field5 || 'Direct Deposit Received',
+          paymentMethod: field6 || 'M-Pesa',
+          reference: field7 ? field7.trim() : null,
+          userEmail: currentUser?.email,
+          userName: currentUser?.name
+        })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          refreshDeposits();
+        } else {
+          alert(res.error || 'Failed to save deposit');
+        }
+      })
+      .catch(err => console.error('Deposit save failed:', err));
     }
 
     let actionType: 'Added' | 'Updated' = editingId ? 'Updated' : 'Added';
@@ -4997,9 +5047,10 @@ export default function Home() {
                    modalMode.includes('Fines') ? 'Member Full Name' :
                    modalMode.includes('Expense') ? 'Description' :
                    modalMode.includes('Investment') ? 'Asset Name' :
-                   modalMode.includes('Project') ? 'Project Title' : 'Name / Title'}
+                   modalMode.includes('Project') ? 'Project Title' :
+                   modalMode.includes('Deposit') ? 'Depositor Name / Organisation *' : 'Name / Title'}
                 </label>
-                {(modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Member')) ? (
+                {(modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Member') || modalMode.includes('Deposit')) ? (
                   <MemberAutocomplete
                     value={field1}
                     required
@@ -5007,6 +5058,7 @@ export default function Home() {
                     placeholder={
                       modalMode.includes('Loan') ? 'Search borrower name or ID (e.g. David, 002)...' :
                       modalMode.includes('Fines') ? 'Search member name or ID (e.g. Daniel, 006)...' :
+                      modalMode.includes('Deposit') ? 'Search member name or type depositor name...' :
                       'Type member name or ID...'
                     }
                     onChange={(val, mem) => {
@@ -5039,7 +5091,8 @@ export default function Home() {
                    modalMode.includes('Fines') ? 'Date Levied (YYYY-MM-DD)' :
                    modalMode.includes('Expense') ? 'Expense Category' :
                    modalMode.includes('Investment') ? 'Investment Type' :
-                   modalMode.includes('Project') ? 'Project Manager / Lead' : 'Category'}
+                   modalMode.includes('Project') ? 'Project Manager / Lead' :
+                   modalMode.includes('Deposit') ? 'Deposit Date (YYYY-MM-DD) *' : 'Category'}
                 </label>
                 {(modalMode.includes('Contribution') || modalMode.includes('Project')) ? (
                   <MemberAutocomplete
@@ -5052,13 +5105,13 @@ export default function Home() {
                     }
                     onChange={(val) => setField2(val)}
                   />
-                ) : modalMode.includes('Fines') ? (
+                ) : (modalMode.includes('Fines') || modalMode.includes('Deposit')) ? (
                   <input
                     type="date"
                     required
                     value={field2}
                     onChange={(e) => setField2(e.target.value)}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
                   />
                 ) : (
                   <input
@@ -5080,14 +5133,31 @@ export default function Home() {
                    modalMode.includes('Fines') ? 'Penalty Amount (KES)' :
                    modalMode.includes('Expense') ? 'Amount (KES)' :
                    modalMode.includes('Investment') ? 'Capital Allocated (KES)' :
-                   modalMode.includes('Project') ? 'Project Budget (KES)' : 'Contact / Value'}
+                   modalMode.includes('Project') ? 'Project Budget (KES)' :
+                   modalMode.includes('Deposit') ? 'AMOUNT DEPOSITED (KES) * (MANDATORY)' : 'Contact / Value'}
                 </label>
-                <input
-                  type="text"
-                  value={field3}
-                  onChange={(e) => setField3(e.target.value)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+                {modalMode.includes('Deposit') ? (
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2 text-xs font-bold font-mono text-emerald-400">KES</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0.01"
+                      required
+                      placeholder="0.00"
+                      value={field3}
+                      onChange={(e) => setField3(e.target.value)}
+                      className="w-full bg-[#0F172A] border-2 border-emerald-500/60 rounded-xl pl-12 pr-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-emerald-400 shadow-sm"
+                    />
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={field3}
+                    onChange={(e) => setField3(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                )}
               </div>
 
               {/* Field 4 */}
@@ -5099,7 +5169,8 @@ export default function Home() {
                    modalMode.includes('Fines') ? 'Reason / Cause' :
                    modalMode.includes('Expense') ? 'Expense Date (YYYY-MM-DD)' :
                    modalMode.includes('Investment') ? 'Expected Return (e.g. 15%)' :
-                   modalMode.includes('Project') ? 'Project Status (Active / Completed)' : 'Status'}
+                   modalMode.includes('Project') ? 'Project Status (Active / Completed)' :
+                   modalMode.includes('Deposit') ? 'Transaction Type (e.g. Member Deposit, Share Capital) *' : 'Status'}
                 </label>
                 {(modalMode.includes('Loan') || modalMode.includes('Expense')) ? (
                   <input
@@ -5120,14 +5191,15 @@ export default function Home() {
               </div>
 
               {/* Field 5 */}
-              {(modalMode.includes('Contribution') || modalMode.includes('Member') || modalMode.includes('Expense') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Investment')) && (
+              {(modalMode.includes('Contribution') || modalMode.includes('Member') || modalMode.includes('Expense') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Investment') || modalMode.includes('Deposit')) && (
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     {modalMode.includes('Member') ? 'Email Address' :
                      modalMode.includes('Contribution') ? 'Mawega Payout (KES)' :
                      modalMode.includes('Loan') ? 'Date Settled (or "-" if active)' :
                      modalMode.includes('Fines') ? 'Payment Status (Active / Paid)' :
-                     modalMode.includes('Expense') ? 'Paid To / Reference' : 'Status'}
+                     modalMode.includes('Expense') ? 'Paid To / Reference' :
+                     modalMode.includes('Deposit') ? 'Reason / Description *' : 'Status'}
                   </label>
                   {modalMode.includes('Expense') ? (
                     <MemberAutocomplete
@@ -5148,18 +5220,35 @@ export default function Home() {
               )}
 
               {/* Field 6 */}
-              {(modalMode.includes('Contribution') || modalMode.includes('Loan') || modalMode.includes('Fines')) && (
+              {(modalMode.includes('Contribution') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Deposit')) && (
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     {modalMode.includes('Contribution') ? 'Notes / Remarks' :
                      modalMode.includes('Loan') ? 'Loan Status (Active / Settled)' :
-                     modalMode.includes('Fines') ? 'Date Paid' : 'Additional Info'}
+                     modalMode.includes('Fines') ? 'Date Paid' :
+                     modalMode.includes('Deposit') ? 'Payment Method (M-Pesa, Cash, Bank Transfer, Other)' : 'Additional Info'}
                   </label>
                   <input
                     type="text"
                     value={field6}
                     onChange={(e) => setField6(e.target.value)}
                     className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
+
+              {/* Field 7 */}
+              {modalMode.includes('Deposit') && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Reference Number (M-Pesa / Bank Slip)
+                  </label>
+                  <input
+                    type="text"
+                    value={field7}
+                    placeholder="e.g. QK89123456"
+                    onChange={(e) => setField7(e.target.value)}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               )}

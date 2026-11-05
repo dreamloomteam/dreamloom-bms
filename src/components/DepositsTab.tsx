@@ -334,9 +334,9 @@ export default function DepositsTab({
       alert('Please enter depositor name');
       return;
     }
-    const amt = Number(formData.amount);
-    if (isNaN(amt) || amt <= 0) {
-      alert('Please enter a valid positive amount in KES');
+    const amt = parseFloat(formData.amount);
+    if (!formData.amount || isNaN(amt) || amt <= 0) {
+      alert('Validation Error: AMOUNT DEPOSITED (KES) is mandatory and must be a valid positive amount greater than zero (both whole numbers and decimal amounts are accepted).');
       return;
     }
     if (duplicateWarning) {
@@ -747,11 +747,9 @@ export default function DepositsTab({
                 >
                   Date {sortBy === 'date' && (sortOrder === 'desc' ? '▼' : '▲')}
                 </th>
-                <th className="p-4">Name / Depositor</th>
+                <th className="p-4">Depositor Name</th>
                 <th className="p-4">Transaction Type</th>
                 <th className="p-4">Reason / Description</th>
-                <th className="p-4">Payment Method & Account</th>
-                <th className="p-4">Reference</th>
                 <th
                   onClick={() => {
                     if (sortBy === 'amount') setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
@@ -761,6 +759,8 @@ export default function DepositsTab({
                 >
                   Amount (KES) {sortBy === 'amount' && (sortOrder === 'desc' ? '▼' : '▲')}
                 </th>
+                <th className="p-4">Payment Method & Account</th>
+                <th className="p-4">Reference</th>
                 <th className="p-4 text-center">Reconciliation</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
@@ -838,6 +838,20 @@ export default function DepositsTab({
                         )}
                       </td>
 
+                      {/* Amount Deposited (KES) */}
+                      <td className="p-4 text-right whitespace-nowrap">
+                        <span
+                          className={`font-black text-sm font-mono ${
+                            isRev ? 'line-through text-slate-500' : 'text-emerald-400'
+                          }`}
+                        >
+                          {Number(dep.amount).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </td>
+
                       {/* Payment Method & Receiving Account */}
                       <td className="p-4 font-sans whitespace-nowrap text-slate-300">
                         <div className="font-medium text-white">{dep.paymentMethod}</div>
@@ -849,20 +863,6 @@ export default function DepositsTab({
                       {/* Reference */}
                       <td className="p-4 whitespace-nowrap text-emerald-300 font-mono font-semibold">
                         {dep.reference ? dep.reference : <span className="text-slate-600">-</span>}
-                      </td>
-
-                      {/* Amount */}
-                      <td className="p-4 text-right whitespace-nowrap">
-                        <span
-                          className={`font-black text-sm ${
-                            isRev ? 'line-through text-slate-500' : 'text-emerald-400'
-                          }`}
-                        >
-                          {Number(dep.amount).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
                       </td>
 
                       {/* Reconciliation Status */}
@@ -943,14 +943,14 @@ export default function DepositsTab({
             {filteredDeposits.length > 0 && (
               <tfoot className="bg-[#121B2F] font-bold text-white border-t border-[#1E293B]">
                 <tr>
-                  <td colSpan={6} className="p-4 font-sans text-right uppercase text-[10px] text-slate-400">
+                  <td colSpan={4} className="p-4 font-sans text-right uppercase text-[10px] text-slate-400">
                     Total Active Filtered Deposits ({metrics.activeCount} transactions):
                   </td>
                   <td className="p-4 text-right font-mono text-emerald-400 text-sm">
                     {selectedCurrency} {metrics.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td colSpan={2} className="p-4 text-center text-[10px] text-slate-400 font-sans">
-                    Anti-double-counting reconciled
+                  <td colSpan={4} className="p-4 text-center text-[10px] text-slate-400 font-sans">
+                    Anti-double-counting reconciled • {metrics.reconciledCount} Reconciled / {metrics.unreconciledCount} Pending
                   </td>
                 </tr>
               </tfoot>
@@ -1021,24 +1021,34 @@ export default function DepositsTab({
                 </div>
               </div>
 
-              {/* Row 2: Amount (KES) & Transaction Type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Amount (KES) <span className="text-rose-400">*</span>
+              {/* Highlighted Mandatory AMOUNT DEPOSITED (KES) */}
+              <div className="bg-[#121B2F] p-4 rounded-2xl border-2 border-emerald-500/50 shadow-lg space-y-1.5">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                  <label className="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-emerald-400" /> AMOUNT DEPOSITED (KES) <span className="text-rose-400 font-bold">* MANDATORY</span>
                   </label>
+                  <span className="text-[10px] text-emerald-300/80 font-mono font-medium">Whole numbers & decimals accepted</span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-sm font-bold font-mono text-emerald-400 select-none">KES</span>
                   <input
                     type="number"
-                    step="0.01"
-                    min="1"
+                    step="any"
+                    min="0.01"
                     required
-                    placeholder="e.g. 50000"
+                    placeholder="0.00"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#0B1324] border border-[#1E2D4A] rounded-xl pl-14 pr-4 py-2.5 text-base text-white font-mono font-black tracking-tight focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 shadow-inner"
                   />
                 </div>
+                <p className="text-[11px] text-slate-400">
+                  Must be greater than zero. Persistently recorded to PostgreSQL database and feeds all deposit calculations.
+                </p>
+              </div>
 
+              {/* Row 2: Transaction Type & Payment Method */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-slate-300 block mb-1">
                     Transaction Type <span className="text-rose-400">*</span>
@@ -1050,6 +1060,21 @@ export default function DepositsTab({
                   >
                     {TRANSACTION_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Payment Method <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={formData.paymentMethod}
+                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    {PAYMENT_METHODS.map((pm) => (
+                      <option key={pm} value={pm}>{pm}</option>
                     ))}
                   </select>
                 </div>
@@ -1071,37 +1096,20 @@ export default function DepositsTab({
                 </div>
               )}
 
-              {/* Row 3: Receiving Account & Payment Method */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Receiving Company Account <span className="text-rose-400">*</span>
-                  </label>
-                  <select
-                    value={formData.receivingAccount}
-                    onChange={(e) => setFormData({ ...formData, receivingAccount: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    {RECEIVING_ACCOUNTS.map((acc) => (
-                      <option key={acc} value={acc}>{acc}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    value={formData.paymentMethod}
-                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    {PAYMENT_METHODS.map((pm) => (
-                      <option key={pm} value={pm}>{pm}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* Row 3: Receiving Account */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  Receiving Company Account <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={formData.receivingAccount}
+                  onChange={(e) => setFormData({ ...formData, receivingAccount: e.target.value })}
+                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {RECEIVING_ACCOUNTS.map((acc) => (
+                    <option key={acc} value={acc}>{acc}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Row 4: External Reference & Duplicate Warning */}
