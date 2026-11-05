@@ -9,9 +9,10 @@ import {
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
-  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw
+  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
+import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
 import {
   ALL_MONTHS,
   AVAILABLE_YEARS,
@@ -145,6 +146,24 @@ export default function Home() {
           }
         })
         .catch(err => console.warn('Could not fetch server penalties:', err));
+
+      // 4. Deposits Register Persistence
+      const savedDeposits = localStorage.getItem('dreamloom_deposits');
+      if (savedDeposits) {
+        try {
+          const parsed = JSON.parse(savedDeposits);
+          if (Array.isArray(parsed) && parsed.length > 0) setDeposits(parsed);
+        } catch (e) { console.warn('Saved deposits parse failed:', e); }
+      }
+      fetch('/api/deposits')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data)) {
+            setDeposits(res.data);
+            localStorage.setItem('dreamloom_deposits', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server deposits:', err));
 
       // 5. Login Logs & Audit Logs Persistence
       const savedLoginLogs = localStorage.getItem('dreamloom_login_logs');
@@ -417,6 +436,10 @@ export default function Home() {
   const [paymentRefInput, setPaymentRefInput] = useState('');
   const [paymentNotesInput, setPaymentNotesInput] = useState('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // Deposits Register & Reconciliation State
+  const [deposits, setDeposits] = useState<DepositRecord[]>([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
 
   // 1. Official Membership Directory & Summary (PDF Page 1 & Page 10)
   const [members, setMembers] = useState([
@@ -763,6 +786,7 @@ export default function Home() {
   const editLogModules = useMemo(() => [
     'All Pages',
     'Contributions',
+    'Deposits',
     'Loans',
     'Members',
     'Fines & Penalties',
@@ -1286,6 +1310,22 @@ export default function Home() {
       }
     } catch (e) {
       console.warn('Could not refresh penalties:', e);
+    }
+  };
+
+  // Real-time Database Deposits Synchronization
+  const refreshDeposits = async () => {
+    try {
+      setDepositsLoading(true);
+      const res = await fetch('/api/deposits').then(r => r.json());
+      if (res.success && Array.isArray(res.data)) {
+        setDeposits(res.data);
+        try { localStorage.setItem('dreamloom_deposits', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh deposits:', e);
+    } finally {
+      setDepositsLoading(false);
     }
   };
 
@@ -2280,6 +2320,7 @@ export default function Home() {
         { name: 'Overview', icon: LayoutDashboard },
         { name: 'Member Directory', icon: Users },
         { name: 'Contributions', icon: Wallet },
+        { name: 'Deposits', icon: ArrowDownCircle },
         { name: 'Loan Portfolio', icon: CreditCard },
         { name: 'Fines & Penalties', icon: AlertTriangle },
         { name: 'Expenses', icon: Receipt },
@@ -3810,6 +3851,23 @@ export default function Home() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* DEPOSITS REGISTER & RECONCILIATION */}
+          {/* ===================================================================== */}
+          {activeTab === 'Deposits' && (
+            <DepositsTab
+              deposits={deposits}
+              members={members}
+              loans={loans}
+              projects={projects}
+              investments={investments}
+              canEdit={canEdit}
+              currentUser={currentUser}
+              onRefresh={refreshDeposits}
+              selectedCurrency={selectedCurrency}
+            />
           )}
 
           {/* ===================================================================== */}

@@ -51,6 +51,7 @@ model Member {
   contributions Contribution[]
   loans         Loan[]
   penalties     Penalty[]
+  deposits      Deposit[]
   userId        Int?           @unique
   user          User?          @relation(fields: [userId], references: [id])
 }
@@ -172,4 +173,39 @@ model Asset {
   location  String
   status    String   @default("Active")
   createdAt DateTime @default(now())
+}
+
+model Deposit {
+  id                    Int       @id @default(autoincrement())
+  customId              String    @unique
+  date                  DateTime  @default(now())
+  depositorName         String
+  amount                Float
+  transactionType       String
+  customTransactionType String?
+  reason                String
+  reference             String?
+  paymentMethod         String    @default("M-Pesa")
+  receivingAccount      String    @default("Equity Bank - A/C 1760287177880")
+  memberId              Int?
+  member                Member?   @relation(fields: [memberId], references: [id])
+  allocationType        String?   @default("None")
+  allocationRef         String?
+  contributionId        Int?
+  loanId                String?
+  projectId             String?
+  investmentId          String?
+  reconciliationStatus  String    @default("Unreconciled")
+  reconciledAt          DateTime?
+  reconciledBy          String?
+  reconciliationNotes   String?
+  attachmentUrl         String?
+  attachmentName        String?
+  isReversed            Boolean   @default(false)
+  reversalReason        String?
+  reversedAt            DateTime?
+  reversedBy            String?
+  createdByUser         String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }
