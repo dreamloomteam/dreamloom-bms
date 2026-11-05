@@ -1076,30 +1076,45 @@ export default function Home() {
     });
   }, [members, contributions, loans, grandTotalContributions]);
 
-  // Member Unsettled Dues (Section 4: Retrieved directly from Fines & Late Payment Penalties Register)
-  // Sums remaining balance for UNPAID and PARTIALLY PAID records; excludes fully PAID records.
-  const memberUnsettledTotals = useMemo(() => {
+  // Outstanding Contributions per Member (retrieved from Contributions Register)
+  const memberOutstandingContribs = useMemo(() => {
     const map: Record<string, number> = {};
     members.forEach(m => {
-      const activeDues = fines
+      const un = contributions
+        .filter(c => c.member && isSameMemberName(c.member, m.fullName) && !c.payout)
+        .reduce((sum, c) => sum + (Number(c.unsettled) || 0), 0);
+      map[m.fullName] = un;
+    });
+    return map;
+  }, [members, contributions]);
+
+  const grandTotalOutstandingContribs = useMemo(() => {
+    return Object.values(memberOutstandingContribs).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }, [memberOutstandingContribs]);
+
+  // Unpaid KSh 500 Penalties per Member (retrieved from Fines & Penalties Register)
+  const memberUnpaidPenalties = useMemo(() => {
+    const map: Record<string, number> = {};
+    members.forEach(m => {
+      const un = fines
         .filter(f => {
-          const isMember = isSameMemberName(f.member, m.fullName);
-          const isOutstanding = f.status === 'UNPAID' || f.status === 'PARTIALLY PAID' || (f.status !== 'PAID' && f.status !== 'Settled' && (Number(f.remainingBalance) > 0 || (f.remainingBalance === undefined && Number(f.amount) > 0)));
-          return isMember && isOutstanding;
+          const isMem = isSameMemberName(f.member, m.fullName);
+          const isUnpaid = f.status === 'Unpaid' || f.status === 'UNPAID' || f.status === 'Active';
+          return isMem && isUnpaid;
         })
-        .reduce((sum, f) => {
-          const rem = f.remainingBalance !== undefined ? Number(f.remainingBalance) : (Number(f.amount) || 0);
-          return sum + rem;
-        }, 0);
-      map[m.fullName] = activeDues;
+        .reduce((sum, f) => sum + (Number(f.penaltyAmount) || Number(f.amount) || 500), 0);
+      map[m.fullName] = un;
     });
     return map;
   }, [members, fines]);
 
-  // Total Unsettled Dues (Section 4 & 5: Directly derived from active dues in Penalties Register)
-  const grandTotalUnsettled = useMemo(() => {
-    return Object.values(memberUnsettledTotals).reduce((sum, v) => sum + (Number(v) || 0), 0);
-  }, [memberUnsettledTotals]);
+  const grandTotalUnpaidPenalties = useMemo(() => {
+    return Object.values(memberUnpaidPenalties).reduce((sum, v) => sum + (Number(v) || 0), 0);
+  }, [memberUnpaidPenalties]);
+
+  // Backward compatibility alias for any existing summary references
+  const memberUnsettledTotals = memberOutstandingContribs;
+  const grandTotalUnsettled = grandTotalOutstandingContribs;
 
   // Trend Chart Data
   const trendData = useMemo(() => [
@@ -1150,8 +1165,11 @@ export default function Home() {
 
   const filteredFines = useMemo(() => {
     return fines.filter(f => {
-      const matchesSearch = !searchQuery || f.member.toLowerCase().includes(searchQuery.toLowerCase()) || (f.reason && f.reason.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesPeriod = matchesMonthAndYear(f.date, selectedPenaltyMonth, selectedPenaltyYear);
+      const matchesSearch = !searchQuery ||
+        f.member.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (f.monthYear && f.monthYear.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (f.status && f.status.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesPeriod = matchesMonthAndYear(f.monthYear || f.date, selectedPenaltyMonth, selectedPenaltyYear);
       return matchesSearch && matchesPeriod;
     });
   }, [fines, searchQuery, selectedPenaltyMonth, selectedPenaltyYear]);
@@ -1579,31 +1597,22 @@ export default function Home() {
     }
   };
 
-  // Real-time Database Penalty & Unsettled Dues Synchronization
+  // Real-time Database Penalty (KSh 500 late-fee) Synchronization
   const refreshPenalties = async () => {
     try {
       const res = await fetch('/api/penalties').then(r => r.json());
       if (res.success && Array.isArray(res.data)) {
         const mapped = res.data.map((p: any, idx: number) => ({
           id: `FN-${String(idx + 1).padStart(2, '0')}`,
-          dbId: p.id,
-          date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-',
+          dbId: p.id || p.dbId,
+          date: p.date ? String(p.date).slice(0, 10) : (p.dateLevied ? String(p.dateLevied).slice(0, 10) : '-'),
           monthYear: p.monthYear,
-          member: p.member?.fullName || 'Member',
-          reason: p.reason || 'Late payment + penalty',
-          unsettledContribution: Number(p.unsettledContribution) || 0,
-          penaltyAmount: Number(p.penaltyAmount) || 500,
-          amount: Number(p.penaltyAmount) || 500,
-          totalOutstanding: Number(p.totalOutstanding) || ((Number(p.unsettledContribution) || 0) + (Number(p.penaltyAmount) || 500)),
-          paidContribution: Number(p.paidContribution) || 0,
-          paidFine: Number(p.paidFine) || 0,
-          paidAmount: Number(p.paidAmount) || 0,
-          remainingContribution: Number(p.remainingContribution) || 0,
-          remainingFine: Number(p.remainingFine) || 0,
-          remainingBalance: Number(p.remainingBalance) || 0,
-          status: p.status, // "UNPAID" | "PARTIALLY PAID" | "PAID"
+          member: p.member || p.member?.fullName || 'Member',
+          reason: p.reason || 'Late payment penalty',
+          penaltyAmount: 500,
+          amount: 500,
+          status: (p.status?.toUpperCase() === 'PAID' || p.status === 'Paid') ? 'Paid' : 'Unpaid',
           datePaid: p.datePaid || '-',
-          payments: p.payments || []
         }));
         setFines(mapped);
         try { localStorage.setItem('dreamloom_fines', JSON.stringify(mapped)); } catch (e) {}
@@ -1746,59 +1755,38 @@ export default function Home() {
     }
   };
 
-  // Toggle Penalty Status: Active <-> Paid (Awaits database persistence)
+  // Toggle Penalty Status: Unpaid <-> Paid (Awaits database persistence)
   const handleToggleFineStatus = async (fineId: string) => {
     if (!canEdit) {
       alert('Access Restricted: Only Simon Memia Wanjiru and Elijah Waitara Gichari can update penalty status.');
       return;
     }
-    const todayStr = getEATISODate();
-    const targetFine = fines.find(f => f.id === fineId);
+    const targetFine = fines.find(f => f.id === fineId || f.dbId === fineId);
     if (!targetFine) return;
 
-    const nextStatus = targetFine.status === 'Active' ? 'Paid' : 'Active';
-    const delId = (targetFine as any).dbId || fineId;
+    const isPaid = targetFine.status === 'Paid';
+    const nextStatus = isPaid ? 'Unpaid' : 'Paid';
+    const targetDbId = (targetFine as any).dbId || fineId;
     const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
 
     try {
       const res = await fetch('/api/penalties', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userEmail,
-          id: delId,
-          status: nextStatus === 'Paid' ? 'Settled' : 'Active',
-          paidAmount: nextStatus === 'Paid' ? targetFine.amount : 0
+          action: 'toggle',
+          id: targetDbId,
+          status: nextStatus,
+          userEmail
         })
       }).then(r => r.json());
 
       if (!res.success) {
-        alert('Failed to toggle penalty status: ' + (res.error || 'Server error.'));
+        alert('Failed to update penalty status: ' + (res.error || 'Server error.'));
         return;
       }
 
       await refreshPenalties();
-      await refreshContributions();
-
-      await recordAuditLog({
-        user: currentUser?.fullName,
-        member: targetFine.member,
-        module: 'Fines & Penalties',
-        action: 'Updated',
-        oldValues: {
-          'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
-          'Reason': targetFine.reason || 'Late payment + penalty',
-          'Status': targetFine.status,
-          'Date Paid': targetFine.datePaid || '-'
-        },
-        newValues: {
-          'Penalty Amount': `KSh ${Number(targetFine.amount).toLocaleString()}`,
-          'Reason': targetFine.reason || 'Late payment + penalty',
-          'Status': nextStatus,
-          'Date Paid': nextStatus === 'Paid' ? todayStr : '-'
-        },
-        remarks: `Updated penalty status for ${targetFine.member} to ${nextStatus}`
-      });
       await refreshAuditLogs();
     } catch (err: any) {
       alert('Error updating penalty status: ' + err.message);
@@ -1833,12 +1821,14 @@ export default function Home() {
       setField6('Active');
       setField7('0');
     } else if (targetMode === 'Fines & Penalties' || targetMode === 'Levy Penalty') {
-      setField1('');
-      setField2(todayISO);
+      setField1(members[0]?.fullName || 'Simon Memia Wanjiru');
+      const defMonth = selectedPenaltyMonth !== 'All' ? selectedPenaltyMonth : 'Aug';
+      const defYear = selectedPenaltyYear !== 'All' ? selectedPenaltyYear : 2026;
+      setField2(`${defMonth} ${defYear}`);
       setField3('500');
-      setField4('Late Contribution Penalty');
-      setField5('Pending');
-      setField6('-');
+      setField4('Unpaid');
+      setField5('');
+      setField6('');
       setField7('');
     } else if (targetMode === 'Expenses' || targetMode === 'Record Expense') {
       setField1('');
@@ -1895,11 +1885,12 @@ export default function Home() {
       setField7(String(item.balance || 0));
     } else if (mode === 'Fines & Penalties') {
       setField1(item.member || '');
-      setField2(item.date || '');
-      setField3(String(item.amount || 500));
-      setField4(item.reason || '');
-      setField5(item.status || 'Paid');
-      setField6(item.datePaid || '');
+      setField2(item.monthYear || item.date || 'Aug 2026');
+      setField3('500');
+      setField4(item.status === 'Paid' ? 'Paid' : 'Unpaid');
+      setField5('');
+      setField6('');
+      setField7('');
     } else if (mode === 'Expenses') {
       setField1(item.description || '');
       setField2(item.category || '');
@@ -2159,23 +2150,9 @@ export default function Home() {
         }
         await refreshLoans();
       }
-      // 4. Fines & Penalties
+      // 4. Fines & Penalties (KSh 500 late-fee management only)
       else if (modalMode === 'Fines & Penalties' || modalMode === 'Levy Penalty') {
-        const fineDateToUse = field2 || getEATISODate();
-        const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
-
-        // Enforce rule: Each member can only have ONE late-payment penalty per contribution month
-        const hasDuplicate = fines.some(f =>
-          (!editingId || f.id !== editingId) &&
-          isSameMemberName(f.member, field1) &&
-          matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
-        );
-        if (hasDuplicate) {
-          alert(`Duplicate Blocked: A late-payment penalty is already recorded for ${field1} in ${syncCheck.monthLabel}. Each member can only have ONE late-payment penalty per contribution month.`);
-          return;
-        }
-
-        const targetFine = editingId ? fines.find(f => f.id === editingId) : null;
+        const targetFine = editingId ? fines.find(f => f.id === editingId || f.dbId === editingId) : null;
         const fineDbId = targetFine?.dbId || editingId;
 
         const res = await fetch('/api/penalties', {
@@ -2185,11 +2162,9 @@ export default function Home() {
             userEmail,
             id: editingId ? fineDbId : undefined,
             memberName: field1.trim(),
-            dateLevied: fineDateToUse,
-            penaltyAmount: Number(field3) || 500,
-            paidAmount: field5 === 'Paid' ? (Number(field3) || 500) : 0,
-            reason: field4 || 'Late payment + penalty',
-            status: field5 === 'Paid' ? 'Settled' : 'Active'
+            monthYear: field2.trim(),
+            status: field4 === 'Paid' ? 'Paid' : 'Unpaid',
+            penaltyAmount: 500
           })
         }).then(r => r.json());
 
@@ -2198,7 +2173,7 @@ export default function Home() {
           return;
         }
         await refreshPenalties();
-        await refreshContributions();
+        await refreshAuditLogs();
       }
       // 5. Expenses
       else if (modalMode === 'Expenses' || modalMode === 'Add Expense') {
@@ -3401,11 +3376,11 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* AUTOMATIC SUMMARY CARD WITH UNSETTLED COLUMN (PDF Page 10) */}
+              {/* AUTOMATIC SUMMARY CARD WITH SEPARATED OBLIGATIONS (PDF Page 10) */}
               <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
                 <div className="p-5 border-b border-[#1E293B]">
                   <h2 className="font-bold text-white text-base">Member Balances, Unsettled Dues & Shares — Automatic Summary</h2>
-                  <p className="text-xs text-slate-400">Total Contribution vs Unsettled Contributions, Active Loans, and Net Balance (Page 14 of 17)</p>
+                  <p className="text-xs text-slate-400">Total Contribution vs Unsettled Contributions, Unpaid Penalties, Active Loans, and Net Balance (Page 14 of 17)</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-300">
@@ -3413,7 +3388,8 @@ export default function Home() {
                       <tr>
                         <th className="p-4">Member Name</th>
                         <th className="p-4 text-right">Total Contribution (KES)</th>
-                        <th className="p-4 text-right text-amber-300">Unsettled Contribution (KES)</th>
+                        <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
+                        <th className="p-4 text-right text-rose-300">Unpaid Penalties (KES)</th>
                         <th className="p-4 text-right">Active Loans (KES)</th>
                         <th className="p-4 text-right">Net Balance (KES)</th>
                         <th className="p-4 text-right">% Share Holding</th>
@@ -3421,13 +3397,15 @@ export default function Home() {
                     </thead>
                     <tbody className="divide-y divide-[#1E293B] font-mono">
                       {automatedMembers.map((m) => {
-                        const memberUnsettled = memberUnsettledTotals[m.fullName] || 0;
+                        const memberUnsettled = memberOutstandingContribs[m.fullName] || 0;
+                        const memberPenalty = memberUnpaidPenalties[m.fullName] || 0;
                         return (
                           <tr key={m.id} className="hover:bg-[#142036] transition">
                             <td className="p-4 font-sans text-white font-medium">{m.fullName}</td>
                             <td className="p-4 text-right font-bold text-white">{m.totalContribution.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                             <td className="p-4 text-right font-bold text-amber-400">{memberUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right text-rose-400">{m.activeLoans.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-bold text-rose-400">{memberPenalty.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right text-slate-300">{m.activeLoans.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                             <td className="p-4 text-right font-bold text-emerald-400">{m.netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                             <td className="p-4 text-right font-bold text-sky-400">{m.shares}</td>
                           </tr>
@@ -3436,8 +3414,9 @@ export default function Home() {
                       <tr className="bg-[#121B2F] font-bold text-white">
                         <td className="p-4 uppercase">GRAND TOTALS</td>
                         <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-amber-400 font-black">{grandTotalUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-rose-400 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-amber-400 font-black">{grandTotalOutstandingContribs.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-rose-400 font-black">{grandTotalUnpaidPenalties.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-slate-300 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right text-emerald-400 font-black">{(grandTotalContributions - totalActiveLoansAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="p-4 text-right text-sky-400 font-black">100.00%</td>
                       </tr>
@@ -4049,167 +4028,286 @@ export default function Home() {
           )}
 
           {/* ===================================================================== */}
-          {/* FINES & PENALTIES LOG (PDF Page 9) WITH REQUESTED COLUMNS & TOGGLE */}
+          {/* FINES & LATE PAYMENT PENALTIES REGISTER (KSh 500 late-fee management only) */}
           {/* ===================================================================== */}
-          {activeTab === 'Fines & Penalties' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="font-bold text-white text-base">Fines & Late Payment Penalties Register</h2>
-                  <p className="text-xs text-slate-400">Click &apos;Active&apos; status to change to &apos;Paid&apos; and automatically record settlement date</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-400">Month:</label>
-                    <select
-                      value={selectedPenaltyMonth}
-                      onChange={(e) => setSelectedPenaltyMonth(e.target.value)}
-                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
-                    >
-                      <option value="All">All Months</option>
-                      {ALL_MONTHS.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
+          {activeTab === 'Fines & Penalties' && (() => {
+            const paidFinesList = filteredFines.filter(f => f.status === 'Paid');
+            const unpaidFinesList = filteredFines.filter(f => f.status === 'Unpaid');
+            const totalRecordedAmount = filteredFines.length * 500;
+            const totalCollectedAmount = paidFinesList.length * 500;
+            const outstandingAmount = unpaidFinesList.length * 500;
 
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-400">Year:</label>
-                    <select
-                      value={selectedPenaltyYear}
-                      onChange={(e) => setSelectedPenaltyYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
-                    >
-                      <option value="All">All Years</option>
-                      {AVAILABLE_YEARS.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {canEdit && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={async () => {
-                          try {
-                            const res = await fetch('/api/penalties', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ action: 'sync', userEmail: currentUser?.email })
-                            }).then(r => r.json());
-                            if (res.success) {
-                              await refreshPenalties();
-                              alert(res.message || 'Synchronized with contributions successfully!');
-                            }
-                          } catch (e) {
-                            alert('Sync failed');
-                          }
-                        }}
-                        className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
-                        title="Synchronize all contributions with fines & penalties register"
-                      >
-                        <RotateCw className="w-3.5 h-3.5 text-emerald-400" /> Sync Contributions
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenQuickModal('Fines & Penalties')}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Levy Penalty
-                      </button>
+            return (
+              <div className="space-y-6">
+                {/* 1. AUTOMATIC PENALTY SUMMARY CARDS */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: Total Fines Recorded */}
+                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400">Total Fines Recorded</span>
+                      <div className="w-9 h-9 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-300">
+                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      </div>
                     </div>
-                  )}
+                    <div className="mt-3">
+                      <div className="text-xl font-black text-white font-mono">
+                        KES {totalRecordedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 font-sans">{filteredFines.length} Fines Recorded</p>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Total Fines Collected */}
+                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400">Total Fines Collected</span>
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <CheckCircle className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="text-xl font-black text-emerald-400 font-mono">
+                        KES {totalCollectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </div>
+                      <p className="text-[11px] text-emerald-400/80 mt-1 font-sans">
+                        {paidFinesList.length} Penalties Paid ({filteredFines.length > 0 ? Math.round((paidFinesList.length / filteredFines.length) * 100) : 0}%)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Outstanding Fines */}
+                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400">Outstanding Fines</span>
+                      <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                        <Coins className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="text-xl font-black text-rose-400 font-mono">
+                        KES {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </div>
+                      <p className="text-[11px] text-rose-400/80 mt-1 font-sans">Unsettled Member Penalties</p>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Number of Unpaid Penalties */}
+                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-400">Number of Unpaid Penalties</span>
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="text-xl font-black text-amber-400 font-mono">
+                        {unpaidFinesList.length}
+                      </div>
+                      <p className="text-[11px] text-amber-400/80 mt-1 font-sans">
+                        {unpaidFinesList.length === 1 ? '1 Penalty Outstanding' : `${unpaidFinesList.length} Penalties Outstanding`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. PENALTIES REGISTER TABLE */}
+                <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
+                  <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h2 className="font-bold text-white text-base">Fines & Late Payment Penalties Register</h2>
+                      <p className="text-xs text-slate-400">Exclusively tracking the KSh 500 late-payment fines for monthly contributions</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-slate-400">Month:</label>
+                        <select
+                          value={selectedPenaltyMonth}
+                          onChange={(e) => setSelectedPenaltyMonth(e.target.value)}
+                          className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                        >
+                          <option value="All">All Months</option>
+                          {ALL_MONTHS.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-slate-400">Year:</label>
+                        <select
+                          value={selectedPenaltyYear}
+                          onChange={(e) => setSelectedPenaltyYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                          className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                        >
+                          <option value="All">All Years</option>
+                          {AVAILABLE_YEARS.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {canEdit && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await fetch('/api/penalties', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ action: 'sync', userEmail: currentUser?.email })
+                                }).then(r => r.json());
+                                if (res.success) {
+                                  await refreshPenalties();
+                                  alert(res.message || 'Synchronized with contributions successfully!');
+                                } else {
+                                  alert('Sync failed: ' + (res.error || 'Unknown error'));
+                                }
+                              } catch (e) {
+                                alert('Sync failed');
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+                            title="Synchronize all contributions with fines & penalties register"
+                          >
+                            <RotateCw className="w-3.5 h-3.5 text-emerald-400" /> Sync Contributions
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenQuickModal('Fines & Penalties')}
+                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Levy Penalty
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-300">
+                      <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
+                        <tr>
+                          <th className="p-4">Member Name</th>
+                          <th className="p-4">Contribution Month</th>
+                          <th className="p-4 text-right">Fine (KES)</th>
+                          <th className="p-4 text-center">Payment Status</th>
+                          {canEdit && <th className="p-4 text-center">Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#1E293B] font-mono">
+                        {filteredFines.length === 0 ? (
+                          <tr>
+                            <td colSpan={canEdit ? 5 : 4} className="p-8 text-center text-slate-400 font-sans">
+                              No penalty records found matching the selected filters.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredFines.map((f) => {
+                            const isPaid = f.status === 'Paid';
+                            const displayMonth = f.monthYear || f.date;
+
+                            return (
+                              <tr key={f.id} className="hover:bg-[#142036] transition">
+                                <td className="p-4 font-sans text-white font-medium">{f.member}</td>
+                                <td className="p-4 text-slate-300 font-sans font-semibold">
+                                  <span className="text-white block font-mono font-medium">{displayMonth}</span>
+                                </td>
+                                <td className="p-4 text-right font-bold text-white">
+                                  500.00
+                                </td>
+                                <td className="p-4 text-center font-sans">
+                                  <span
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
+                                      isPaid
+                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                    }`}
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                                    {isPaid ? 'Paid' : 'Unpaid'}
+                                  </span>
+                                </td>
+                                {canEdit && (
+                                  <td className="p-4 text-center font-sans">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        onClick={() => handleToggleFineStatus(f.id)}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition border flex items-center gap-1 ${
+                                          isPaid
+                                            ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                                            : 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-600 hover:text-white'
+                                        }`}
+                                        title={isPaid ? 'Click to mark as Unpaid' : 'Click to mark as Paid'}
+                                      >
+                                        {isPaid ? (
+                                          <>
+                                            <RotateCw className="w-3 h-3" /> Mark Unpaid
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircle className="w-3 h-3" /> Mark Paid
+                                          </>
+                                        )}
+                                      </button>
+                                      <button
+                                        onClick={() => handleOpenEditModal(f, 'Fines & Penalties')}
+                                        className="p-1.5 hover:text-white text-slate-400 hover:bg-slate-700/50 rounded-lg transition"
+                                        title="Edit Penalty Record"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          const confirmDel = window.confirm(`Permanently delete penalty record for ${f.member} (${displayMonth})?`);
+                                          if (!confirmDel) return;
+                                          try {
+                                            const targetDbId = f.dbId || f.id;
+                                            const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+                                            const res = await fetch(`/api/penalties?id=${encodeURIComponent(String(targetDbId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+                                              method: 'DELETE'
+                                            }).then(r => r.json());
+                                            if (res.success) {
+                                              await refreshPenalties();
+                                              await refreshAuditLogs();
+                                            } else {
+                                              alert('Delete failed: ' + (res.error || 'Server error'));
+                                            }
+                                          } catch (e: any) {
+                                            alert('Error deleting penalty: ' + e.message);
+                                          }
+                                        }}
+                                        className="p-1.5 hover:text-rose-400 text-slate-400 hover:bg-rose-500/10 rounded-lg transition"
+                                        title="Delete Penalty Record"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })
+                        )}
+                        <tr className="bg-[#121B2F] font-bold text-white">
+                          <td className="p-4 uppercase font-sans">TOTALS</td>
+                          <td className="p-4 font-sans text-slate-400">{filteredFines.length} Record{filteredFines.length === 1 ? '' : 's'}</td>
+                          <td className="p-4 text-right text-emerald-400 font-black">
+                            {totalRecordedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-4 text-center font-sans text-slate-400">
+                            <span className="text-emerald-400 font-mono">{paidFinesList.length} Paid</span>
+                            <span className="mx-1">/</span>
+                            <span className="text-rose-400 font-mono">{unpaidFinesList.length} Unpaid</span>
+                          </td>
+                          {canEdit && <td className="p-4"></td>}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                    <tr>
-                      <th className="p-4">Member Name</th>
-                      <th className="p-4">Contribution Month & Year</th>
-                      <th className="p-4 text-right text-amber-300">Unsettled Contribution (KES)</th>
-                      <th className="p-4 text-right text-rose-300">Unsettled Fine (KES)</th>
-                      <th className="p-4 text-right text-white">Total Outstanding (KES)</th>
-                      <th className="p-4 text-right text-sky-300">Amount Paid (KES)</th>
-                      <th className="p-4 text-right text-emerald-300">Remaining Balance (KES)</th>
-                      <th className="p-4 text-center">Payment Status</th>
-                      {canEdit && <th className="p-4 text-center">Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1E293B] font-mono">
-                    {filteredFines.map((f) => {
-                      const unsettledContrib = Number(f.unsettledContribution) || 0;
-                      const fineAmt = Number(f.penaltyAmount) || Number(f.amount) || 500;
-                      const totalOut = f.totalOutstanding !== undefined ? Number(f.totalOutstanding) : (unsettledContrib + fineAmt);
-                      const paidTotal = Number(f.paidAmount) || 0;
-                      const remBal = f.remainingBalance !== undefined ? Number(f.remainingBalance) : Math.max(0, totalOut - paidTotal);
-                      const statusBadge = remBal === 0 && (paidTotal > 0 || totalOut === 0) ? 'PAID' : (paidTotal > 0 ? 'PARTIALLY PAID' : (f.status === 'Paid' ? 'PAID' : 'UNPAID'));
-                      const displayPeriod = f.monthYear || f.date;
-
-                      return (
-                        <tr key={f.id} className="hover:bg-[#142036] transition">
-                          <td className="p-4 font-sans text-white font-medium">{f.member}</td>
-                          <td className="p-4 text-slate-400 font-sans">
-                            <span className="text-white block font-mono font-medium">{displayPeriod}</span>
-                            <span className="text-[10px] text-slate-400 block font-sans">{f.date}</span>
-                          </td>
-                          <td className="p-4 text-right font-bold text-amber-400">{unsettledContrib.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-rose-400">{fineAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-white">{totalOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-sky-400">{paidTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-black text-emerald-400">{remBal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-center font-sans">
-                            <button
-                              onClick={() => canEdit && remBal > 0 && handleOpenPaymentModal(f)}
-                              disabled={!canEdit || remBal === 0}
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold transition flex items-center justify-center gap-1 mx-auto ${
-                                statusBadge === 'PAID'
-                                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                  : statusBadge === 'PARTIALLY PAID'
-                                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 cursor-pointer'
-                                  : 'bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 cursor-pointer'
-                              }`}
-                              title={remBal > 0 ? 'Click to record payment' : 'Fully settled and recorded'}
-                            >
-                              <span>{statusBadge}</span>
-                              {statusBadge === 'PAID' ? <CheckCircle className="w-3 h-3" /> : <Coins className="w-3 h-3" />}
-                            </button>
-                          </td>
-                          {canEdit && (
-                            <td className="p-4 text-center font-sans">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {remBal > 0 && (
-                                  <button
-                                    onClick={() => handleOpenPaymentModal(f)}
-                                    className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-lg text-[10px] font-bold transition border border-emerald-500/30 flex items-center gap-1"
-                                    title="Record payment against this record"
-                                  >
-                                    <DollarSign className="w-3 h-3" /> Pay
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleOpenEditModal(f, 'Fines & Penalties')}
-                                  className="p-1.5 hover:text-white text-slate-400 hover:bg-slate-700/50 rounded-lg transition"
-                                  title="Edit Penalty Record"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                    <tr className="bg-[#121B2F] font-bold text-white">
-                      <td className="p-4 uppercase font-sans" colSpan={3}>TOTAL PENALTIES COLLECTED</td>
-                      <td className="p-4 text-right text-emerald-400 font-black">{totalPaidPenalties.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td colSpan={canEdit ? 5 : 4} className="p-4 font-sans text-slate-400">Penalties dynamically feed Bank Account Balances</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ===================================================================== */}
           {/* OPERATIONAL EXPENSES & PAYOUTS LOG (PDF Page 6) */}
@@ -5026,7 +5124,114 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleSubmitModal} className="p-6 space-y-4">
-              {/* Field 1 */}
+              {modalMode.includes('Fines') ? (
+                /* SIMPLIFIED 4-FIELD PENALTY ENTRY FORM (Requirement 2) */
+                <div className="space-y-4">
+                  {/* Field 1: Member Name Dropdown */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Member Name <span className="text-rose-400">*</span>
+                    </label>
+                    <select
+                      value={field1}
+                      onChange={(e) => setField1(e.target.value)}
+                      required
+                      className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium cursor-pointer"
+                    >
+                      <option value="" disabled>Select Member</option>
+                      {members.map(m => (
+                        <option key={m.id || m.fullName} value={m.fullName}>
+                          {m.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Field 2: Contribution Month (MMM YYYY) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Contribution Month <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <select
+                        value={(() => {
+                          const parts = (field2 || '').split(' ');
+                          return ALL_MONTHS.includes(parts[0] as any) ? parts[0] : (selectedPenaltyMonth !== 'All' ? selectedPenaltyMonth : 'Aug');
+                        })()}
+                        onChange={(e) => {
+                          const parts = (field2 || '').split(' ');
+                          const yr = parts[1] || (selectedPenaltyYear !== 'All' ? String(selectedPenaltyYear) : '2026');
+                          setField2(`${e.target.value} ${yr}`);
+                        }}
+                        className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium cursor-pointer"
+                      >
+                        {ALL_MONTHS.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={(() => {
+                          const parts = (field2 || '').split(' ');
+                          const yr = parseInt(parts[1], 10);
+                          return AVAILABLE_YEARS.includes(yr) ? yr : (selectedPenaltyYear !== 'All' ? selectedPenaltyYear : 2026);
+                        })()}
+                        onChange={(e) => {
+                          const parts = (field2 || '').split(' ');
+                          const mo = parts[0] || (selectedPenaltyMonth !== 'All' ? selectedPenaltyMonth : 'Aug');
+                          setField2(`${mo} ${e.target.value}`);
+                        }}
+                        className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium cursor-pointer"
+                      >
+                        {AVAILABLE_YEARS.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1 font-mono">
+                      Cycle Period: <span className="text-emerald-400 font-bold">{field2 || 'Aug 2026'}</span>
+                    </p>
+                  </div>
+
+                  {/* Field 3: Penalty Amount (Fixed at KSh 500, read-only) */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-xs font-semibold text-slate-300">
+                        Penalty Amount (KES)
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-mono">Fixed Policy Fee</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-2.5 text-xs font-bold font-mono text-emerald-400">KES</span>
+                      <input
+                        type="text"
+                        value="500.00"
+                        readOnly
+                        disabled
+                        className="w-full bg-[#0a101d] border border-[#1E2D4A] rounded-xl pl-12 pr-3 py-2 text-xs text-slate-300 font-mono font-bold cursor-not-allowed opacity-90 shadow-inner"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Automatic standard KSh 500 fine for late monthly contributions.</p>
+                  </div>
+
+                  {/* Field 4: Payment Status */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                      Payment Status <span className="text-rose-400">*</span>
+                    </label>
+                    <select
+                      value={field4 === 'Paid' ? 'Paid' : 'Unpaid'}
+                      onChange={(e) => setField4(e.target.value)}
+                      className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-medium cursor-pointer"
+                    >
+                      <option value="Unpaid">Unpaid (Outstanding Fine)</option>
+                      <option value="Paid">Paid (Settled Fine)</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Field 1 */}
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">
                   {modalMode.includes('Member') ? 'Full Name' :
@@ -5240,67 +5445,10 @@ export default function Home() {
                   />
                 </div>
               )}
-
-              {/* Month-by-Month Synchronization Assistant for Fines & Penalties */}
-              {modalMode.includes('Fines') && (
-                (() => {
-                  const fineDateToUse = field2 || getEATISODate();
-                  const syncCheck = getMemberUnsettledForDate(contributions, field1, fineDateToUse);
-                  const penaltyAmt = Number(field3) || 500;
-                  const totalObligation = syncCheck.unsettled + penaltyAmt;
-                  const isDuplicate = fines.some(f =>
-                    (!editingId || f.id !== editingId) &&
-                    field1 &&
-                    isSameMemberName(f.member, field1) &&
-                    matchesMonthAndYear(f.date, syncCheck.monthName, syncCheck.year)
-                  );
-
-                  return (
-                    <div className={`p-3.5 rounded-xl border text-xs space-y-2 transition ${
-                      isDuplicate
-                        ? 'bg-rose-950/30 border-rose-500/40'
-                        : 'bg-emerald-950/20 border-emerald-500/30'
-                    }`}>
-                      <div className="flex items-center justify-between font-semibold">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className={`w-2 h-2 rounded-full ${isDuplicate ? 'bg-rose-400 animate-pulse' : 'bg-emerald-400'}`}></span>
-                          Month-by-Month Contributions Sync
-                        </span>
-                        <span className="text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                          {syncCheck.monthLabel}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
-                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
-                          <div className="text-slate-400 text-[10px] uppercase font-sans">Month Dues</div>
-                          <div className="text-amber-400 font-bold mt-0.5">KES {syncCheck.unsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                        </div>
-                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
-                          <div className="text-slate-400 text-[10px] uppercase font-sans">Penalty</div>
-                          <div className="text-rose-400 font-bold mt-0.5">KES {penaltyAmt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                        </div>
-                        <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
-                          <div className="text-slate-400 text-[10px] uppercase font-sans">Total Due</div>
-                          <div className="text-emerald-400 font-black mt-0.5">KES {totalObligation.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                        </div>
-                      </div>
-
-                      {isDuplicate ? (
-                        <div className="flex items-center gap-1.5 text-rose-300 font-medium text-[11px] bg-rose-500/10 p-2 rounded-lg border border-rose-500/30">
-                          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                          <span><strong>Duplicate Alert:</strong> A penalty is already registered for this member in {syncCheck.monthLabel}. Each member can only have ONE penalty per cycle.</span>
-                        </div>
-                      ) : (
-                        <div className="text-[10px] text-slate-400 flex items-center justify-between">
-                          <span>Primary source: Contributions Register</span>
-                          <span className="text-emerald-400">✓ Isolated strictly to {syncCheck.monthLabel}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()
+                </>
               )}
+
+
 
               {/* Automated 10% Interest Calculator for Loan Portfolio */}
               {modalMode.includes('Loan') && (

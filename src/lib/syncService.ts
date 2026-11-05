@@ -61,9 +61,105 @@ export function normalizePeriod(dateOrStr: string | Date | null | undefined): No
 }
 
 /**
- * Synchronizes a single contribution into the Fines & Late Payment Penalties Register.
- * Matching key: Member ID + Month + Year + Dues Type.
- * Guaranteed: One member cannot have duplicate penalties for the same month.
+ * Checks if the monthly contribution deadline (16th day of that month at 23:59:59 EAT) has passed.
+ * EAT is UTC+3.
+ */
+export function isContributionDeadlinePassed(monthYearStr: string, referenceDate: Date = new Date()): boolean {
+  const period = normalizePeriod(monthYearStr);
+  // 16th of that month at 23:59:59 EAT corresponds to 20:59:59 UTC on the 16th
+  const deadlineUtc = new Date(Date.UTC(period.year, period.monthIdx, 16, 20, 59, 59));
+  return referenceDate.getTime() > deadlineUtc.getTime();
+}
+
+/**
+ * Automatic Monthly Penalty Generation.
+ * Scans contributions across all 7 members:
+ * - When a member fails to make required monthly contribution by the 16th deadline:
+ *   Generates exactly ONE KSh 500 penalty.
+ * - Never generates duplicate penalties (enforced by memberId + monthYear).
+ * - Never generates penalties for members who paid on time.
+ * - Never generates penalties for months that have not yet reached the 16th deadline.
+ * - Preserves existing penalty records and payment status.
+ */
+export async function syncAllContributions() {
+  const members = await prisma.member.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const contributions = await prisma.contribution.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const duesType = 'Contribution & Fine';
+  const now = new Date();
+  const createdPenalties: any[] = [];
+
+  for (const contrib of contributions) {
+    if (!contrib.memberId) continue;
+
+    const period = normalizePeriod(contrib.monthYear);
+
+    // Rule 1: Deadline check - Do not generate penalties for months that have not yet reached the 16th
+    if (!isContributionDeadlinePassed(period.periodKey, now)) {
+      continue;
+    }
+
+    // Rule 2: Member paid on time check
+    const amount = Number(contrib.amount) || 0;
+    const unsettled = Number(contrib.unsettled) || 0;
+    const remarks = (contrib.remarks || '').toLowerCase();
+    const isLateOrUnsettled = unsettled > 0 || amount === 0 || remarks.includes('late') || remarks.includes('penalty');
+
+    if (!isLateOrUnsettled) {
+      // Member paid on time, do not generate fine
+      continue;
+    }
+
+    // Rule 3: Single penalty per member per month - Never generate duplicate
+    const existing = await prisma.penalty.findUnique({
+      where: {
+        memberId_monthYear_duesType: {
+          memberId: contrib.memberId,
+          monthYear: period.periodKey,
+          duesType,
+        },
+      },
+    });
+
+    if (existing) {
+      // Existing penalty preserved, do not duplicate
+      continue;
+    }
+
+    // Create exactly one KSh 500 fine
+    const created = await prisma.penalty.create({
+      data: {
+        memberId: contrib.memberId,
+        monthYear: period.periodKey,
+        dueDate: new Date(),
+        dateLevied: new Date(),
+        penaltyAmount: 500.0,
+        unsettledContribution: 0.0,
+        paidAmount: 0.0,
+        paidContribution: 0.0,
+        paidFine: 0.0,
+        remainingBalance: 500.0,
+        status: 'UNPAID',
+        reason: 'Late Contribution Penalty',
+        duesType,
+        contributionId: contrib.id,
+      },
+      include: { member: true },
+    });
+
+    createdPenalties.push(created);
+  }
+
+  return createdPenalties;
+}
+
+/**
+ * Synchronizes a single contribution into the KSh 500 penalty register.
  */
 export async function syncContributionToPenalty(contributionId: number) {
   const contribution = await prisma.contribution.findUnique({
@@ -77,10 +173,21 @@ export async function syncContributionToPenalty(contributionId: number) {
 
   const period = normalizePeriod(contribution.monthYear);
   const duesType = 'Contribution & Fine';
-  const unsettled = Number(contribution.unsettled) || 0;
-  const isLateOrFine = unsettled > 0 || (contribution.remarks && contribution.remarks.toLowerCase().includes('penalty'));
 
-  // If no unsettled dues and no penalty remarks, check if an existing unsettled record should be cleared
+  // Deadline check
+  if (!isContributionDeadlinePassed(period.periodKey)) {
+    return null;
+  }
+
+  const amount = Number(contribution.amount) || 0;
+  const unsettled = Number(contribution.unsettled) || 0;
+  const remarks = (contribution.remarks || '').toLowerCase();
+  const isLateOrUnsettled = unsettled > 0 || amount === 0 || remarks.includes('late') || remarks.includes('penalty');
+
+  if (!isLateOrUnsettled) {
+    return null;
+  }
+
   const existing = await prisma.penalty.findUnique({
     where: {
       memberId_monthYear_duesType: {
@@ -89,221 +196,59 @@ export async function syncContributionToPenalty(contributionId: number) {
         duesType,
       },
     },
-    include: { payments: true },
   });
-
-  if (!isLateOrFine && !existing) {
-    return null;
-  }
-
-  const fineAmount = 500; // Standard late fine
 
   if (existing) {
-    // Mirror the updated contribution unsettled amount while preserving existing payments
-    const remContrib = Math.max(0, unsettled - existing.paidContribution);
-    const remFine = Math.max(0, existing.penaltyAmount - existing.paidFine);
-    const remBalance = remContrib + remFine;
-    const totalPaid = existing.paidContribution + existing.paidFine;
-    let newStatus = 'UNPAID';
-    if (remBalance === 0 && (totalPaid > 0 || unsettled === 0)) {
-      newStatus = 'PAID';
-    } else if (totalPaid > 0) {
-      newStatus = 'PARTIALLY PAID';
-    }
-
-    const updated = await prisma.penalty.update({
-      where: { id: existing.id },
-      data: {
-        unsettledContribution: unsettled,
-        remainingBalance: remBalance,
-        status: newStatus,
-        contributionId: contribution.id,
-      },
-      include: { member: true, payments: true },
-    });
-    return updated;
-  } else if (isLateOrFine) {
-    // Create new penalty record
-    const totalOutstanding = unsettled + fineAmount;
-    const created = await prisma.penalty.create({
-      data: {
-        memberId: contribution.memberId,
-        monthYear: period.periodKey,
-        dueDate: new Date(),
-        dateLevied: new Date(),
-        unsettledContribution: unsettled,
-        penaltyAmount: fineAmount,
-        paidAmount: 0,
-        paidContribution: 0,
-        paidFine: 0,
-        remainingBalance: totalOutstanding,
-        status: 'UNPAID',
-        reason: 'Late Contribution & Unsettled Dues',
-        duesType,
-        contributionId: contribution.id,
-      },
-      include: { member: true, payments: true },
-    });
-    return created;
+    return existing;
   }
 
-  return null;
+  return await prisma.penalty.create({
+    data: {
+      memberId: contribution.memberId,
+      monthYear: period.periodKey,
+      dueDate: new Date(),
+      dateLevied: new Date(),
+      penaltyAmount: 500.0,
+      unsettledContribution: 0.0,
+      paidAmount: 0.0,
+      paidContribution: 0.0,
+      paidFine: 0.0,
+      remainingBalance: 500.0,
+      status: 'UNPAID',
+      reason: 'Late Contribution Penalty',
+      duesType,
+      contributionId: contribution.id,
+    },
+    include: { member: true },
+  });
 }
 
 /**
- * Executes transparent, traceable payment allocation between contribution and fine components.
- * Uses atomic Prisma transaction to prevent double counting.
- */
-export async function recordPenaltyPayment(params: {
-  penaltyId: number;
-  amount: number;
-  paymentMethod?: string;
-  reference?: string;
-  notes?: string;
-  userEmail?: string;
-}) {
+  * Backward compatibility helper for legacy scripts.
+  */
+export async function recordPenaltyPayment(params: any) {
   const { penaltyId, amount, paymentMethod, reference, notes, userEmail } = params;
+  const numId = typeof penaltyId === 'number' ? penaltyId : parseInt(String(penaltyId).replace(/\D/g, ''), 10);
+  const nowIso = new Date().toISOString().slice(0, 10);
 
-  if (amount <= 0) {
-    throw new Error('Payment amount must be greater than zero.');
-  }
-
-  // Execute database operations inside interactive transaction with generous timeout for serverless DB
-  const result = await prisma.$transaction(
-    async (tx) => {
-      const penalty = await tx.penalty.findUnique({
-        where: { id: penaltyId },
-        include: { member: true, payments: true },
-      });
-
-      if (!penalty) {
-        throw new Error(`Penalty record #${penaltyId} not found.`);
-      }
-
-      const currentRemaining = Number(penalty.remainingBalance);
-      if (amount > currentRemaining) {
-        throw new Error(
-          `Payment of KSh ${amount.toLocaleString()} exceeds the remaining balance of KSh ${currentRemaining.toLocaleString()}.`
-        );
-      }
-
-      // Transparent allocation: Contribution component first, then fine component
-      const neededContrib = Math.max(0, penalty.unsettledContribution - penalty.paidContribution);
-      const allocContrib = Math.min(amount, neededContrib);
-      const remainingPayment = amount - allocContrib;
-      const neededFine = Math.max(0, penalty.penaltyAmount - penalty.paidFine);
-      const allocFine = Math.min(remainingPayment, neededFine);
-
-      const newPaidContrib = penalty.paidContribution + allocContrib;
-      const newPaidFine = penalty.paidFine + allocFine;
-      const newPaidTotal = penalty.paidAmount + amount;
-
-      const remainingContrib = Math.max(0, penalty.unsettledContribution - newPaidContrib);
-      const remainingFine = Math.max(0, penalty.penaltyAmount - newPaidFine);
-      const newRemainingBalance = remainingContrib + remainingFine;
-      const newStatus = newRemainingBalance === 0 ? 'PAID' : 'PARTIALLY PAID';
-      const nowIso = new Date().toISOString().slice(0, 10);
-
-      // 1. Create payment transaction record
-      const paymentTx = await tx.paymentTransaction.create({
-        data: {
-          penaltyId: penalty.id,
-          amount: amount,
-          allocatedContribution: allocContrib,
-          allocatedFine: allocFine,
-          paymentDate: new Date(),
-          paymentMethod: paymentMethod || 'M-PESA',
-          reference: reference || `PAY-${Date.now()}`,
-          notes: notes || `Payment allocated: KSh ${allocContrib.toLocaleString()} to contribution, KSh ${allocFine.toLocaleString()} to fine.`,
-          createdByUser: userEmail || 'Administrator',
-        },
-      });
-
-      // 2. Update penalty record
-      const updatedPenalty = await tx.penalty.update({
-        where: { id: penalty.id },
-        data: {
-          paidAmount: newPaidTotal,
-          paidContribution: newPaidContrib,
-          paidFine: newPaidFine,
-          remainingBalance: newRemainingBalance,
-          status: newStatus,
-          datePaid: newStatus === 'PAID' ? nowIso : penalty.datePaid,
-        },
-        include: { member: true, payments: true },
-      });
-
-      // 3. Mirror reduction in contribution record if linked
-      if (penalty.contributionId && allocContrib > 0) {
-        await tx.contribution.update({
-          where: { id: penalty.contributionId },
-          data: {
-            unsettled: remainingContrib,
-          },
-        });
-      }
-
-      return {
-        penalty: updatedPenalty,
-        transaction: paymentTx,
-        allocatedContribution: allocContrib,
-        allocatedFine: allocFine,
-        remainingContribution: remainingContrib,
-        remainingFine: remainingFine,
-        remainingBalance: newRemainingBalance,
-      };
+  const updated = await prisma.penalty.update({
+    where: { id: numId },
+    data: {
+      paidAmount: Number(amount) || 500,
+      paidFine: Number(amount) || 500,
+      remainingBalance: 0,
+      status: 'PAID',
+      datePaid: nowIso,
     },
-    { maxWait: 15000, timeout: 25000 }
-  );
-
-  // 4. Create forensic audit trail outside the transaction
-  try {
-    await createAuditLog({
-      model: 'Fines & Penalties',
-      action: 'Updated',
-      recordId: result.penalty.id,
-      userEmail,
-      member: result.penalty.member?.fullName || 'Member',
-      oldValues: {
-        'Status': result.penalty.status === 'PAID' ? 'PARTIALLY PAID' : 'UNPAID',
-        'Amount Paid': `KSh ${(result.penalty.paidAmount - amount).toLocaleString()}`,
-        'Remaining Balance': `KSh ${(result.remainingBalance + amount).toLocaleString()}`,
-      },
-      newValues: {
-        'Status': result.penalty.status,
-        'Amount Paid': `KSh ${result.penalty.paidAmount.toLocaleString()}`,
-        'Remaining Balance': `KSh ${result.remainingBalance.toLocaleString()}`,
-        'Allocated to Contribution': `KSh ${result.allocatedContribution.toLocaleString()}`,
-        'Allocated to Fine': `KSh ${result.allocatedFine.toLocaleString()}`,
-      },
-      remarks: `Recorded payment of KSh ${amount.toLocaleString()} for ${result.penalty.member?.fullName} (${result.penalty.monthYear})`,
-    });
-  } catch (auditErr) {
-    console.warn('Audit log creation failed non-fatally:', auditErr);
-  }
-
-  return result;
-}
-
-/**
- * Synchronizes all existing contributions in the database to ensure complete historical accuracy.
- */
-export async function syncAllContributions() {
-  const contributions = await prisma.contribution.findMany({
-    where: {
-      OR: [
-        { unsettled: { gt: 0 } },
-        { remarks: { contains: 'penalty', mode: 'insensitive' } },
-        { remarks: { contains: 'late', mode: 'insensitive' } },
-      ],
-    },
-    select: { id: true },
+    include: { member: true, payments: true }
   });
 
-  const results = [];
-  for (const c of contributions) {
-    const res = await syncContributionToPenalty(c.id);
-    if (res) results.push(res);
-  }
-  return results;
+  return {
+    penalty: updated,
+    allocatedContribution: 0,
+    allocatedFine: Number(amount) || 500,
+    remainingContribution: 0,
+    remainingFine: 0,
+    remainingBalance: 0
+  };
 }

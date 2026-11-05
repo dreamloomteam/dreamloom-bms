@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
-import { normalizePeriod, recordPenaltyPayment, syncAllContributions } from '@/lib/syncService';
+import { normalizePeriod, syncAllContributions, isContributionDeadlinePassed } from '@/lib/syncService';
+import { getEATISODate } from '@/lib/dateUtils';
 
 function isAuthorizedEditor(email?: string | null) {
   if (!email) return false;
@@ -9,7 +10,7 @@ function isAuthorizedEditor(email?: string | null) {
   return clean === 'simon@dreamloom.co.ke' || clean === 'elijah@dreamloom.co.ke';
 }
 
-// GET /api/penalties - List all penalties with full component breakdown
+// GET /api/penalties - List all KSh 500 late-payment penalties
 export async function GET() {
   try {
     const penalties = await prisma.penalty.findMany({
@@ -22,279 +23,327 @@ export async function GET() {
             nationalId: true,
           },
         },
-        payments: {
-          orderBy: { paymentDate: 'desc' },
-        },
       },
       orderBy: { dateLevied: 'desc' },
     });
 
     const enriched = penalties.map((p) => {
-      const unsettledContrib = Number(p.unsettledContribution) || 0;
-      const penaltyAmt = Number(p.penaltyAmount) || 0;
-      const totalOutstanding = unsettledContrib + penaltyAmt;
-      const paidContrib = Number(p.paidContribution) || 0;
-      const paidFn = Number(p.paidFine) || 0;
-      const paidTotal = Number(p.paidAmount) || (paidContrib + paidFn);
-      const remainingContrib = Math.max(0, unsettledContrib - paidContrib);
-      const remainingFn = Math.max(0, penaltyAmt - paidFn);
-      const remainingBal = remainingContrib + remainingFn;
-
-      let calculatedStatus = p.status;
-      if (remainingBal === 0 && (paidTotal > 0 || totalOutstanding === 0)) {
-        calculatedStatus = 'PAID';
-      } else if (paidTotal > 0) {
-        calculatedStatus = 'PARTIALLY PAID';
-      } else {
-        calculatedStatus = 'UNPAID';
-      }
+      const fineAmount = 500;
+      const isPaid = p.status?.toUpperCase() === 'PAID' || (Number(p.paidAmount) >= 500 && p.status?.toUpperCase() !== 'UNPAID' && p.status?.toUpperCase() !== 'ACTIVE');
+      const normalizedStatus = isPaid ? 'Paid' : 'Unpaid';
+      const period = normalizePeriod(p.monthYear);
 
       return {
-        ...p,
-        totalOutstanding,
-        paidContribution: paidContrib,
-        paidFine: paidFn,
-        paidAmount: paidTotal,
-        remainingContribution: remainingContrib,
-        remainingFine: remainingFn,
-        remainingBalance: remainingBal,
-        status: calculatedStatus,
+        id: p.id,
+        dbId: p.id,
+        member: p.member?.fullName || 'Member',
+        memberId: p.memberId,
+        monthYear: period.periodKey,
+        month: period.monthName,
+        year: period.year,
+        date: p.dateLevied ? String(p.dateLevied).slice(0, 10) : getEATISODate(),
+        amount: fineAmount,
+        fineAmount,
+        penaltyAmount: fineAmount,
+        status: normalizedStatus,
+        datePaid: isPaid ? (p.datePaid || String(p.dateLevied).slice(0, 10)) : '-',
+        reason: p.reason || 'Late Contribution Penalty',
       };
     });
 
-    return NextResponse.json({ success: true, data: enriched });
+    // Compute automatic penalty summary metrics
+    const totalCount = enriched.length;
+    const paidCount = enriched.filter(p => p.status === 'Paid').length;
+    const unpaidCount = enriched.filter(p => p.status === 'Unpaid').length;
+    const totalFinesRecorded = totalCount * 500;
+    const totalFinesCollected = paidCount * 500;
+    const outstandingFines = unpaidCount * 500;
+
+    return NextResponse.json({
+      success: true,
+      data: enriched,
+      metrics: {
+        totalFinesRecorded,
+        totalFinesCollected,
+        outstandingFines,
+        unpaidCount,
+        paidCount,
+        totalCount,
+      },
+    });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }
 
-// POST /api/penalties - Create penalty, record payment, or sync
+// POST /api/penalties - Create penalty, toggle status, or auto-generate
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, userEmail } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Only Simon Memia or Elijah Waitara can perform this action.' }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Only Simon Memia or Elijah Waitara can manage penalty records.' },
+        { status: 403 }
+      );
     }
 
-    // 1. Payment Action
-    if (action === 'payment') {
-      const { penaltyId, amount, paymentMethod, reference, notes } = body;
-      if (!penaltyId || !amount) {
-        return NextResponse.json({ success: false, error: 'penaltyId and amount are required for payment' }, { status: 400 });
+    // 1. Full Synchronization / Automatic Monthly Penalty Generation
+    if (action === 'sync') {
+      const generated = await syncAllContributions();
+      return NextResponse.json({
+        success: true,
+        message: `Successfully generated ${generated.length} new late payment penalties from contributions.`,
+        data: generated,
+      });
+    }
+
+    // 2. Status Toggle Action (Unpaid <-> Paid)
+    if (action === 'toggle') {
+      const { id, status } = body;
+      const numId = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, ''), 10);
+      if (!numId || isNaN(numId)) {
+        return NextResponse.json({ success: false, error: 'Valid penalty ID is required.' }, { status: 400 });
       }
 
-      const paymentResult = await recordPenaltyPayment({
-        penaltyId: Number(penaltyId),
-        amount: Number(amount),
-        paymentMethod,
-        reference,
-        notes,
+      const prev = await prisma.penalty.findUnique({
+        where: { id: numId },
+        include: { member: true },
+      });
+
+      if (!prev) {
+        return NextResponse.json({ success: false, error: 'Penalty record not found.' }, { status: 404 });
+      }
+
+      const nextStatus = status ? (status.toUpperCase() === 'PAID' ? 'PAID' : 'UNPAID') : (prev.status?.toUpperCase() === 'PAID' ? 'UNPAID' : 'PAID');
+      const isPaid = nextStatus === 'PAID';
+      const todayISO = getEATISODate();
+
+      const updated = await prisma.penalty.update({
+        where: { id: numId },
+        data: {
+          status: nextStatus,
+          penaltyAmount: 500.0,
+          paidAmount: isPaid ? 500.0 : 0.0,
+          paidFine: isPaid ? 500.0 : 0.0,
+          remainingBalance: isPaid ? 0.0 : 500.0,
+          datePaid: isPaid ? todayISO : null,
+        },
+        include: { member: true },
+      });
+
+      await createAuditLog({
+        model: 'Fines & Penalties',
+        action: 'Updated',
+        recordId: updated.id,
         userEmail,
+        member: updated.member?.fullName || 'Member',
+        oldValues: {
+          'Fine Amount': 'KSh 500',
+          'Period': updated.monthYear,
+          'Payment Status': prev.status?.toUpperCase() === 'PAID' ? 'Paid' : 'Unpaid',
+        },
+        newValues: {
+          'Fine Amount': 'KSh 500',
+          'Period': updated.monthYear,
+          'Payment Status': isPaid ? 'Paid' : 'Unpaid',
+          'Date Paid': isPaid ? todayISO : '-',
+        },
+        remarks: `Marked late payment fine as ${isPaid ? 'Paid' : 'Unpaid'} for ${updated.member?.fullName} (${updated.monthYear})`,
       });
 
-      return NextResponse.json({ success: true, data: paymentResult });
+      return NextResponse.json({ success: true, data: updated });
     }
 
-    // 2. Full Sync Action
-    if (action === 'sync') {
-      const synced = await syncAllContributions();
-      return NextResponse.json({ success: true, message: `Synchronized ${synced.length} records.`, data: synced });
+    // 3. Manual Penalty Entry
+    const { memberName, monthYear, status } = body;
+
+    if (!memberName) {
+      return NextResponse.json({ success: false, error: 'Member Name is required.' }, { status: 400 });
     }
 
-    // 3. Create or Update Penalty Record
-    const { memberName, dateLevied, penaltyAmount, unsettledContribution, reason, remarks, monthYear } = body;
-
-    let memberId: number | null = null;
-    if (memberName) {
-      const member = await prisma.member.findFirst({
-        where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
-      });
-      if (member) memberId = member.id;
-    }
-
-    if (!memberId) {
-      return NextResponse.json({ success: false, error: 'Member not found' }, { status: 400 });
-    }
-
-    const date = dateLevied ? new Date(dateLevied) : new Date();
-    const period = normalizePeriod(monthYear || dateLevied || date);
-    const duesType = 'Contribution & Fine';
-    const fineAmt = Number(penaltyAmount !== undefined ? penaltyAmount : 500);
-    const unsettledContrib = Number(unsettledContribution || 0);
-
-    // Look for existing contribution for this member and period to mirror
-    let linkedContributionId: number | null = null;
-    let actualUnsettled = unsettledContrib;
-
-    const existingContrib = await prisma.contribution.findFirst({
-      where: {
-        memberId,
-        monthYear: { contains: period.monthShort, mode: 'insensitive' },
-      },
+    const member = await prisma.member.findFirst({
+      where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
     });
 
-    if (existingContrib) {
-      linkedContributionId = existingContrib.id;
-      if (unsettledContrib === 0 && existingContrib.unsettled > 0) {
-        actualUnsettled = existingContrib.unsettled;
-      }
+    if (!member) {
+      return NextResponse.json({ success: false, error: `Member "${memberName}" not found in system.` }, { status: 404 });
     }
 
-    const totalOutstanding = actualUnsettled + fineAmt;
+    const period = normalizePeriod(monthYear || new Date());
+    const duesType = 'Contribution & Fine';
 
-    // Upsert to enforce uniqueness: One member cannot have two penalties for the same month
-    const penalty = await prisma.penalty.upsert({
+    // Prevent duplicate penalties for the same member and month
+    const existing = await prisma.penalty.findUnique({
       where: {
         memberId_monthYear_duesType: {
-          memberId,
+          memberId: member.id,
           monthYear: period.periodKey,
           duesType,
         },
       },
-      update: {
-        penaltyAmount: fineAmt,
-        unsettledContribution: actualUnsettled,
-        remainingBalance: totalOutstanding,
-        reason: reason || 'Late payment + penalty',
-        ...(linkedContributionId && { contributionId: linkedContributionId }),
-      },
-      create: {
-        memberId,
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Duplicate Blocked: A late-payment penalty already exists for ${member.fullName} in ${period.periodKey}. Only ONE penalty is allowed per member per contribution month.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const isPaid = (status || '').toLowerCase() === 'paid';
+    const todayISO = getEATISODate();
+
+    const created = await prisma.penalty.create({
+      data: {
+        memberId: member.id,
         monthYear: period.periodKey,
-        dueDate: date,
-        dateLevied: date,
-        penaltyAmount: fineAmt,
-        unsettledContribution: actualUnsettled,
-        paidAmount: 0,
-        paidContribution: 0,
-        paidFine: 0,
-        remainingBalance: totalOutstanding,
-        status: 'UNPAID',
-        reason: reason || 'Late payment + penalty',
+        dueDate: new Date(),
+        dateLevied: new Date(),
+        penaltyAmount: 500.0,
+        unsettledContribution: 0.0,
+        paidAmount: isPaid ? 500.0 : 0.0,
+        paidFine: isPaid ? 500.0 : 0.0,
+        paidContribution: 0.0,
+        remainingBalance: isPaid ? 0.0 : 500.0,
+        status: isPaid ? 'PAID' : 'UNPAID',
+        reason: 'Late Contribution Penalty',
         duesType,
-        contributionId: linkedContributionId,
+        datePaid: isPaid ? todayISO : null,
       },
-      include: { member: true, payments: true },
+      include: { member: true },
     });
 
     await createAuditLog({
       model: 'Fines & Penalties',
       action: 'Added',
-      recordId: penalty.id,
+      recordId: created.id,
       userEmail,
-      member: memberName || penalty.member?.fullName || 'Member',
+      member: member.fullName,
       oldValues: {
-        'Record Status': 'None (New Penalty Levy)',
+        'Record Status': 'None (New Late Penalty)',
       },
       newValues: {
-        'Member': memberName || penalty.member?.fullName || 'Member',
-        'Period': period.periodKey,
-        'Unsettled Contribution': `KSh ${actualUnsettled.toLocaleString()}`,
-        'Penalty Amount': `KSh ${fineAmt.toLocaleString()}`,
-        'Total Outstanding': `KSh ${totalOutstanding.toLocaleString()}`,
-        'Status': penalty.status,
+        'Member Name': member.fullName,
+        'Contribution Month': period.periodKey,
+        'Fine Amount': 'KSh 500',
+        'Payment Status': isPaid ? 'Paid' : 'Unpaid',
       },
-      remarks: remarks || `Levied penalty against ${memberName || 'member'} for ${period.periodKey}`,
+      remarks: `Recorded KSh 500 late-payment fine for ${member.fullName} (${period.periodKey}).`,
     });
 
-    return NextResponse.json({ success: true, data: penalty }, { status: 201 });
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }
 
-// PUT /api/penalties - Update an existing penalty record
+// PUT /api/penalties - Update a penalty record
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { userEmail, id, memberName, dateLevied, penaltyAmount, unsettledContribution, reason, status, remarks } = body;
+    const { userEmail, id, memberName, monthYear, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can update penalties.' }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Only Simon Memia or Elijah Waitara can update penalties.' },
+        { status: 403 }
+      );
     }
 
     const numId = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, ''), 10);
     if (!numId || isNaN(numId)) {
-      return NextResponse.json({ success: false, error: 'Valid Penalty ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Valid penalty ID is required.' }, { status: 400 });
     }
 
-    const prevPenalty = await prisma.penalty.findUnique({
+    const prev = await prisma.penalty.findUnique({
       where: { id: numId },
-      include: { member: true, payments: true },
+      include: { member: true },
     });
 
-    if (!prevPenalty) {
-      return NextResponse.json({ success: false, error: 'Penalty record not found' }, { status: 404 });
+    if (!prev) {
+      return NextResponse.json({ success: false, error: 'Penalty record not found.' }, { status: 404 });
     }
 
-    const prevMember = prevPenalty.member?.fullName || memberName || 'Member';
-    const oldValues = {
-      'Member': prevMember,
-      'Penalty Amount': `KSh ${Number(prevPenalty.penaltyAmount).toLocaleString()}`,
-      'Unsettled Contribution': `KSh ${Number(prevPenalty.unsettledContribution).toLocaleString()}`,
-      'Remaining Balance': `KSh ${Number(prevPenalty.remainingBalance).toLocaleString()}`,
-      'Status': prevPenalty.status,
-    };
-
-    let memberId: number | undefined = undefined;
-    if (memberName) {
-      const member = await prisma.member.findFirst({
+    let targetMemberId = prev.memberId;
+    let targetMemberName = prev.member.fullName;
+    if (memberName && memberName.trim() !== prev.member.fullName) {
+      const foundMem = await prisma.member.findFirst({
         where: { fullName: { contains: memberName.trim(), mode: 'insensitive' } },
       });
-      if (member) memberId = member.id;
-    }
-
-    const newUnsettled = unsettledContribution !== undefined ? Number(unsettledContribution) : prevPenalty.unsettledContribution;
-    const newFineAmt = penaltyAmount !== undefined ? Number(penaltyAmount) : prevPenalty.penaltyAmount;
-    const remContrib = Math.max(0, newUnsettled - prevPenalty.paidContribution);
-    const remFine = Math.max(0, newFineAmt - prevPenalty.paidFine);
-    const remTotal = remContrib + remFine;
-
-    let newStatus = status || prevPenalty.status;
-    if (!status) {
-      if (remTotal === 0 && (prevPenalty.paidAmount > 0 || newUnsettled === 0)) {
-        newStatus = 'PAID';
-      } else if (prevPenalty.paidAmount > 0) {
-        newStatus = 'PARTIALLY PAID';
-      } else {
-        newStatus = 'UNPAID';
+      if (foundMem) {
+        targetMemberId = foundMem.id;
+        targetMemberName = foundMem.fullName;
       }
     }
+
+    const period = monthYear ? normalizePeriod(monthYear) : normalizePeriod(prev.monthYear);
+    const duesType = 'Contribution & Fine';
+
+    // Duplicate check if member or month changed
+    if (targetMemberId !== prev.memberId || period.periodKey !== prev.monthYear) {
+      const duplicate = await prisma.penalty.findFirst({
+        where: {
+          id: { not: numId },
+          memberId: targetMemberId,
+          monthYear: period.periodKey,
+          duesType,
+        },
+      });
+
+      if (duplicate) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Duplicate Blocked: A late-payment penalty already exists for ${targetMemberName} in ${period.periodKey}.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const isPaid = (status || '').toLowerCase() === 'paid' || (status || '').toUpperCase() === 'PAID';
+    const todayISO = getEATISODate();
 
     const updated = await prisma.penalty.update({
       where: { id: numId },
       data: {
-        ...(memberId && { memberId }),
-        ...(dateLevied && { dateLevied: new Date(dateLevied), dueDate: new Date(dateLevied) }),
-        ...(penaltyAmount !== undefined && { penaltyAmount: newFineAmt }),
-        ...(unsettledContribution !== undefined && { unsettledContribution: newUnsettled }),
-        remainingBalance: remTotal,
-        ...(reason && { reason }),
-        status: newStatus,
+        memberId: targetMemberId,
+        monthYear: period.periodKey,
+        penaltyAmount: 500.0,
+        paidAmount: isPaid ? 500.0 : 0.0,
+        paidFine: isPaid ? 500.0 : 0.0,
+        remainingBalance: isPaid ? 0.0 : 500.0,
+        status: isPaid ? 'PAID' : 'UNPAID',
+        datePaid: isPaid ? (prev.datePaid || todayISO) : null,
       },
-      include: { member: true, payments: true },
+      include: { member: true },
     });
-
-    const newMember = updated.member?.fullName || memberName || prevMember;
-    const newValues = {
-      'Member': newMember,
-      'Penalty Amount': `KSh ${Number(updated.penaltyAmount).toLocaleString()}`,
-      'Unsettled Contribution': `KSh ${Number(updated.unsettledContribution).toLocaleString()}`,
-      'Remaining Balance': `KSh ${Number(updated.remainingBalance).toLocaleString()}`,
-      'Status': updated.status,
-    };
 
     await createAuditLog({
       model: 'Fines & Penalties',
       action: 'Updated',
       recordId: updated.id,
       userEmail,
-      member: newMember,
-      oldValues,
-      newValues,
-      remarks: remarks || `Updated penalty record status to ${updated.status} for ${newMember}.`,
+      member: targetMemberName,
+      oldValues: {
+        'Member Name': prev.member.fullName,
+        'Contribution Month': prev.monthYear,
+        'Fine (KES)': '500',
+        'Payment Status': prev.status?.toUpperCase() === 'PAID' ? 'Paid' : 'Unpaid',
+      },
+      newValues: {
+        'Member Name': targetMemberName,
+        'Contribution Month': period.periodKey,
+        'Fine (KES)': '500',
+        'Payment Status': isPaid ? 'Paid' : 'Unpaid',
+        'Date Paid': isPaid ? (prev.datePaid || todayISO) : '-',
+      },
+      remarks: `Updated late penalty record for ${targetMemberName} (${period.periodKey}) to ${isPaid ? 'Paid' : 'Unpaid'}.`,
     });
 
     return NextResponse.json({ success: true, data: updated });
@@ -311,21 +360,24 @@ export async function DELETE(request: Request) {
     const userEmail = searchParams.get('userEmail');
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can delete penalties.' }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Only Simon Memia or Elijah Waitara can delete penalties.' },
+        { status: 403 }
+      );
     }
 
     const numId = rawId ? (isNaN(Number(rawId)) ? parseInt(rawId.replace(/\D/g, ''), 10) : Number(rawId)) : null;
     if (!numId || isNaN(numId)) {
-      return NextResponse.json({ success: false, error: 'Valid Penalty ID is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Valid penalty ID is required.' }, { status: 400 });
     }
 
-    const prevPenalty = await prisma.penalty.findUnique({
+    const prev = await prisma.penalty.findUnique({
       where: { id: numId },
       include: { member: true },
     });
 
-    if (!prevPenalty) {
-      return NextResponse.json({ success: false, error: 'Penalty record not found' }, { status: 404 });
+    if (!prev) {
+      return NextResponse.json({ success: false, error: 'Penalty record not found.' }, { status: 404 });
     }
 
     await prisma.penalty.delete({ where: { id: numId } });
@@ -333,19 +385,19 @@ export async function DELETE(request: Request) {
     await createAuditLog({
       model: 'Fines & Penalties',
       action: 'Deleted',
-      recordId: prevPenalty.id,
+      recordId: numId,
       userEmail,
-      member: prevPenalty.member?.fullName || `Penalty #${numId}`,
+      member: prev.member?.fullName || `Penalty #${numId}`,
       oldValues: {
-        'Member': prevPenalty.member?.fullName || `Penalty #${numId}`,
-        'Penalty Amount': `KSh ${Number(prevPenalty.penaltyAmount).toLocaleString()}`,
-        'Reason': prevPenalty.reason,
-        'Status': prevPenalty.status,
+        'Member Name': prev.member?.fullName || `Penalty #${numId}`,
+        'Contribution Month': prev.monthYear,
+        'Fine (KES)': '500',
+        'Payment Status': prev.status?.toUpperCase() === 'PAID' ? 'Paid' : 'Unpaid',
       },
       newValues: {
-        'Record Status': 'Penalty Record Deleted (No new active record)',
+        'Record Status': 'Penalty Record Deleted',
       },
-      remarks: 'Penalty removed after administrative review.',
+      remarks: `Deleted KSh 500 penalty for ${prev.member?.fullName} (${prev.monthYear}).`,
     });
 
     return NextResponse.json({ success: true });
