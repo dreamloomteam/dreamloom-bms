@@ -284,3 +284,75 @@ export function getMemberUnsettledForDate(
     contributionRecord: null
   };
 }
+
+/**
+ * Normalizes month and year inputs (either explicit month + year or a combined string like "Dec 2025", "December 2025", "01-Dec-2025")
+ * into canonical monthName ("December"), monthShort ("Dec"), year (2025), monthYearShort ("Dec 2025"), monthYearLong ("December 2025"),
+ * and defaultDateStr ("01-Dec-2025").
+ */
+export function normalizeMonthYear(
+  monthInput?: string | null,
+  yearInput?: number | string | null,
+  fallbackMonthYearStr?: string | null
+): {
+  monthIdx: number;
+  monthName: string;
+  monthShort: string;
+  year: number;
+  monthYearShort: string;
+  monthYearLong: string;
+  defaultDateStr: string;
+} {
+  let monthIdx = -1;
+  let year = -1;
+
+  if (yearInput !== undefined && yearInput !== null && yearInput !== '' && yearInput !== 'All') {
+    const parsedY = typeof yearInput === 'number' ? yearInput : parseInt(String(yearInput), 10);
+    if (!isNaN(parsedY) && parsedY >= 2000 && parsedY <= 2100) {
+      year = parsedY;
+    }
+  }
+
+  if (monthInput && monthInput !== 'All') {
+    const cleanM = String(monthInput).trim();
+    const directIdx = ALL_MONTHS.findIndex(
+      (m, i) => m.toLowerCase() === cleanM.toLowerCase() || MONTH_ABBRS[i].toLowerCase() === cleanM.slice(0, 3).toLowerCase()
+    );
+    if (directIdx >= 0 && !/\d{4}/.test(cleanM)) {
+      monthIdx = directIdx;
+    } else {
+      const parsedFromM = parseDateToMonthYear(cleanM);
+      if (parsedFromM) {
+        monthIdx = parsedFromM.monthIdx;
+        if (year < 0) year = parsedFromM.year;
+      }
+    }
+  }
+
+  if ((monthIdx < 0 || year < 0) && fallbackMonthYearStr) {
+    const parsedFallback = parseDateToMonthYear(fallbackMonthYearStr);
+    if (parsedFallback) {
+      if (monthIdx < 0) monthIdx = parsedFallback.monthIdx;
+      if (year < 0) year = parsedFallback.year;
+    }
+  }
+
+  if (monthIdx < 0 || year < 0) {
+    const now = getEATCurrentComponents();
+    if (monthIdx < 0) monthIdx = now.monthIdx;
+    if (year < 0) year = now.year;
+  }
+
+  const monthName = ALL_MONTHS[monthIdx];
+  const monthShort = MONTH_ABBRS[monthIdx];
+  return {
+    monthIdx,
+    monthName,
+    monthShort,
+    year,
+    monthYearShort: `${monthShort} ${year}`,
+    monthYearLong: `${monthName} ${year}`,
+    defaultDateStr: `01-${monthShort}-${year}`
+  };
+}
+

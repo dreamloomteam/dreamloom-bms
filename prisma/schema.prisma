@@ -42,44 +42,106 @@ model EditLog {
 }
 
 model Member {
-  id            Int            @id @default(autoincrement())
-  fullName      String
-  nationalId    String         @unique
-  phone         String
-  email         String         @unique
-  role          String         @default("Member")
-  contributions Contribution[]
-  loans         Loan[]
-  penalties     Penalty[]
-  deposits      Deposit[]
-  userId        Int?           @unique
-  user          User?          @relation(fields: [userId], references: [id])
+  id                   Int                   @id @default(autoincrement())
+  fullName             String
+  nationalId           String                @unique
+  phone                String
+  email                String                @unique
+  role                 String                @default("Member")
+  contributions        Contribution[]
+  contributionPayments ContributionPayment[]
+  loans                Loan[]
+  loanRepayments       LoanRepayment[]
+  penalties            Penalty[]
+  deposits             Deposit[]
+  userId               Int?                  @unique
+  user                 User?                 @relation(fields: [userId], references: [id])
 }
 
 model Contribution {
-  id        Int      @id @default(autoincrement())
-  memberId  Int?
-  member    Member?  @relation(fields: [memberId], references: [id])
-  monthYear String
-  amount    Float    @default(0.0)
-  unsettled Float    @default(0.0)
-  payout    Float    @default(0.0)
-  remarks   String?
-  customId  String?  @unique
-  createdAt DateTime @default(now())
+  id               Int                   @id @default(autoincrement())
+  memberId         Int?
+  member           Member?               @relation(fields: [memberId], references: [id])
+  monthYear        String
+  month            String?
+  year             Int?
+  expectedAmount   Float                 @default(6000.0)
+  amount           Float                 @default(0.0)
+  unsettled        Float                 @default(0.0)
+  creditBalance    Float                 @default(0.0)
+  payout           Float                 @default(0.0)
+  paymentDate      String?
+  paymentMethod    String?               @default("M-Pesa")
+  mpesaRef         String?
+  bankRef          String?
+  paymentReference String?
+  status           String?               @default("Unpaid")
+  remarks          String?
+  customId         String?               @unique
+  createdAt        DateTime              @default(now())
+  payments         ContributionPayment[]
+}
+
+model ContributionPayment {
+  id             Int          @id @default(autoincrement())
+  contributionId Int
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  memberId       Int?
+  member         Member?      @relation(fields: [memberId], references: [id])
+  amount         Float
+  paymentDate    String
+  paymentMethod  String       @default("M-Pesa")
+  mpesaRef       String?
+  bankRef        String?
+  reference      String?
+  remarks        String?
+  recordedBy     String?
+  createdAt      DateTime     @default(now())
 }
 
 model Loan {
-  id           String    @id
-  memberId     Int
-  member       Member    @relation(fields: [memberId], references: [id])
-  issueDate    DateTime
-  principal    Float
-  interest     Float
-  totalPayable Float
-  paidAmount   Float     @default(0.0)
-  status       String    @default("Active")
-  clearedDate  DateTime?
+  id                   String          @id
+  memberId             Int
+  member               Member          @relation(fields: [memberId], references: [id])
+  issueDate            DateTime
+  principal            Float
+  interest             Float
+  totalPayable         Float
+  paidAmount           Float           @default(0.0)
+  principalPaid        Float           @default(0.0)
+  interestPaid         Float           @default(0.0)
+  interestRate         Float           @default(10.0)
+  interestMethod       String          @default("Simple")
+  compoundingFrequency String          @default("Monthly")
+  durationMonths       Int             @default(6)
+  repaymentTerms       String?         @default("Monthly Anniversary")
+  allocationPolicy     String          @default("Interest First")
+  purpose              String?         @default("Personal / Business Development")
+  approvalRef          String?
+  remarks              String?
+  status               String          @default("Active")
+  clearedDate          DateTime?
+  repayments           LoanRepayment[]
+}
+
+model LoanRepayment {
+  id                 Int      @id @default(autoincrement())
+  loanId             String
+  loan               Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  memberId           Int?
+  member             Member?  @relation(fields: [memberId], references: [id])
+  paymentDate        DateTime @default(now())
+  paymentDateStr     String
+  amount             Float
+  interestAllocated  Float    @default(0.0)
+  principalAllocated Float    @default(0.0)
+  paymentMethod      String   @default("M-Pesa")
+  mpesaRef           String?
+  bankRef            String?
+  reference          String?
+  remarks            String?
+  recordedBy         String?
+  createdAt          DateTime @default(now())
 }
 
 model Expense {

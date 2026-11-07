@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
 
 function isAuthorizedEditor(email?: string | null) {
@@ -11,14 +11,31 @@ function isAuthorizedEditor(email?: string | null) {
 // GET /api/members
 export async function GET() {
   try {
+    await ensureDatabaseSchema();
     const members = await prisma.member.findMany({
       orderBy: { id: 'asc' },
       include: {
-        contributions: { select: { amount: true, unsettled: true } },
-        loans: { select: { principal: true, paidAmount: true, status: true, totalPayable: true } },
+        contributions: { select: { amount: true, unsettled: true, expectedAmount: true, payout: true, month: true, year: true } },
+        loans: { select: { id: true, principal: true, paidAmount: true, status: true, totalPayable: true, interestRate: true, interestMethod: true, issueDate: true } },
       },
     });
-    return NextResponse.json({ success: true, data: members });
+    const enriched = members.map((m) => {
+      const memberContribs = (m.contributions || []).filter((c: any) => !c.payout || Number(c.payout) === 0);
+      const totalSaved = memberContribs.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0);
+      const unsettledContributions = memberContribs.reduce((sum: number, c: any) => sum + (Number(c.unsettled) || 0), 0);
+      const activeLoans = (m.loans || [])
+        .filter((l: any) => l.status !== 'Settled')
+        .reduce((sum: number, l: any) => sum + Math.max(0, (Number(l.totalPayable) || Number(l.principal) || 0) - (Number(l.paidAmount) || 0)), 0);
+      return {
+        ...m,
+        totalSaved,
+        totalContribution: totalSaved,
+        unsettledContributions,
+        activeLoans,
+        netBalance: totalSaved - activeLoans,
+      };
+    });
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }

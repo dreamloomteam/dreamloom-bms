@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
+import LoanPortfolioTab from '@/components/LoanPortfolioTab';
+import ContributionsTab from '@/components/ContributionsTab';
 import {
   ALL_MONTHS,
   AVAILABLE_YEARS,
@@ -75,29 +77,40 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Synchronize database records on mount across all modules
+  // Synchronize database records on mount across all modules (PostgreSQL is the authoritative source of truth)
   useEffect(() => {
     try {
-      // 1. Contributions
-      const savedContributions = localStorage.getItem('dreamloom_contributions');
-      if (savedContributions) {
-        try {
-          const parsed = JSON.parse(savedContributions);
-          if (Array.isArray(parsed) && parsed.length > 0) setContributions(parsed);
-        } catch (e) { console.warn('Saved contributions parse failed:', e); }
-      }
+      // 1. Contributions from PostgreSQL
       fetch('/api/contributions')
         .then(r => r.json())
         .then(res => {
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((c: any) => ({
+          const list = Array.isArray(res) ? res : (res?.data || []);
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped = list.map((c: any) => ({
               id: c.customId || ('CNT-' + c.id),
-              month: c.monthYear,
-              member: c.member?.fullName || (c.remarks?.replace('Member: ', '') || 'Simon Memia Wanjiru'),
+              dbId: c.id,
+              customId: c.customId,
+              memberId: c.memberId || c.member?.id || null,
+              month: c.monthYear || c.month,
+              monthName: c.month,
+              year: c.year,
+              monthYear: c.monthYear,
+              member: c.memberName || c.member?.fullName || (c.memberId && DREAMLOOM_MEMBER_NAMES[Number(c.memberId)]) || 'System Entry',
+              memberName: c.memberName || c.member?.fullName || (c.memberId && DREAMLOOM_MEMBER_NAMES[Number(c.memberId)]) || 'System Entry',
+              expectedAmount: Number(c.expectedAmount) || 6000,
               amount: Number(c.amount) || 0,
               unsettled: Number(c.unsettled) || 0,
+              creditBalance: Number(c.creditBalance) || 0,
               payout: Number(c.payout) || 0,
-              notes: c.remarks || ''
+              paymentDate: c.paymentDate || '',
+              paymentMethod: c.paymentMethod || 'M-Pesa',
+              mpesaRef: c.mpesaRef || '',
+              bankRef: c.bankRef || '',
+              paymentReference: c.paymentReference || '',
+              status: c.status || 'Unpaid',
+              notes: c.remarks || '',
+              remarks: c.remarks || '',
+              payments: c.payments || []
             }));
             setContributions(mapped);
             localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped));
@@ -105,29 +118,26 @@ export default function Home() {
         })
         .catch(err => console.warn('Could not fetch server contributions:', err));
 
-      // 2. Loans
-      const savedLoans = localStorage.getItem('dreamloom_loans');
-      if (savedLoans) {
-        try {
-          const parsed = JSON.parse(savedLoans);
-          if (Array.isArray(parsed) && parsed.length > 0) setLoans(parsed);
-        } catch (e) { console.warn('Saved loans parse failed:', e); }
-      }
+      // 2. Loans from PostgreSQL
       fetch('/api/loans')
         .then(r => r.json())
         .then(res => {
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((l: any) => ({
+          const list = Array.isArray(res) ? res : (res?.data || []);
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped = list.map((l: any) => ({
+              ...l,
               id: l.id,
+              memberId: l.memberId || l.member?.id,
               issueDate: l.issueDate ? String(l.issueDate).slice(0, 10) : '-',
-              borrower: l.member?.fullName || 'Member',
+              borrower: l.borrower || l.memberName || l.member?.fullName || 'Member',
+              memberName: l.borrower || l.memberName || l.member?.fullName || 'Member',
               principal: Number(l.principal) || 0,
-              interest: Number(l.interest) || 0,
-              totalLoan: Number(l.totalPayable) || 0,
-              paid: Number(l.paidAmount) || 0,
-              balance: (Number(l.totalPayable) || 0) - (Number(l.paidAmount) || 0),
-              status: l.status,
-              clearedDate: l.clearedDate ? String(l.clearedDate).slice(0, 10) : '-'
+              interest: Number(l.interest ?? l.totalInterestAccrued) || 0,
+              totalLoan: Number(l.totalLoan ?? l.totalPayable ?? l.totalLoanAmount) || 0,
+              paid: Number(l.paid ?? l.paidAmount ?? l.totalAmountPaid) || 0,
+              balance: Number(l.balance ?? l.totalOutstandingBalance) || 0,
+              status: l.status || 'Active',
+              clearedDate: l.clearedDate && l.clearedDate !== '-' ? String(l.clearedDate).slice(0, 10) : (l.settlementDate || '-')
             }));
             setLoans(mapped);
             localStorage.setItem('dreamloom_loans', JSON.stringify(mapped));
@@ -580,6 +590,13 @@ export default function Home() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredTrendPoint, setHoveredTrendPoint] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = setTimeout(() => setToastMessage(null), 4500);
+    return () => clearTimeout(t);
+  }, [toastMessage]);
 
   // Form Field States for Edit / Add Modals
   const [field1, setField1] = useState('');
@@ -728,13 +745,13 @@ export default function Home() {
 
   // 2. Official Contributions & Land Payouts Register (PDF Pages 2, 3, 4, 5) with Unsettled Contributions Column
   const defaultOfficialContributions = initialContributions;
-  const [contributions, setContributions] = useState(initialContributions);
+  const [contributions, setContributions] = useState<any[]>(initialContributions);
 
   // 3. Official Operational Expenses & Payouts Log (PDF Pages 9 & 10 - 35 Records totaling KES 381,746.42)
   const [expenses, setExpenses] = useState<any[]>(initialExpenses);
 
   // 4. Official Loans Register (PDF Pages 7 & 8 - L001 to L019) with Settlement Date Tracking
-  const [loans, setLoans] = useState([
+  const [loans, setLoans] = useState<any[]>([
     // Settled Loans
     { id: 'L001', issueDate: '15th Jan 2026', borrower: 'Simon Memia Wanjiru', principal: 6000.00, interest: 900.00, totalLoan: 6900.00, paid: 6900.00, balance: 0.00, status: 'Settled', clearedDate: '15th Feb 2026' },
     { id: 'L002', issueDate: '15th Feb 2026', borrower: 'David Wainaina Kinyua', principal: 1500.00, interest: 225.00, totalLoan: 1725.00, paid: 1725.00, balance: 0.00, status: 'Settled', clearedDate: '15th Mar 2026' },
@@ -1044,18 +1061,22 @@ export default function Home() {
     return expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   }, [expenses]);
 
-  // Active Loans Principal Disbursed
+  // Active Loans Principal Remaining (Excludes Settled Loans)
   const totalActiveLoansPrincipal = useMemo(() => {
-    return loans.filter(l => l.status === 'Active').reduce((sum, l) => sum + (Number(l.principal) || 0), 0);
+    return loans
+      .filter(l => l.status !== 'Settled')
+      .reduce((sum, l) => sum + (Number(l.remainingPrincipal ?? l.principal) || 0), 0);
   }, [loans]);
 
-  // Active Loans Outstanding Balance (Principal + Interest)
+  // Active Loans Outstanding Balance (Principal + Accrued Interest, Excludes Settled Loans)
   const totalActiveLoansAmount = useMemo(() => {
-    return loans.filter(l => l.status === 'Active').reduce((sum, l) => sum + (Number(l.balance) || 0), 0);
+    return loans
+      .filter(l => l.status !== 'Settled')
+      .reduce((sum, l) => sum + (Number(l.balance ?? l.totalOutstandingBalance) || 0), 0);
   }, [loans]);
 
   const activeLoansCount = useMemo(() => {
-    return loans.filter(l => l.status === 'Active').length;
+    return loans.filter(l => l.status !== 'Settled').length;
   }, [loans]);
 
   // Total Penalties Paid (Dynamically calculated from all settled & partial payments)
@@ -1063,9 +1084,9 @@ export default function Home() {
     return fines.reduce((sum, f) => sum + (Number(f.paidAmount) || (f.status === 'Paid' ? Number(f.amount) || 0 : 0)), 0);
   }, [fines]);
 
-  // Total Interest Paid from Settled Loans
+  // Total Interest Paid from Loans
   const totalPaidInterest = useMemo(() => {
-    return loans.filter(l => l.status === 'Settled').reduce((sum, l) => sum + (Number(l.interest) || 0), 0);
+    return loans.reduce((sum, l) => sum + (Number(l.interestPaid ?? (l.status === 'Settled' ? l.interest : 0)) || 0), 0);
   }, [loans]);
 
   // Real-time Bank Account Balance
@@ -1076,17 +1097,24 @@ export default function Home() {
 
   // Automated Member Financial Position (Dynamically derived from genuine contributions and loans)
   const automatedMembers = useMemo(() => {
-    return members.map(m => {
+    return members.map((m, idx) => {
+      const mDbId = m.dbId || (idx + 1);
       // 1. Dynamic contributions paid by this member
-      const memberPaid = contributions
-        .filter(c => c.member && isSameMemberName(c.member, m.fullName) && !c.payout)
-        .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const memberContribs = contributions.filter(
+        c => !c.payout && ((c.memberId && Number(c.memberId) === mDbId) || (c.member && isSameMemberName(c.member, m.fullName)))
+      );
+      const memberPaid = memberContribs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const memberUnsettled = memberContribs.reduce((sum, c) => sum + (Number(c.unsettled) || 0), 0);
       const effectiveTotalContrib = memberPaid > 0 ? memberPaid : m.totalContribution;
 
-      // 2. Active loans balance for this member
+      // 2. Active loans balance for this member (strictly excluding Settled loans)
       const memberActiveLoans = loans
-        .filter(l => l.borrower && isSameMemberName(l.borrower, m.fullName) && l.status === 'Active')
-        .reduce((sum, l) => sum + (Number(l.balance) || 0), 0);
+        .filter(
+          l =>
+            l.status !== 'Settled' &&
+            ((l.memberId && Number(l.memberId) === mDbId) || (l.borrower && isSameMemberName(l.borrower, m.fullName)))
+        )
+        .reduce((sum, l) => sum + (Number(l.balance ?? l.totalOutstandingBalance) || 0), 0);
 
       // 3. Automated Net Balance: Total Contributions minus Active Loans
       const dynamicNetBalance = effectiveTotalContrib - memberActiveLoans;
@@ -1098,7 +1126,9 @@ export default function Home() {
 
       return {
         ...m,
+        dbId: mDbId,
         totalContribution: effectiveTotalContrib,
+        unsettledContributions: memberUnsettled,
         activeLoans: memberActiveLoans,
         netBalance: dynamicNetBalance,
         shares: dynamicShares
@@ -1518,40 +1548,63 @@ export default function Home() {
   const refreshContributions = async () => {
     try {
       const res = await fetch('/api/contributions').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        const mapped = res.data.map((c: any) => ({
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const mapped = list.map((c: any) => ({
           id: c.customId || ('CNT-' + c.id),
           dbId: c.id,
-          month: c.monthYear,
-          member: c.member?.fullName || (c.remarks?.replace('Member: ', '') || 'Simon Memia Wanjiru'),
+          customId: c.customId,
+          memberId: c.memberId || c.member?.id || null,
+          month: c.monthYear || c.month,
+          monthName: c.month,
+          year: c.year,
+          monthYear: c.monthYear,
+          member: c.memberName || c.member?.fullName || (c.memberId && DREAMLOOM_MEMBER_NAMES[Number(c.memberId)]) || 'System Entry',
+          memberName: c.memberName || c.member?.fullName || (c.memberId && DREAMLOOM_MEMBER_NAMES[Number(c.memberId)]) || 'System Entry',
+          expectedAmount: Number(c.expectedAmount) || 6000,
           amount: Number(c.amount) || 0,
           unsettled: Number(c.unsettled) || 0,
+          creditBalance: Number(c.creditBalance) || 0,
           payout: Number(c.payout) || 0,
-          notes: c.remarks || ''
+          paymentDate: c.paymentDate || '',
+          paymentMethod: c.paymentMethod || 'M-Pesa',
+          mpesaRef: c.mpesaRef || '',
+          bankRef: c.bankRef || '',
+          paymentReference: c.paymentReference || '',
+          status: c.status || 'Unpaid',
+          notes: c.remarks || '',
+          remarks: c.remarks || '',
+          payments: c.payments || []
         }));
         setContributions(mapped);
         try { localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped)); } catch (e) {}
       }
+      await refreshPenalties();
     } catch (e) {
       console.warn('Could not refresh contributions:', e);
     }
   };
 
-  const refreshLoans = async () => {
+  const refreshLoans = async (asOfDate?: string) => {
     try {
-      const res = await fetch('/api/loans').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        const mapped = res.data.map((l: any) => ({
+      const url = asOfDate ? `/api/loans?asOfDate=${encodeURIComponent(asOfDate)}` : '/api/loans';
+      const res = await fetch(url).then(r => r.json());
+      const list = Array.isArray(res) ? res : (res?.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const mapped = list.map((l: any) => ({
+          ...l,
           id: l.id,
+          memberId: l.memberId || l.member?.id,
           issueDate: l.issueDate ? String(l.issueDate).slice(0, 10) : '-',
-          borrower: l.member?.fullName || 'Member',
+          borrower: l.borrower || l.memberName || l.member?.fullName || 'Member',
+          memberName: l.borrower || l.memberName || l.member?.fullName || 'Member',
           principal: Number(l.principal) || 0,
-          interest: Number(l.interest) || 0,
-          totalLoan: Number(l.totalPayable) || 0,
-          paid: Number(l.paidAmount) || 0,
-          balance: (Number(l.totalPayable) || 0) - (Number(l.paidAmount) || 0),
-          status: l.status,
-          clearedDate: l.clearedDate ? String(l.clearedDate).slice(0, 10) : '-'
+          interest: Number(l.interest ?? l.totalInterestAccrued) || 0,
+          totalLoan: Number(l.totalLoan ?? l.totalPayable ?? l.totalLoanAmount) || 0,
+          paid: Number(l.paid ?? l.paidAmount ?? l.totalAmountPaid) || 0,
+          balance: Number(l.balance ?? l.totalOutstandingBalance) || 0,
+          status: l.status || 'Active',
+          clearedDate: l.clearedDate && l.clearedDate !== '-' ? String(l.clearedDate).slice(0, 10) : (l.settlementDate || '-')
         }));
         setLoans(mapped);
         try { localStorage.setItem('dreamloom_loans', JSON.stringify(mapped)); } catch (e) {}
@@ -1766,24 +1819,8 @@ export default function Home() {
       if (res.success) {
         setIsPaymentModalOpen(false);
         await refreshPenalties();
-        try {
-          const cRes = await fetch('/api/contributions').then(r => r.json());
-          if (cRes.success && Array.isArray(cRes.data)) {
-            const mapped = cRes.data.map((c: any) => ({
-              id: c.customId || `CNT-${c.id}`,
-              dbId: c.id,
-              month: c.monthYear,
-              member: c.member?.fullName || (c.remarks?.includes('Member:') ? c.remarks.replace('Member:', '').trim() : 'Member'),
-              amount: Number(c.amount) || 0,
-              unsettled: Number(c.unsettled) || 0,
-              payout: Number(c.payout) || 0,
-              notes: c.remarks || ''
-            }));
-            setContributions(mapped);
-            try { localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped)); } catch (e) {}
-          }
-        } catch (e) {}
-        alert(`Payment of KSh ${pAmt.toLocaleString()} successfully recorded and allocated!`);
+        await refreshContributions();
+        setToastMessage(`Payment of KSh ${pAmt.toLocaleString()} successfully recorded and allocated!`);
       } else {
         alert(res.error || 'Failed to record payment');
       }
@@ -3477,447 +3514,32 @@ export default function Home() {
             </div>
           )}
 
-                    {/* ===================================================================== */}
-          {/* CONTRIBUTIONS MODULE: MONTHLY ENTRY & MASTER REGISTER */}
+          {toastMessage && (
+            <div className="fixed bottom-6 right-6 z-50 bg-emerald-950/95 border border-emerald-500/50 text-emerald-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{toastMessage}</span>
+              <button onClick={() => setToastMessage(null)} className="text-emerald-300 hover:text-white ml-2">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* CONTRIBUTIONS MODULE: COMPLETE PROFESSIONAL UPGRADE                   */}
           {/* ===================================================================== */}
           {activeTab === 'Contributions' && (
-            <div className="space-y-6">
-              {/* TOP HEADER & SUB-TAB TOGGLE */}
-              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <h2 className="font-extrabold text-white text-lg tracking-wide uppercase">Contributions Register</h2>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5">Manage member monthly contributions, late payment indicators, and penalties</p>
-                </div>
-
-                {/* VIEW SWITCHER */}
-                <div className="flex items-center bg-[#142036] p-1 rounded-xl border border-[#1E2D4A]">
-                  <button
-                    onClick={() => setContributionSubView('monthly')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      contributionSubView === 'monthly'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Monthly Entry Tab
-                  </button>
-                  <button
-                    onClick={() => setContributionSubView('register')}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-                      contributionSubView === 'register'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    All Cycles Ledger ({contributions.length})
-                  </button>
-                </div>
-              </div>
-
-              {/* VIEW 1: MONTHLY CONTRIBUTIONS ENTRY TAB (EXACT DESIGN FROM SCREENSHOT) */}
-              {contributionSubView === 'monthly' && (() => {
-                const cycleRecords = contributions.filter(c =>
-                  matchesMonthAndYear(c.month, selectedMonth, selectedYear) && !c.payout
-                );
-                const official7Members = [
-                  'Simon Memia Wanjiru',
-                  'David Wainaina Kinyua',
-                  'Elijah Waitara Gichari',
-                  'Samuel Kamau Nguuro',
-                  'Michael Kiarie Wanjiru',
-                  'Daniel Kamau Njiriri',
-                  'Beatrice Njoki Muthoni'
-                ];
-
-                // Metrics for this selected month
-                const expectedThisMonth = 42000.00; // 7 members * 6000
-                const receivedThisMonth = cycleRecords.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-                const outstandingThisMonth = Math.max(0, expectedThisMonth - receivedThisMonth);
-                const penaltiesThisMonth = fines.filter(f => {
-                  return matchesMonthAndYear(f.date, selectedMonth, selectedYear);
-                }).reduce((s, f) => s + (f.amount || 500), 0);
-
-                const paidCount = cycleRecords.filter(c => Number(c.amount) > 0).length;
-                const unpaidCount = 7 - paidCount;
-
-                // Filter members by search input
-                const displayedMembers = official7Members.filter(m =>
-                  m.toLowerCase().includes(contributionSearchMember.toLowerCase())
-                );
-
-                return (
-                  <div className="space-y-6">
-                    {/* STAT CARDS BANNER (AS IN SCREENSHOT) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* Expected */}
-                      <div className="bg-[#101B30] border border-blue-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-                          <Calendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium text-slate-400">Expected This Month</p>
-                          <p className="text-xl font-extrabold text-white font-mono mt-0.5">KES {expectedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                      </div>
-
-                      {/* Received */}
-                      <div className="bg-[#101B30] border border-emerald-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-                          <CheckCircle className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium text-slate-400">Received ({paidCount} Paid)</p>
-                          <p className="text-xl font-extrabold text-emerald-400 font-mono mt-0.5">KES {receivedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                      </div>
-
-                      {/* Outstanding */}
-                      <div className="bg-[#101B30] border border-amber-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-                          <Clock className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium text-slate-400">Outstanding ({unpaidCount} Pending)</p>
-                          <p className="text-xl font-extrabold text-amber-400 font-mono mt-0.5">KES {outstandingThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                      </div>
-
-                      {/* Penalties */}
-                      <div className="bg-[#101B30] border border-rose-500/20 rounded-2xl p-4 shadow-lg flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0">
-                          <AlertTriangle className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium text-slate-400">Penalties Levied</p>
-                          <p className="text-xl font-extrabold text-rose-400 font-mono mt-0.5">KES {penaltiesThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* CONTROLS BAR: Month, Year, Search, and Export (Screenshot Top Bar) */}
-                    <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-4 shadow-xl flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-slate-400">Month:</label>
-                          <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
-                          >
-                            <option value="All">All Months</option>
-                            {ALL_MONTHS.map(m => (
-                              <option key={m} value={m}>{m}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-slate-400">Year:</label>
-                          <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-                            className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
-                          >
-                            <option value="All">All Years</option>
-                            {AVAILABLE_YEARS.map(y => (
-                              <option key={y} value={y}>{y}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {canEdit && (
-                          <button
-                            onClick={() => handleSaveMonthlyContributions(`${selectedMonth} ${selectedYear}`)}
-                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/60 transition"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Save Month Entries
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1 md:w-64">
-                          <MemberAutocomplete
-                            value={contributionSearchMember}
-                            onChange={(val) => setContributionSearchMember(val)}
-                            members={members}
-                            placeholder="Search member name or ID..."
-                          />
-                        </div>
-
-                        {/* EXPORT OPTIONS DROPDOWN */}
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => {
-                              const headers = ['#', 'Member Name', 'Month', 'Expected (KES)', 'Amount Paid (KES)', 'Unsettled (KES)', 'Status', 'Remarks'];
-                              const rows = displayedMembers.map((m, idx) => {
-                                const rec = cycleRecords.find(c => c.member === m);
-                                const amt = rec ? rec.amount : 0;
-                                const status = amt > 0 ? 'Paid' : 'Unpaid';
-                                return [idx + 1, m, selectedContributionCycle, 6000, amt, rec ? rec.unsettled : 0, status, rec ? rec.notes : ''];
-                              });
-                              exportDataAsCSV(`Dreamloom_${selectedContributionCycle.replace(/\s+/g, '_')}_Contributions.csv`, headers, rows);
-                            }}
-                            className="px-3 py-1.5 bg-[#142036] border border-[#1E2D4A] hover:bg-[#1A2A46] text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
-                            title="Download CSV for this month"
-                          >
-                            <Download className="w-3.5 h-3.5 text-emerald-400" /> Export Month
-                          </button>
-                          <button
-                            onClick={() => {
-                              const headers = ['#', 'Member Name', 'Month', 'Outstanding Amount (KES)', 'Contact Phone'];
-                              const rows = displayedMembers.filter(m => {
-                                const rec = cycleRecords.find(c => c.member === m);
-                                return !rec || rec.amount === 0;
-                              }).map((m, idx) => {
-                                const memObj = members.find(x => x.fullName === m);
-                                return [idx + 1, m, selectedContributionCycle, 6000, memObj ? memObj.phone : ''];
-                              });
-                              exportDataAsCSV(`Dreamloom_${selectedContributionCycle.replace(/\s+/g, '_')}_Outstanding_Members.csv`, headers, rows);
-                            }}
-                            className="px-3 py-1.5 bg-[#142036] border border-[#1E2D4A] hover:bg-[#1A2A46] text-amber-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
-                            title="Download list of members who have not paid"
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Outstanding List
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* MONTHLY CONTRIBUTIONS TABLE (EXACT COLUMNS FROM SCREENSHOT) */}
-                    <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs text-slate-300">
-                          <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                            <tr>
-                              <th className="p-4 w-10">#</th>
-                              <th className="p-4">Member Name</th>
-                              <th className="p-4 text-center">Contribution (KES)</th>
-                              <th className="p-4 text-center">LPI</th>
-                              <th className="p-4 text-center">Penalty (KES)</th>
-                              <th className="p-4 text-right">Amount Paid</th>
-                              <th className="p-4">Payment Date</th>
-                              <th className="p-4 text-center">Status</th>
-                              <th className="p-4">Remarks</th>
-                              {canEdit && <th className="p-4 text-center">Action</th>}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#1E293B] font-mono">
-                            {displayedMembers.map((memberName, idx) => {
-                              const rec = cycleRecords.find(c => c.member === memberName);
-                              const input = monthlyInputs[memberName];
-
-                              const amtPaid = input?.amount !== undefined ? input.amount : (rec ? rec.amount : (selectedContributionCycle.includes('2027') ? 0 : 6000));
-                              const isPaid = amtPaid > 0;
-                              const isLate = rec?.notes?.toLowerCase().includes('late') || rec?.unsettled > 0;
-                              const paymentDate = input?.paymentDate || (isPaid ? (selectedContributionCycle.includes('Oct 2026') ? '28-Oct-2026' : '15th') : '-');
-                              const remarks = input?.remarks !== undefined ? input.remarks : (rec?.notes || (isPaid ? 'On time' : 'Pending payment'));
-                              const penaltyVal = input?.penalty !== undefined ? input.penalty : (isLate ? 500 : 0);
-
-                              return (
-                                <tr key={memberName} className="hover:bg-[#142036] transition">
-                                  <td className="p-4 text-slate-500 font-sans">{idx + 1}</td>
-                                  <td className="p-4 font-sans text-white font-medium">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center text-[10px] font-bold">
-                                        {memberName.split(' ')[0][0]}
-                                      </div>
-                                      <span>{memberName}</span>
-                                    </div>
-                                  </td>
-                                  <td className="p-4 text-center text-slate-300">
-                                    6,000.00
-                                  </td>
-                                  <td className="p-4 text-center font-sans">
-                                    {isPaid && !isLate ? (
-                                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs">
-                                        ✓
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 font-bold text-xs">
-                                        •
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 text-center font-sans">
-                                    {penaltyVal > 0 ? (
-                                      <span className="text-rose-400 font-bold">{penaltyVal}</span>
-                                    ) : (
-                                      <span className="text-slate-500">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 text-right">
-                                    {canEdit ? (
-                                      <input
-                                        type="number"
-                                        value={amtPaid}
-                                        onChange={(e) => {
-                                          const val = Number(e.target.value) || 0;
-                                          setMonthlyInputs(prev => ({
-                                            ...prev,
-                                            [memberName]: {
-                                              ...prev[memberName],
-                                              amount: val,
-                                              unsettled: val >= 6000 ? 0 : (6000 - val),
-                                              paymentDate: val > 0 ? 'Today' : '-',
-                                              remarks: val >= 6000 ? 'On time' : (val > 0 ? 'Partial payment' : 'Pending payment'),
-                                              penalty: val < 6000 && val > 0 ? 500 : 0
-                                            }
-                                          }));
-                                        }}
-                                        className="w-24 bg-[#142036] border border-[#1E2D4A] rounded-lg px-2 py-1 text-right text-xs font-bold text-emerald-400 focus:outline-none focus:border-emerald-500"
-                                      />
-                                    ) : (
-                                      <span className={`font-bold ${amtPaid > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                        {amtPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 text-slate-400 font-sans text-xs">
-                                    {paymentDate}
-                                  </td>
-                                  <td className="p-4 text-center font-sans">
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                      isPaid && !isLate
-                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                                        : isLate
-                                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                                        : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                                    }`}>
-                                      {isPaid && !isLate ? 'Paid' : isLate ? 'Late' : 'Unpaid'}
-                                    </span>
-                                  </td>
-                                  <td className="p-4 font-sans text-slate-300 text-xs">
-                                    {remarks}
-                                  </td>
-                                  {canEdit && (
-                                    <td className="p-4 text-center font-sans">
-                                      <div className="flex items-center justify-center gap-1.5">
-                                        {rec && (
-                                          <button
-                                            onClick={() => handleOpenEditModal(rec, 'Contributions')}
-                                            className="p-1 text-emerald-400 hover:bg-emerald-500/10 rounded transition"
-                                            title="Edit this contribution record"
-                                          >
-                                            <Edit3 className="w-3.5 h-3.5" />
-                                          </button>
-                                        )}
-                                        {rec && (
-                                          <button
-                                            onClick={async () => {
-                                              if (!window.confirm(`Delete contribution record for ${memberName} in ${selectedContributionCycle}?`)) return;
-                                              const remaining = contributions.filter(c => c.id !== rec.id);
-                                              setContributions(remaining);
-                                              try { localStorage.setItem('dreamloom_contributions', JSON.stringify(remaining)); } catch(e){}
-                                              fetch(`/api/contributions?customId=${encodeURIComponent(rec.id)}&userEmail=${encodeURIComponent(currentUser?.email || '')}`, { method: 'DELETE' });
-                                            }}
-                                            className="p-1 text-rose-400 hover:bg-rose-500/10 rounded transition"
-                                            title="Delete this record"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
-                            {/* TOTALS FOOTER ROW */}
-                            <tr className="bg-[#121B2F] font-bold text-white text-xs">
-                              <td className="p-4 uppercase font-sans" colSpan={2}>Total ({selectedContributionCycle})</td>
-                              <td className="p-4 text-center font-black">42,000.00</td>
-                              <td className="p-4 text-center font-sans">-</td>
-                              <td className="p-4 text-center text-rose-400 font-black">{penaltiesThisMonth > 0 ? penaltiesThisMonth : '-'}</td>
-                              <td className="p-4 text-right text-emerald-400 font-black">{receivedThisMonth.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                              <td className="p-4 text-slate-400 font-sans" colSpan={canEdit ? 4 : 3}>
-                                Outstanding: KES {outstandingThisMonth.toLocaleString()} • Verified against Bank & Excel
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* VIEW 2: MASTER CONTRIBUTIONS & LAND PAYOUTS REGISTER (HISTORICAL ALL CYCLES) */}
-              {contributionSubView === 'register' && (
-                <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-5 border-b border-[#1E293B] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                      <h3 className="font-bold text-white text-sm">Master Historical Contributions & Land Payouts Ledger</h3>
-                      <p className="text-xs text-slate-400">Total Group Contributions: KES {grandTotalContributions.toLocaleString()} • Unsettled: KES {grandTotalUnsettled.toLocaleString()} • Payouts: KES {grandTotalMawegaPayouts.toLocaleString()}</p>
-                    </div>
-                    {canEdit && (
-                      <button
-                        onClick={() => handleOpenQuickModal('Contributions')}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Record Contribution
-                      </button>
-                    )}
-                  </div>
-                  <div className="overflow-x-auto max-h-[650px]">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold sticky top-0 z-10">
-                        <tr>
-                          <th className="p-4">#</th>
-                          <th className="p-4">Date / Month</th>
-                          <th className="p-4">Member Name</th>
-                          <th className="p-4 text-right">Amount (KES)</th>
-                          <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
-                          <th className="p-4 text-right">Mawega Payout (KES)</th>
-                          <th className="p-4">Notes / Remarks</th>
-                          {canEdit && <th className="p-4 text-center">Action</th>}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#1E293B] font-mono">
-                        {filteredContributions.map((c, idx) => (
-                          <tr key={c.id} className="hover:bg-[#142036] transition">
-                            <td className="p-4 text-slate-500">{idx + 1}</td>
-                            <td className="p-4 text-slate-400">{c.month}</td>
-                            <td className="p-4 font-sans text-white font-medium">{c.member}</td>
-                            <td className="p-4 text-right font-bold text-emerald-400">
-                              {c.amount > 0 ? c.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                            </td>
-                            <td className="p-4 text-right font-bold text-amber-400">
-                              {c.unsettled > 0 ? c.unsettled.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                            </td>
-                            <td className="p-4 text-right font-bold text-sky-400">
-                              {c.payout > 0 ? c.payout.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                            </td>
-                            <td className="p-4 font-sans text-slate-400">{c.notes || '-'}</td>
-                            {canEdit && (
-                              <td className="p-4 text-center font-sans">
-                                <button
-                                  onClick={() => handleOpenEditModal(c, 'Contributions')}
-                                  className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                  title="Edit Contribution Entry"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                        <tr className="bg-[#121B2F] font-bold text-white text-xs sticky bottom-0">
-                          <td className="p-4 uppercase font-sans" colSpan={3}>GRAND TOTAL CONTRIBUTIONS & PAYOUTS</td>
-                          <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right text-amber-400 font-black">{grandTotalUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right text-sky-400 font-black">{grandTotalMawegaPayouts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 font-sans" colSpan={canEdit ? 2 : 1}>Official Ledger Reconciled</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ContributionsTab
+              contributions={contributions}
+              members={automatedMembers}
+              selectedMonth={selectedMonth}
+              selectedYear={typeof selectedYear === 'number' ? selectedYear : 2026}
+              onSelectMonth={(m) => setSelectedMonth(m)}
+              onSelectYear={(y) => setSelectedYear(y)}
+              canEdit={canEdit}
+              userEmail={currentUser?.email || 'simon@dreamloom.co.ke'}
+              onRefreshContributions={refreshContributions}
+              showToast={(msg) => setToastMessage(msg)}
+            />
           )}
 
           {/* ===================================================================== */}
@@ -3938,143 +3560,18 @@ export default function Home() {
           )}
 
           {/* ===================================================================== */}
-          {/* LOAN PORTFOLIO & SETTLED LOANS (PDF Pages 7 & 8) */}
+          {/* LOAN PORTFOLIO: COMPLETE PROFESSIONAL REBUILD                         */}
           {/* ===================================================================== */}
           {activeTab === 'Loan Portfolio' && (
-            <div className="space-y-6">
-              {/* ACTIVE LOANS */}
-              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                <div className="p-5 border-b border-[#1E293B] flex justify-between items-center">
-                  <div>
-                    <h2 className="font-bold text-white text-base">Active Loans Portfolio ({loans.filter(l => l.status === 'Active').length} Active)</h2>
-                    <p className="text-xs text-slate-400">Click &apos;Active&apos; status to settle loan and automatically record settlement date</p>
-                  </div>
-                  {canEdit && (
-                    <button
-                      onClick={() => handleOpenQuickModal('Loan Portfolio')}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Disburse Loan
-                    </button>
-                  )}
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                      <tr>
-                        <th className="p-4">Loan ID</th>
-                        <th className="p-4">Issue Date</th>
-                        <th className="p-4">Member Name</th>
-                        <th className="p-4 text-right">Principal (KES)</th>
-                        <th className="p-4 text-right">Interest (KES)</th>
-                        <th className="p-4 text-right">Total Loan (KES)</th>
-                        <th className="p-4 text-right">Loan Balance (KES)</th>
-                        <th className="p-4 text-center">Status</th>
-                        {canEdit && <th className="p-4 text-center">Action</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1E293B] font-mono">
-                      {loans.filter(l => l.status === 'Active').map((l) => (
-                        <tr key={l.id} className="hover:bg-[#142036] transition">
-                          <td className="p-4 text-emerald-400 font-bold">{l.id}</td>
-                          <td className="p-4 text-slate-400">{l.issueDate}</td>
-                          <td className="p-4 font-sans text-white font-medium">{l.borrower}</td>
-                          <td className="p-4 text-right">{l.principal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right text-slate-400">{l.interest.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-white">{l.totalLoan.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-amber-400">{l.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-center">
-                            <button
-                              onClick={() => handleToggleLoanStatus(l.id)}
-                              disabled={!canEdit}
-                              className={`px-3 py-1 rounded-full text-[10px] font-sans font-bold transition flex items-center justify-center gap-1 mx-auto ${
-                                canEdit
-                                  ? 'bg-blue-500/20 text-sky-400 hover:bg-emerald-500/20 hover:text-emerald-400 cursor-pointer border border-blue-500/40 hover:border-emerald-500/40'
-                                  : 'bg-blue-500/10 text-sky-400 cursor-default'
-                              }`}
-                              title={canEdit ? 'Click to mark as Settled' : 'View only'}
-                            >
-                              <span>{l.status}</span>
-                              {canEdit && <Check className="w-3 h-3 opacity-60" />}
-                            </button>
-                          </td>
-                          {canEdit && (
-                            <td className="p-4 text-center font-sans">
-                              <button
-                                onClick={() => handleOpenEditModal(l, 'Loan Portfolio')}
-                                className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                title="Edit Loan Record"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                      <tr className="bg-[#121B2F] font-bold text-white">
-                        <td className="p-4 uppercase font-sans" colSpan={6}>TOTAL ACTIVE LOANS OUTSTANDING</td>
-                        <td className="p-4 text-right text-amber-400 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td colSpan={canEdit ? 2 : 1}></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* SETTLED LOANS HISTORY WITH EXPLICIT SETTLEMENT DATES */}
-              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                <div className="p-5 border-b border-[#1E293B]">
-                  <h2 className="font-bold text-white text-base">Settled Loans History with Settlement Dates</h2>
-                  <p className="text-xs text-slate-400">Fully Repaid Loans ({loans.filter(l => l.status === 'Settled').length} Settled)</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                      <tr>
-                        <th className="p-4">Loan ID</th>
-                        <th className="p-4">Issue Date</th>
-                        <th className="p-4">Member Name</th>
-                        <th className="p-4 text-right">Principal Repaid (KES)</th>
-                        <th className="p-4 text-right">Interest Paid (KES)</th>
-                        <th className="p-4 text-right">Paid Total (KES)</th>
-                        <th className="p-4 text-emerald-400 font-bold">Date Settled</th>
-                        <th className="p-4 text-center">Status</th>
-                        {canEdit && <th className="p-4 text-center">Action</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1E293B] font-mono">
-                      {loans.filter(l => l.status === 'Settled').map((l) => (
-                        <tr key={l.id} className="hover:bg-[#142036] transition">
-                          <td className="p-4 text-emerald-400 font-bold">{l.id}</td>
-                          <td className="p-4 text-slate-400">{l.issueDate}</td>
-                          <td className="p-4 font-sans text-white font-medium">{l.borrower}</td>
-                          <td className="p-4 text-right">{l.principal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right text-slate-400">{l.interest.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-right font-bold text-emerald-400">{l.totalLoan.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                          <td className="p-4 text-emerald-300 font-bold">{l.clearedDate || 'Settled'}</td>
-                          <td className="p-4 text-center">
-                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-sans font-bold">
-                              {l.status}
-                            </span>
-                          </td>
-                          {canEdit && (
-                            <td className="p-4 text-center font-sans">
-                              <button
-                                onClick={() => handleOpenEditModal(l, 'Loan Portfolio')}
-                                className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                title="Edit Loan Record"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+            <LoanPortfolioTab
+              loans={loans}
+              members={automatedMembers}
+              canEdit={canEdit}
+              userEmail={currentUser?.email || 'simon@dreamloom.co.ke'}
+              onRefreshLoans={refreshLoans}
+              onNavigateTab={(tabId) => setActiveTab(tabId === 'members' ? 'Member Directory' : tabId)}
+              showToast={(msg) => setToastMessage(msg)}
+            />
           )}
 
           {/* ===================================================================== */}
