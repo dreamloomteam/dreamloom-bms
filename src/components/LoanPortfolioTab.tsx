@@ -1158,7 +1158,7 @@ export default function LoanPortfolioTab({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[1080px]">
                 <thead>
                   <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     <th className="py-3.5 px-4">Loan ID</th>
@@ -1171,7 +1171,7 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
                     <th className="py-3.5 px-4 text-right">Outstanding Balance (KES)</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 z-10">
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 z-10 min-w-[210px]">
                       Actions
                     </th>
                   </tr>
@@ -1248,7 +1248,7 @@ export default function LoanPortfolioTab({
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           {renderStatusBadge(loan.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] group-hover:bg-[#162033] border-l border-slate-800/80 z-10">
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] group-hover:bg-[#162033] border-l border-slate-800/80 z-10 min-w-[210px]">
                           {/* Desktop Actions */}
                           <div className="hidden sm:flex items-center justify-center gap-1.5">
                             <button
@@ -1307,7 +1307,7 @@ export default function LoanPortfolioTab({
                               <MoreVertical className="w-4 h-4" />
                             </button>
                             {openMobileMenuLoanId === loan.id && (
-                              <div className="origin-top-right absolute right-0 mt-1 w-40 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-30">
+                              <div className="origin-top-right absolute right-0 mt-1 w-44 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-50">
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2128,7 +2128,7 @@ export default function LoanPortfolioTab({
 
           <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs min-w-[960px]">
                 <thead>
                   <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
                     <th className="py-3.5 px-4">Loan ID</th>
@@ -2139,7 +2139,7 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
                     <th className="py-3.5 px-4">Settlement Date</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 min-w-[200px]">
                       Actions
                     </th>
                   </tr>
@@ -2172,7 +2172,7 @@ export default function LoanPortfolioTab({
                         <td className="py-3.5 px-4 text-center">
                           {renderStatusBadge('Settled')}
                         </td>
-                        <td className="py-3.5 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap min-w-[200px]">
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {

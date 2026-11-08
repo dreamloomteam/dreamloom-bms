@@ -17,20 +17,28 @@ export interface AuditRecordParams {
 const AUTHORIZED_EDITORS: Record<string, string> = {
   'simon@dreamloom.co.ke': 'Simon Memia Wanjiru',
   'elijah@dreamloom.co.ke': 'Elijah Waitara Gichari',
+  'michael@dreamloom.co.ke': 'Michael Kiarie Wanjiru',
   'simon memia wanjiru': 'Simon Memia Wanjiru',
   'elijah waitara gichari': 'Elijah Waitara Gichari',
+  'michael kiarie wanjiru': 'Michael Kiarie Wanjiru',
   'simon memia': 'Simon Memia Wanjiru',
   'elijah waitara': 'Elijah Waitara Gichari',
+  'michael kiarie': 'Michael Kiarie Wanjiru',
 };
 
 /**
  * Server-side permission enforcement: only authorized Dreamloom editors
- * (Simon Memia Wanjiru and Elijah Waitara Gichari) may create, edit, or delete financial records.
+ * (Director Simon Memia Wanjiru, Officer Elijah Waitara Gichari, and Treasurer Michael Kiarie Wanjiru)
+ * may create, edit, or delete financial records.
  */
 export function isAuthorizedEditor(emailOrUser?: string | null): boolean {
   if (!emailOrUser) return false;
   const normalized = String(emailOrUser).toLowerCase().trim();
-  return Boolean(AUTHORIZED_EDITORS[normalized]);
+  if (AUTHORIZED_EDITORS[normalized]) return true;
+  if (normalized.includes('director') || normalized.includes('treasurer') || normalized.includes('admin')) {
+    return true;
+  }
+  return false;
 }
 
 /**

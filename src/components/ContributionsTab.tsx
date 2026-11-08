@@ -907,7 +907,7 @@ export default function ContributionsTab({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs min-w-[980px]">
                 <thead>
                   <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                     <th className="py-3.5 px-4">1. Member Name</th>
@@ -919,7 +919,7 @@ export default function ContributionsTab({
                     <th className="py-3.5 px-4">7. Payment Date</th>
                     <th className="py-3.5 px-4">8. Payment Reference</th>
                     <th className="py-3.5 px-4 text-center">9. Payment Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80 min-w-[220px]">
                       10. Actions
                     </th>
                   </tr>
@@ -962,7 +962,7 @@ export default function ContributionsTab({
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           {renderContribStatusBadge(row.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80 min-w-[220px]">
                           {/* Desktop Actions */}
                           <div className="hidden sm:flex items-center justify-center gap-1.5">
                             {canEdit && (
@@ -1034,7 +1034,7 @@ export default function ContributionsTab({
                               <MoreVertical className="w-4 h-4" />
                             </button>
                             {openMobileMenuKey === rowMenuKey && (
-                              <div className="absolute right-0 top-8 z-30 w-44 bg-[#090F1D] border border-slate-700 rounded-xl shadow-2xl py-1 text-left">
+                              <div className="absolute right-0 top-8 z-50 w-44 bg-[#090F1D] border border-slate-700 rounded-xl shadow-2xl py-1 text-left">
                                 {canEdit && (
                                   <>
                                     <button

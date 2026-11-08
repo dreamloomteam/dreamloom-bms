@@ -69,13 +69,29 @@ export default function Home() {
     { email: 'beatrice@dreamloom.co.ke', password: 'Beatrice@404', name: 'Beatrice Njoki', fullName: 'Beatrice Njoki Muthoni', nationalId: '40492876', phone: '0708665848', role: 'Member' },
   ];
 
-  // 2. Authentication States (Always prompt on refresh, persistent database sync)
+  // 2. Authentication States (Persistent session across refresh & devices)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
+
+  // Restore authenticated session from localStorage
+  useEffect(() => {
+    try {
+      const savedUserStr = localStorage.getItem('dreamloom_auth_user');
+      if (savedUserStr) {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed && parsed.email) {
+          setCurrentUser(parsed);
+          setIsLoggedIn(true);
+        }
+      }
+    } catch (e) {
+      console.warn('Session restoration failed:', e);
+    }
+  }, []);
 
   // Synchronize database records on mount across all modules (PostgreSQL is the authoritative source of truth)
   useEffect(() => {
@@ -517,11 +533,19 @@ export default function Home() {
     }
   }, []);
 
-  // Role-Based Access Control: Strictly Simon Memia Wanjiru & Elijah Waitara Gichari can edit
+  // Role-Based Access Control: Authorized officers (Director Simon, Officer Elijah, Treasurer Michael, and Admin) can edit & delete
   const canEdit = useMemo(() => {
     if (!currentUser) return false;
-    const email = currentUser.email?.toLowerCase().trim();
-    return email === 'simon@dreamloom.co.ke' || email === 'elijah@dreamloom.co.ke';
+    const email = currentUser.email?.toLowerCase().trim() || '';
+    const role = (currentUser.role || '').toLowerCase();
+    return (
+      email === 'simon@dreamloom.co.ke' ||
+      email === 'elijah@dreamloom.co.ke' ||
+      email === 'michael@dreamloom.co.ke' ||
+      role.includes('director') ||
+      role.includes('treasurer') ||
+      role.includes('admin')
+    );
   }, [currentUser]);
 
   // Inactivity Auto-Logout Timer (10 Minutes)
@@ -535,6 +559,9 @@ export default function Home() {
       timeoutId = setTimeout(() => {
         setIsLoggedIn(false);
         setCurrentUser(null);
+        try {
+          localStorage.removeItem('dreamloom_auth_user');
+        } catch (e) {}
         setAuthError('Your session has timed out due to inactivity. Please authenticate with your password to resume.');
       }, 10 * 60 * 1000);
     };
@@ -1387,6 +1414,9 @@ export default function Home() {
     if (targetUser) {
       setCurrentUser(targetUser);
       setIsLoggedIn(true);
+      try {
+        localStorage.setItem('dreamloom_auth_user', JSON.stringify(targetUser));
+      } catch (e) {}
       setLoginEmail('');
       setLoginPassword('');
       
@@ -1437,6 +1467,9 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser(null);
+    try {
+      localStorage.removeItem('dreamloom_auth_user');
+    } catch (e) {}
   };
 
   // Toggle Loan Status: Active <-> Settled (Awaits database persistence)
