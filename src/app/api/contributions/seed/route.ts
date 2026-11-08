@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isAuthorizedEditor } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,8 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { userEmail, records } = body;
 
-    const clean = userEmail ? userEmail.toLowerCase().trim() : '';
-    if (clean !== 'simon@dreamloom.co.ke' && clean !== 'elijah@dreamloom.co.ke') {
+    if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 

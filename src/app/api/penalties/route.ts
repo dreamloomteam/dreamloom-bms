@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createAuditLog } from '@/lib/audit';
+import { createAuditLog, isAuthorizedEditor } from '@/lib/audit';
 import { normalizePeriod, syncAllContributions, isContributionDeadlinePassed } from '@/lib/syncService';
 import { getEATISODate } from '@/lib/dateUtils';
 
@@ -13,12 +13,6 @@ const MEMBER_ID_TO_NAME: Record<number, string> = {
   6: 'Daniel Kamau Njiriri',
   7: 'Beatrice Njoki Muthoni',
 };
-
-function isAuthorizedEditor(email?: string | null) {
-  if (!email) return false;
-  const clean = email.toLowerCase().trim();
-  return clean === 'simon@dreamloom.co.ke' || clean === 'elijah@dreamloom.co.ke';
-}
 
 // GET /api/penalties - List all KSh 500 late-payment penalties
 export async function GET() {

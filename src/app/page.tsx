@@ -60,6 +60,7 @@ const resolvePenaltyMemberName = (p: any): string => {
 export default function Home() {
   // 1. Authorized Member Credentials & Contact Register (Exact Requested PINs)
   const authorizedUsers = [
+    { email: 'kamera@dreamloom.co.ke', password: 'Simon@%322', name: 'Simon Memia', fullName: 'Simon Memia Wanjiru', nationalId: '32242103', phone: '0719545283', role: 'Director / Super Admin' },
     { email: 'simon@dreamloom.co.ke', password: 'Simon@%322', name: 'Simon Memia', fullName: 'Simon Memia Wanjiru', nationalId: '32242103', phone: '0719545283', role: 'Director / Member' },
     { email: 'david@dreamloom.co.ke', password: 'David@399', name: 'David Wainaina', fullName: 'David Wainaina Kinyua', nationalId: '39929859', phone: '0714382925', role: 'Member' },
     { email: 'elijah@dreamloom.co.ke', password: 'Elijah@342', name: 'Elijah Waitara', fullName: 'Elijah Waitara Gichari', nationalId: '34282968', phone: '0718963492', role: 'Member' },
@@ -539,6 +540,7 @@ export default function Home() {
     const email = currentUser.email?.toLowerCase().trim() || '';
     const role = (currentUser.role || '').toLowerCase();
     return (
+      email === 'kamera@dreamloom.co.ke' ||
       email === 'simon@dreamloom.co.ke' ||
       email === 'elijah@dreamloom.co.ke' ||
       email === 'michael@dreamloom.co.ke' ||
@@ -656,7 +658,7 @@ export default function Home() {
       nationalId: '32242103',
       phone: '0719545283',
       role: 'Director / Member',
-      email: 'simon@dreamloom.co.ke',
+      email: 'kamera@dreamloom.co.ke',
       totalContribution: 65050.00,
       activeLoans: 13200.00,
       netBalance: 51850.00,
@@ -1117,9 +1119,11 @@ export default function Home() {
     return fines.reduce((sum, f) => sum + (Number(f.paidAmount) || (f.status === 'Paid' ? Number(f.amount) || 0 : 0)), 0);
   }, [fines]);
 
-  // Total Interest Paid from Loans
+  // Total Interest Paid from Loans (Authoritative calculation across valid non-cancelled facilities)
   const totalPaidInterest = useMemo(() => {
-    return loans.reduce((sum, l) => sum + (Number(l.interestPaid ?? (l.status === 'Settled' ? l.interest : 0)) || 0), 0);
+    return loans
+      .filter(l => l.status !== 'Cancelled')
+      .reduce((sum, l) => sum + (Number(l.interestPaid ?? (l.status === 'Settled' ? l.interest : 0)) || 0), 0);
   }, [loans]);
 
   // Real-time Bank Account Balance
@@ -2522,7 +2526,7 @@ export default function Home() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. simon@dreamloom.co.ke"
+                  placeholder="e.g. kamera@dreamloom.co.ke"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   className="w-full bg-[#080E1A] border border-[#1E293B] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
@@ -4166,7 +4170,7 @@ export default function Home() {
                 </div>
                 <div>
                   <label className="block text-slate-400 font-medium mb-1">Authorized Data Editors</label>
-                  <input type="text" readOnly value="Simon Memia Wanjiru (simon@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl p-2.5 text-white" />
+                  <input type="text" readOnly value="Simon Memia Wanjiru (kamera@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl p-2.5 text-white" />
                 </div>
               </div>
             </div>
@@ -4193,14 +4197,14 @@ export default function Home() {
                 <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl space-y-2">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Super Administrator</p>
                   <p className="text-sm font-semibold text-white">Simon Memia Wanjiru (Director)</p>
-                  <p className="text-xs font-mono text-slate-400">simon@dreamloom.co.ke</p>
+                  <p className="text-xs font-mono text-slate-400">kamera@dreamloom.co.ke</p>
                 </div>
               </div>
 
               <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl text-xs space-y-1.5 text-slate-400 font-mono">
                 <p>System Version: 2.1 Reconciled Multi-Role High-Performance Dashboard</p>
                 <p>Company: Dreamloom Holding Limited</p>
-                <p>Permissions: Data modification restricted strictly to Simon Memia & Elijah Waitara</p>
+                <p>Permissions: Data modification restricted strictly to Simon Memia (kamera@dreamloom.co.ke) &amp; Elijah Waitara</p>
               </div>
             </div>
           )}

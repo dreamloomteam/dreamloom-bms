@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createAuditLog } from '@/lib/audit';
-
-function isAuthorizedEditor(email?: string | null) {
-  if (!email) return false;
-  const clean = email.toLowerCase().trim();
-  return clean === 'simon@dreamloom.co.ke' || clean === 'elijah@dreamloom.co.ke';
-}
+import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
 
 // GET /api/expenses
 export async function GET() {

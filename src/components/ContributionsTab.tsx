@@ -965,25 +965,33 @@ export default function ContributionsTab({
                         <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80 min-w-[220px]">
                           {/* Desktop Actions */}
                           <div className="hidden sm:flex items-center justify-center gap-1.5">
-                            {canEdit && (
-                              <>
-                                <button
-                                  onClick={() => handleOpenAddModal(row)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
-                                  title="Edit Contribution"
-                                >
-                                  <Edit2 className="w-3 h-3" />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  onClick={() => handleOpenInstalmentModal(row)}
-                                  className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold"
-                                  title="Record Additional Instalment Payment"
-                                >
-                                  + Pay
-                                </button>
-                              </>
-                            )}
+                            <button
+                              onClick={() => {
+                                if (!canEdit) {
+                                  showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
+                                  return;
+                                }
+                                handleOpenAddModal(row);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
+                              title="Edit Contribution"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!canEdit) {
+                                  showToast('Editor access required: Please log in as an authorized director or officer to record payments.');
+                                  return;
+                                }
+                                handleOpenInstalmentModal(row);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold"
+                              title="Record Additional Instalment Payment"
+                            >
+                              + Pay
+                            </button>
                             <button
                               onClick={() => setHistoryModalTarget(row)}
                               className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
@@ -991,37 +999,45 @@ export default function ContributionsTab({
                             >
                               History
                             </button>
-                            {canEdit && (
-                              <button
-                                onClick={() => handleOpenDeleteModal(row)}
-                                disabled={!hasDbRecord && row.amount === 0 && !row.customId}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                                  hasDbRecord || row.amount > 0 || row.customId
-                                    ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
-                                    : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed'
-                                }`}
-                                title={
-                                  hasDbRecord || row.amount > 0 || row.customId
-                                    ? 'Delete or Reverse Contribution'
-                                    : 'No saved contribution record to delete'
+                            <button
+                              onClick={() => {
+                                if (!canEdit) {
+                                  showToast('Editor access required: Please log in as an authorized director or officer to delete or reverse records.');
+                                  return;
                                 }
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Delete</span>
-                              </button>
-                            )}
+                                handleOpenDeleteModal(row);
+                              }}
+                              disabled={!hasDbRecord && row.amount === 0 && !row.customId}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
+                                hasDbRecord || row.amount > 0 || row.customId
+                                  ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
+                                  : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed'
+                              }`}
+                              title={
+                                hasDbRecord || row.amount > 0 || row.customId
+                                  ? 'Delete or Reverse Contribution'
+                                  : 'No saved contribution record to delete'
+                              }
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
                           </div>
 
                           {/* Mobile Three-Dot Menu + Quick Buttons */}
                           <div className="flex sm:hidden items-center justify-center gap-1 relative">
-                            {canEdit && (
-                              <button
-                                onClick={() => handleOpenAddModal(row)}
-                                className="px-2 py-1 bg-slate-800 text-emerald-400 rounded text-[11px] font-bold"
-                              >
-                                Edit
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                if (!canEdit) {
+                                  showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
+                                  return;
+                                }
+                                handleOpenAddModal(row);
+                              }}
+                              className="px-2 py-1 bg-slate-800 text-emerald-400 rounded text-[11px] font-bold"
+                            >
+                              Edit
+                            </button>
                             <button
                               onClick={() =>
                                 setOpenMobileMenuKey(
@@ -1035,24 +1051,34 @@ export default function ContributionsTab({
                             </button>
                             {openMobileMenuKey === rowMenuKey && (
                               <div className="absolute right-0 top-8 z-50 w-44 bg-[#090F1D] border border-slate-700 rounded-xl shadow-2xl py-1 text-left">
-                                {canEdit && (
-                                  <>
-                                    <button
-                                      onClick={() => handleOpenAddModal(row)}
-                                      className="w-full px-3 py-2 text-xs text-emerald-400 hover:bg-slate-800 flex items-center gap-2 font-bold"
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                      <span>Edit Contribution</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenInstalmentModal(row)}
-                                      className="w-full px-3 py-2 text-xs text-teal-300 hover:bg-slate-800 flex items-center gap-2 font-bold"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>Add Instalment (+Pay)</span>
-                                    </button>
-                                  </>
-                                )}
+                                <button
+                                  onClick={() => {
+                                    setOpenMobileMenuKey(null);
+                                    if (!canEdit) {
+                                      showToast('Editor access required: Please log in as an authorized director or officer.');
+                                      return;
+                                    }
+                                    handleOpenAddModal(row);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs text-emerald-400 hover:bg-slate-800 flex items-center gap-2 font-bold"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  <span>Edit Contribution</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setOpenMobileMenuKey(null);
+                                    if (!canEdit) {
+                                      showToast('Editor access required: Please log in as an authorized director or officer.');
+                                      return;
+                                    }
+                                    handleOpenInstalmentModal(row);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs text-teal-300 hover:bg-slate-800 flex items-center gap-2 font-bold"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Add Instalment (+Pay)</span>
+                                </button>
                                 <button
                                   onClick={() => {
                                     setOpenMobileMenuKey(null);
@@ -1063,15 +1089,20 @@ export default function ContributionsTab({
                                   <History className="w-3.5 h-3.5" />
                                   <span>Payment History</span>
                                 </button>
-                                {canEdit && (hasDbRecord || row.amount > 0 || row.customId) && (
-                                  <button
-                                    onClick={() => handleOpenDeleteModal(row)}
-                                    className="w-full px-3 py-2 text-xs text-rose-400 hover:bg-slate-800 flex items-center gap-2 font-bold border-t border-slate-800"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Delete / Reverse</span>
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => {
+                                    setOpenMobileMenuKey(null);
+                                    if (!canEdit) {
+                                      showToast('Editor access required: Please log in as an authorized director or officer.');
+                                      return;
+                                    }
+                                    handleOpenDeleteModal(row);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs text-rose-400 hover:bg-slate-800 flex items-center gap-2 font-bold border-t border-slate-800"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete / Reverse</span>
+                                </button>
                               </div>
                             )}
                           </div>
