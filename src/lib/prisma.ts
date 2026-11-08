@@ -202,6 +202,21 @@ export async function ensureDatabaseSchema(): Promise<void> {
       }
     }
 
+    // 7. Ensure unique constraint & performance indexes exist idempotently
+    const indexQueries = [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Contribution_memberId_month_year_key" ON "Contribution"("memberId", "month", "year")`,
+      `CREATE INDEX IF NOT EXISTS "Contribution_month_year_idx" ON "Contribution"("month", "year")`,
+      `CREATE INDEX IF NOT EXISTS "ContributionPayment_contributionId_idx" ON "ContributionPayment"("contributionId")`,
+      `CREATE INDEX IF NOT EXISTS "ContributionPayment_memberId_idx" ON "ContributionPayment"("memberId")`,
+      `CREATE INDEX IF NOT EXISTS "Loan_memberId_idx" ON "Loan"("memberId")`,
+      `CREATE INDEX IF NOT EXISTS "Loan_status_idx" ON "Loan"("status")`,
+      `CREATE INDEX IF NOT EXISTS "LoanRepayment_loanId_idx" ON "LoanRepayment"("loanId")`,
+      `CREATE INDEX IF NOT EXISTS "LoanRepayment_memberId_idx" ON "LoanRepayment"("memberId")`
+    ];
+    for (const q of indexQueries) {
+      await prisma.$executeRawUnsafe(q);
+    }
+
     globalForPrisma.schemaEnsured = true;
   } catch (err) {
     console.error('Warning during ensureDatabaseSchema:', err);

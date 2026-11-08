@@ -281,6 +281,79 @@ async function main() {
     }
     console.log(`✔ Seeded ${initialFines.length} penalties.`);
   }
+
+  // 6. Seed Official Strategic Investments
+  const initialInvestments = [
+    { id: 'INV-01', asset: 'Mawega Land Parcel', type: 'Real Estate', capital: 340000.00, status: 'Active', expectedReturn: '15%' },
+    { id: 'INV-02', asset: 'Equity Bank Primary Liquidity', type: 'Treasury & Reserves', capital: 51850.00, status: 'Active', expectedReturn: '12%' },
+  ];
+  for (const inv of initialInvestments) {
+    await prisma.investment.upsert({
+      where: { id: inv.id },
+      update: inv,
+      create: inv
+    });
+  }
+  console.log(`✔ Seeded ${initialInvestments.length} official investments.`);
+
+  // 7. Seed Official Operations & Legal Projects
+  const initialProjects = [
+    { id: 'PRJ-01', name: 'Mawega Land Title Processing & Survey Works', budget: 40000.00, status: 'Active', manager: 'Elijah Waitara & Daniel Kamau' },
+    { id: 'PRJ-02', name: 'Company Statutory Registration (CR12 & KRA PIN)', budget: 15514.00, status: 'Completed', manager: 'Simon Memia Wanjiru' },
+  ];
+  for (const prj of initialProjects) {
+    await prisma.project.upsert({
+      where: { id: prj.id },
+      update: prj,
+      create: prj
+    });
+  }
+  console.log(`✔ Seeded ${initialProjects.length} official projects.`);
+
+  // 8. Seed Official Suppliers
+  const initialSuppliers = [
+    { id: 'SUP-01', name: 'Mawega Land Registry Office', category: 'Conveyancing & Land Registry', contact: 'Nairobi Office', status: 'Active' },
+    { id: 'SUP-02', name: 'Equity Bank Kenya Limited', category: 'Banking & Financial Operations', contact: 'A/C 1760287177880', status: 'Active' },
+  ];
+  for (const sup of initialSuppliers) {
+    await prisma.supplier.upsert({
+      where: { id: sup.id },
+      update: sup,
+      create: sup
+    });
+  }
+  console.log(`✔ Seeded ${initialSuppliers.length} official suppliers.`);
+
+  // 9. Seed Official Documents
+  const initialDocuments = [
+    { id: 'DOC-01', name: 'Company Registration Certificate', category: 'Statutory', link: '#', status: 'Available' },
+    { id: 'DOC-02', name: 'KRA Pin Certificate', category: 'Statutory', link: '#', status: 'Available' },
+    { id: 'DOC-03', name: 'CR12 Official Search 2026', category: 'Statutory', link: '#', status: 'Available' },
+    { id: 'DOC-04', name: 'Mawega Land Sale & Conveyancing Agreement', category: 'Legal Contract', link: '#', status: 'Available' },
+    { id: 'DOC-05', name: 'Official Membership & Contact Directory', category: 'Governance', link: '#', status: 'Available' },
+  ];
+  for (const doc of initialDocuments) {
+    await prisma.document.upsert({
+      where: { id: doc.id },
+      update: doc,
+      create: doc
+    });
+  }
+  console.log(`✔ Seeded ${initialDocuments.length} official documents.`);
+
+  // 10. Seed Official Assets
+  const initialAssets = [
+    { id: 'AST-01', name: 'Mawega Land Parcel (Title Processing)', category: 'Real Estate & Land', valuation: 340000.00, location: 'Mawega, Kenya', status: 'Active' },
+    { id: 'AST-02', name: 'Equity Bank Corporate Reserve Account', category: 'Liquid Treasury Asset', valuation: 51850.00, location: 'Equity Bank (A/C 1760287177880)', status: 'Active' },
+  ];
+  for (const ast of initialAssets) {
+    await prisma.asset.upsert({
+      where: { id: ast.id },
+      update: ast,
+      create: ast
+    });
+  }
+  console.log(`✔ Seeded ${initialAssets.length} official corporate assets.`);
 }
 
 main()

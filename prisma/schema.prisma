@@ -80,6 +80,9 @@ model Contribution {
   customId         String?               @unique
   createdAt        DateTime              @default(now())
   payments         ContributionPayment[]
+
+  @@unique([memberId, month, year])
+  @@index([month, year])
 }
 
 model ContributionPayment {
@@ -97,6 +100,9 @@ model ContributionPayment {
   remarks        String?
   recordedBy     String?
   createdAt      DateTime     @default(now())
+
+  @@index([contributionId])
+  @@index([memberId])
 }
 
 model Loan {
@@ -122,6 +128,9 @@ model Loan {
   status               String          @default("Active")
   clearedDate          DateTime?
   repayments           LoanRepayment[]
+
+  @@index([memberId])
+  @@index([status])
 }
 
 model LoanRepayment {
@@ -142,6 +151,9 @@ model LoanRepayment {
   remarks            String?
   recordedBy         String?
   createdAt          DateTime @default(now())
+
+  @@index([loanId])
+  @@index([memberId])
 }
 
 model Expense {

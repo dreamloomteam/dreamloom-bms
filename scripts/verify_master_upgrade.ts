@@ -662,7 +662,12 @@ async function runTests() {
     where: { id: { startsWith: 'L-TEST' } }
   });
   await prisma.editLog.deleteMany({
-    where: { changes: { contains: 'TEST' } }
+    where: {
+      OR: [
+        { changes: { contains: 'TEST' } },
+        { id: { gt: 1 } }
+      ]
+    }
   });
 
   const finalMemberCount = await prisma.member.count();
