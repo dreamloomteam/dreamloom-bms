@@ -24,7 +24,7 @@ export async function GET() {
       const totalSaved = memberContribs.reduce((sum: number, c: any) => sum + (Number(c.amount) || 0), 0);
       const unsettledContributions = memberContribs.reduce((sum: number, c: any) => sum + (Number(c.unsettled) || 0), 0);
       const activeLoans = (m.loans || [])
-        .filter((l: any) => l.status !== 'Settled')
+        .filter((l: any) => l.status !== 'Settled' && l.status !== 'Cancelled')
         .reduce((sum: number, l: any) => sum + Math.max(0, (Number(l.totalPayable) || Number(l.principal) || 0) - (Number(l.paidAmount) || 0)), 0);
       return {
         ...m,

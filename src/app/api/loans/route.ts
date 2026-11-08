@@ -6,6 +6,7 @@ import {
   formatISODate
 } from '@/lib/loanCalculator';
 import { ALL_MONTHS, MONTH_ABBRS } from '@/lib/dateUtils';
+import { createAuditLog, isAuthorizedEditor, resolveEditorName } from '@/lib/audit';
 
 function enrichLoanForResponse(loan: any, asOfDate?: Date | string | null) {
   const memberName = loan.member?.fullName || loan.borrower || 'Member';
@@ -61,6 +62,28 @@ function enrichLoanForResponse(loan: any, asOfDate?: Date | string | null) {
   };
 }
 
+function buildLoanAuditSnapshot(loan: any, asOfDate?: Date | string | null) {
+  const enriched = enrichLoanForResponse(loan, asOfDate);
+  return {
+    'Loan ID': enriched.id,
+    'Approval Ref': enriched.approvalRef || `APR-${enriched.id}`,
+    'Member Name': enriched.memberName,
+    'Issue Date': enriched.issueDate,
+    'Principal Amount': `KES ${Number(enriched.principal || 0).toLocaleString()}`,
+    'Interest Rate': `${enriched.interestRate}% / month`,
+    'Interest Method': enriched.interestMethod,
+    'Duration': `${enriched.durationMonths} Months`,
+    'Interest Accrued': `KES ${Number(enriched.totalInterestAccrued || 0).toLocaleString()}`,
+    'Total Paid': `KES ${Number(enriched.totalAmountPaid || 0).toLocaleString()}`,
+    'Outstanding Principal': `KES ${Number(enriched.remainingPrincipal || 0).toLocaleString()}`,
+    'Outstanding Interest': `KES ${Number(enriched.unpaidInterest || 0).toLocaleString()}`,
+    'Total Outstanding Balance': `KES ${Number(enriched.totalOutstandingBalance || 0).toLocaleString()}`,
+    'Status': enriched.status,
+    'Repayment Records': Array.isArray(enriched.repayments) ? enriched.repayments.length : 0,
+    'Notes': enriched.remarks || '-'
+  };
+}
+
 function resolveAsOfDateFromParams(searchParams: URLSearchParams): Date | null {
   const explicitAsOf = searchParams.get('asOfDate');
   if (explicitAsOf) {
@@ -76,7 +99,6 @@ function resolveAsOfDateFromParams(searchParams: URLSearchParams): Date | null {
     );
     const yNum = parseInt(reportYear, 10);
     if (mIdx >= 0 && !isNaN(yNum)) {
-      // End of the selected reporting month
       return new Date(Date.UTC(yNum, mIdx + 1, 0));
     }
   }
@@ -88,6 +110,7 @@ export async function GET(request: Request) {
     await ensureDatabaseSchema();
     const { searchParams } = new URL(request.url);
     const asOfDate = resolveAsOfDateFromParams(searchParams);
+    const filterMemberId = searchParams.get('memberId');
 
     const loans = await prisma.loan.findMany({
       include: {
@@ -99,7 +122,13 @@ export async function GET(request: Request) {
       orderBy: { issueDate: 'desc' }
     });
 
-    const enriched = loans.map(l => enrichLoanForResponse(l, asOfDate));
+    let enriched = loans.map(l => enrichLoanForResponse(l, asOfDate));
+    if (filterMemberId) {
+      const mId = parseInt(filterMemberId, 10);
+      if (!isNaN(mId)) {
+        enriched = enriched.filter(l => l.memberId === mId);
+      }
+    }
     return NextResponse.json(enriched);
   } catch (error) {
     console.error('Failed to fetch loans:', error);
@@ -112,6 +141,20 @@ export async function POST(request: Request) {
     await ensureDatabaseSchema();
     const body = await request.json();
     const { action } = body;
+
+    const authUser =
+      body.userEmail ||
+      body.updatedBy ||
+      body.createdBy ||
+      body.recordedBy ||
+      request.headers.get('x-user-email');
+
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can disburse loans or record repayments.' },
+        { status: 403 }
+      );
+    }
 
     // -------------------------------------------------------------------------
     // MODE 1: Record Loan Repayment (Partial or Full)
@@ -174,7 +217,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // Check for duplicate transaction reference if provided
       const refToCheck = (mpesaRef || bankRef || reference || '').trim();
       if (refToCheck && refToCheck !== '-') {
         const dupRep = await prisma.loanRepayment.findFirst({
@@ -192,8 +234,14 @@ export async function POST(request: Request) {
 
       const payDateUTC = toUTCMidnight(paymentDate);
       const payDateStr = formatISODate(payDateUTC);
+      const evalDate = asOfDate
+        ? toUTCMidnight(asOfDate)
+        : payDateUTC.getTime() > Date.now()
+        ? payDateUTC
+        : toUTCMidnight(new Date());
 
-      // If loan had legacy paidAmount > 0 and 0 repayment rows, materialize the initial repayment row first
+      const oldSnapshot = buildLoanAuditSnapshot(loan, evalDate);
+
       if (loan.repayments.length === 0 && Number(loan.paidAmount) > 0) {
         await prisma.loanRepayment.create({
           data: {
@@ -212,7 +260,6 @@ export async function POST(request: Request) {
         });
       }
 
-      // Create the new repayment row
       const createdRepayment = await prisma.loanRepayment.create({
         data: {
           loanId: loan.id,
@@ -227,11 +274,10 @@ export async function POST(request: Request) {
           bankRef: bankRef || null,
           reference: refToCheck || `REP-${loan.id}-${Date.now().toString().slice(-5)}`,
           remarks: remarks || 'Loan repayment',
-          recordedBy: recordedBy || 'System'
+          recordedBy: recordedBy || resolveEditorName(authUser)
         }
       });
 
-      // Re-fetch loan with all repayments and compute authoritative profile
       const loanWithReps = await prisma.loan.findUnique({
         where: { id: loan.id },
         include: {
@@ -239,12 +285,6 @@ export async function POST(request: Request) {
           repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
         }
       });
-
-      const evalDate = asOfDate
-        ? toUTCMidnight(asOfDate)
-        : payDateUTC.getTime() > Date.now()
-        ? payDateUTC
-        : toUTCMidnight(new Date());
 
       const profile = calculateLoanProfile(
         {
@@ -255,7 +295,6 @@ export async function POST(request: Request) {
         evalDate
       );
 
-      // Update each repayment's computed allocation in DB
       for (const ep of profile.repayments) {
         if (ep.id && Number(ep.id) > 0) {
           await prisma.loanRepayment.update({
@@ -286,20 +325,22 @@ export async function POST(request: Request) {
         }
       });
 
-      await prisma.editLog.create({
-        data: {
-          model: 'LoanRepayment',
-          action: 'create',
-          changes: JSON.stringify({
-            loanId: loan.id,
-            repaymentId: createdRepayment.id,
-            amount: payAmt,
-            paymentDate: payDateStr,
-            newStatus: profile.status,
-            remainingBalance: profile.totalOutstandingBalance,
-            recordedBy: recordedBy || 'System'
-          })
-        }
+      await createAuditLog({
+        model: 'LoanRepayment',
+        action: 'Added',
+        recordId: createdRepayment.id,
+        recordRef: `${loan.id} (REP-${createdRepayment.id})`,
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        member: updatedLoan.member?.fullName || 'Member',
+        oldValues: oldSnapshot,
+        newValues: {
+          ...buildLoanAuditSnapshot(updatedLoan, evalDate),
+          'Repayment Amount': `KES ${payAmt.toLocaleString()}`,
+          'Payment Date': payDateStr,
+          'Reference': createdRepayment.reference || '-'
+        },
+        remarks: `Recorded KES ${payAmt.toLocaleString()} repayment on Loan ${loan.id} (${updatedLoan.member?.fullName || 'Member'})`
       });
 
       const enrichedUpdated = enrichLoanForResponse(updatedLoan, evalDate);
@@ -320,9 +361,11 @@ export async function POST(request: Request) {
       interestMethod,
       compoundingFrequency,
       durationMonths,
+      loanDurationMonths,
       repaymentTerms,
       allocationPolicy,
       purpose,
+      loanPurpose,
       approvalRef,
       remarks,
       paid,
@@ -331,7 +374,6 @@ export async function POST(request: Request) {
       createdBy
     } = body;
 
-    // Validate Principal
     const principalNum = Number(principal);
     if (principal === undefined || principal === null || principal === '' || isNaN(principalNum) || principalNum <= 0) {
       return NextResponse.json(
@@ -340,7 +382,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate Interest Rate
     const rateNum = interestRate !== undefined && interestRate !== null && interestRate !== '' ? Number(interestRate) : 10.0;
     if (isNaN(rateNum) || rateNum < 0) {
       return NextResponse.json(
@@ -349,7 +390,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate Disbursement Date
     if (!issueDate || String(issueDate).trim() === '' || String(issueDate).trim() === '-') {
       return NextResponse.json(
         { error: 'Disbursement Date is required.' },
@@ -367,7 +407,6 @@ export async function POST(request: Request) {
     }
     const issueDateUTC = toUTCMidnight(issueDate);
 
-    // Validate Member
     const members = await prisma.member.findMany();
     let memberObj = null;
     if (memberId !== undefined && memberId !== null && memberId !== '') {
@@ -396,7 +435,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check duplicate Loan ID or duplicate Approval Reference
     let finalLoanId = id && String(id).trim() !== '' && String(id).trim() !== 'AUTO' ? String(id).trim() : '';
     if (finalLoanId) {
       const existingById = await prisma.loan.findUnique({ where: { id: finalLoanId } });
@@ -438,11 +476,11 @@ export async function POST(request: Request) {
 
     const methodStr = interestMethod || 'Simple';
     const compFreq = compoundingFrequency || 'Monthly';
-    const durMonths = Math.max(1, Number(durationMonths) || 6);
+    const durMonths = Math.max(1, Number(durationMonths ?? loanDurationMonths) || 6);
     const allocPolicy = allocationPolicy || 'Interest First';
     const initialPaid = Math.max(0, Number(paid) || 0);
+    const finalPurpose = purpose || loanPurpose || 'Personal / Business Development';
 
-    // Calculate initial profile
     const tempProfile = calculateLoanProfile({
       id: finalLoanId,
       memberId: memberObj.id,
@@ -455,7 +493,7 @@ export async function POST(request: Request) {
       durationMonths: durMonths,
       repaymentTerms: repaymentTerms || 'Monthly Anniversary',
       allocationPolicy: allocPolicy,
-      purpose: purpose || 'Personal / Business Development',
+      purpose: finalPurpose,
       approvalRef: approvalRef || `APR-${finalLoanId}`,
       remarks: remarks || '',
       paidAmount: initialPaid,
@@ -480,7 +518,7 @@ export async function POST(request: Request) {
         durationMonths: durMonths,
         repaymentTerms: repaymentTerms || 'Monthly Anniversary',
         allocationPolicy: tempProfile.allocationPolicy,
-        purpose: purpose || 'Personal / Business Development',
+        purpose: finalPurpose,
         approvalRef: approvalRef && String(approvalRef).trim() !== '' ? String(approvalRef).trim() : `APR-${finalLoanId}`,
         remarks: remarks || null,
         status: status || tempProfile.status,
@@ -510,7 +548,7 @@ export async function POST(request: Request) {
           paymentMethod: 'M-Pesa',
           reference: `INIT-${newLoan.id}`,
           remarks: 'Initial payment recorded at loan entry',
-          recordedBy: createdBy || 'System'
+          recordedBy: createdBy || resolveEditorName(authUser)
         }
       });
     }
@@ -523,20 +561,16 @@ export async function POST(request: Request) {
       }
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Loan',
-        action: 'create',
-        changes: JSON.stringify({
-          id: newLoan.id,
-          borrower: memberObj.fullName,
-          principal: principalNum,
-          interestRate: rateNum,
-          interestMethod: tempProfile.interestMethod,
-          issueDate: formatISODate(issueDateUTC),
-          createdBy: createdBy || 'System'
-        })
-      }
+    await createAuditLog({
+      model: 'Loan',
+      action: 'Added',
+      recordRef: newLoan.id,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: memberObj.fullName,
+      oldValues: {},
+      newValues: buildLoanAuditSnapshot(refreshedLoan),
+      remarks: `Disbursed new loan ${newLoan.id} for ${memberObj.fullName} (Principal: KES ${principalNum.toLocaleString()}, ${rateNum}%/mo ${tempProfile.interestMethod})`
     });
 
     const enrichedRefreshed = enrichLoanForResponse(refreshedLoan);
@@ -554,214 +588,68 @@ export async function PUT(request: Request) {
   try {
     await ensureDatabaseSchema();
     const body = await request.json();
-    const {
-      id,
-      borrower,
-      memberId,
-      issueDate,
-      principal,
-      interestRate,
-      interestMethod,
-      compoundingFrequency,
-      durationMonths,
-      repaymentTerms,
-      allocationPolicy,
-      purpose,
-      approvalRef,
-      remarks,
-      paid,
-      status,
-      clearedDate,
-      updatedBy
-    } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: 'Loan ID is required' }, { status: 400 });
-    }
+    const authUser =
+      body.userEmail ||
+      body.updatedBy ||
+      body.createdBy ||
+      body.recordedBy ||
+      request.headers.get('x-user-email');
 
-    const existing = await prisma.loan.findUnique({
-      where: { id: String(id) },
-      include: {
-        member: true,
-        repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
-      }
-    });
-    if (!existing) {
-      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-    }
-
-    let resolvedMemberId = existing.memberId;
-    if (memberId) {
-      resolvedMemberId = Number(memberId);
-    } else if (borrower) {
-      const members = await prisma.member.findMany();
-      const m = members.find(
-        mem =>
-          mem.fullName.toLowerCase().trim() === String(borrower).toLowerCase().trim() ||
-          mem.fullName.toLowerCase().includes(String(borrower).toLowerCase().trim())
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can edit loans or repayments.' },
+        { status: 403 }
       );
-      if (m) resolvedMemberId = m.id;
     }
 
-    const newPrincipal = principal !== undefined ? Number(principal) : existing.principal;
-    const newRate = interestRate !== undefined ? Number(interestRate) : existing.interestRate;
-    const newMethod = interestMethod || existing.interestMethod || 'Simple';
-    const newIssueDate = issueDate ? toUTCMidnight(issueDate) : existing.issueDate;
-    const newDuration = durationMonths !== undefined ? Number(durationMonths) : existing.durationMonths;
-    const newPolicy = allocationPolicy || existing.allocationPolicy || 'Interest First';
-
-    // If caller explicitly marks loan Settled (e.g. quick settle button) and paid matches full balance
-    let currentReps = [...existing.repayments];
-    if (status === 'Settled' && currentReps.length === 0 && (paid === undefined || Number(paid) > 0)) {
-      const preProfile = calculateLoanProfile({
-        ...existing,
-        principal: newPrincipal,
-        interestRate: newRate,
-        interestMethod: newMethod,
-        issueDate: newIssueDate,
-        durationMonths: newDuration,
-        allocationPolicy: newPolicy,
-        repayments: []
+    // -------------------------------------------------------------------------
+    // SUB-ACTION: Edit an Individual Loan Repayment Record
+    // -------------------------------------------------------------------------
+    if (body.action === 'edit_repayment' || (body.repaymentId && !body.id)) {
+      const repaymentId = Number(body.repaymentId);
+      const existingRep = await prisma.loanRepayment.findUnique({
+        where: { id: repaymentId }
       });
-      const settleAmt =
-        paid !== undefined && Number(paid) > 0
-          ? Number(paid)
-          : preProfile.totalLoanAmount > preProfile.originalPrincipal
-          ? preProfile.totalLoanAmount
-          : round2(newPrincipal * (1 + newRate / 100));
-      const settleDt =
-        clearedDate && clearedDate !== '-' ? toUTCMidnight(clearedDate) : toUTCMidnight(new Date());
+      if (!existingRep) {
+        return NextResponse.json({ error: 'Loan repayment record not found.' }, { status: 404 });
+      }
 
-      await prisma.loanRepayment.create({
+      const newRepAmt = body.amount !== undefined ? Number(body.amount) : Number(existingRep.amount);
+      if (isNaN(newRepAmt) || newRepAmt <= 0) {
+        return NextResponse.json({ error: 'Repayment amount must be greater than 0.' }, { status: 400 });
+      }
+
+      const oldRepValues = {
+        'Repayment ID': `REP-${existingRep.id}`,
+        'Loan ID': existingRep.loanId,
+        'Amount': `KES ${Number(existingRep.amount).toLocaleString()}`,
+        'Payment Date': existingRep.paymentDateStr || formatISODate(toUTCMidnight(existingRep.paymentDate)),
+        'Method': existingRep.paymentMethod || 'M-Pesa',
+        'Reference': existingRep.reference || existingRep.mpesaRef || existingRep.bankRef || '-',
+        'Remarks': existingRep.remarks || '-'
+      };
+
+      const newPayDateUTC = body.paymentDate ? toUTCMidnight(body.paymentDate) : existingRep.paymentDate;
+      const newPayDateStr = formatISODate(toUTCMidnight(newPayDateUTC));
+      const refVal = (body.reference || body.mpesaRef || body.bankRef || existingRep.reference || '').trim();
+
+      const updatedRep = await prisma.loanRepayment.update({
+        where: { id: existingRep.id },
         data: {
-          loanId: existing.id,
-          memberId: resolvedMemberId,
-          paymentDate: settleDt,
-          paymentDateStr: formatISODate(settleDt),
-          amount: settleAmt,
-          interestAllocated: Math.max(0, settleAmt - newPrincipal),
-          principalAllocated: newPrincipal,
-          paymentMethod: 'M-Pesa',
-          reference: `SET-${existing.id}-${Date.now().toString().slice(-4)}`,
-          remarks: 'Full loan settlement',
-          recordedBy: updatedBy || 'System'
+          amount: newRepAmt,
+          paymentDate: newPayDateUTC,
+          paymentDateStr: newPayDateStr,
+          paymentMethod: body.paymentMethod || existingRep.paymentMethod || 'M-Pesa',
+          mpesaRef: body.mpesaRef !== undefined ? body.mpesaRef : existingRep.mpesaRef,
+          bankRef: body.bankRef !== undefined ? body.bankRef : existingRep.bankRef,
+          reference: refVal || existingRep.reference,
+          remarks: body.remarks ?? body.notes ?? existingRep.remarks
         }
       });
-    } else if (status === 'Active' && existing.status === 'Settled' && Number(paid) === 0) {
-      // Reactivating a settled loan via status toggle
-      await prisma.loanRepayment.deleteMany({ where: { loanId: existing.id } });
-    }
-
-    const reloadedReps = await prisma.loanRepayment.findMany({
-      where: { loanId: existing.id },
-      orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }]
-    });
-
-    const profile = calculateLoanProfile({
-      ...existing,
-      memberId: resolvedMemberId,
-      issueDate: newIssueDate,
-      principal: newPrincipal,
-      interestRate: newRate,
-      interestMethod: newMethod,
-      compoundingFrequency: compoundingFrequency || existing.compoundingFrequency,
-      durationMonths: newDuration,
-      repaymentTerms: repaymentTerms ?? existing.repaymentTerms,
-      allocationPolicy: newPolicy,
-      purpose: purpose ?? existing.purpose,
-      approvalRef: approvalRef ?? existing.approvalRef,
-      remarks: remarks ?? existing.remarks,
-      status: status || existing.status,
-      clearedDate:
-        clearedDate && clearedDate !== '-'
-          ? toUTCMidnight(clearedDate)
-          : status === 'Settled'
-          ? toUTCMidnight(new Date())
-          : null,
-      repayments: reloadedReps
-    });
-
-    const updatedLoan = await prisma.loan.update({
-      where: { id: existing.id },
-      data: {
-        memberId: resolvedMemberId,
-        issueDate: newIssueDate,
-        principal: newPrincipal,
-        interest: profile.totalInterestAccrued,
-        totalPayable: profile.totalLoanAmount,
-        paidAmount: profile.totalAmountPaid,
-        principalPaid: profile.principalRepaid,
-        interestPaid: profile.interestPaid,
-        interestRate: newRate,
-        interestMethod: profile.interestMethod,
-        compoundingFrequency: compoundingFrequency || existing.compoundingFrequency,
-        durationMonths: newDuration,
-        repaymentTerms: repaymentTerms ?? existing.repaymentTerms,
-        allocationPolicy: profile.allocationPolicy,
-        purpose: purpose ?? existing.purpose,
-        approvalRef: approvalRef ?? existing.approvalRef,
-        remarks: remarks ?? existing.remarks,
-        status: profile.status,
-        clearedDate:
-          profile.status === 'Settled'
-            ? profile.settlementDate !== '-'
-              ? toUTCMidnight(profile.settlementDate)
-              : toUTCMidnight(new Date())
-            : null
-      },
-      include: {
-        member: true,
-        repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
-      }
-    });
-
-    await prisma.editLog.create({
-      data: {
-        model: 'Loan',
-        action: 'update',
-        changes: JSON.stringify({
-          id: updatedLoan.id,
-          principal: updatedLoan.principal,
-          interestRate: updatedLoan.interestRate,
-          interestMethod: updatedLoan.interestMethod,
-          paidAmount: updatedLoan.paidAmount,
-          status: updatedLoan.status,
-          updatedBy: updatedBy || 'System'
-        })
-      }
-    });
-
-    const enrichedUpdated = enrichLoanForResponse(updatedLoan);
-    return NextResponse.json({ ...enrichedUpdated, success: true, data: enrichedUpdated });
-  } catch (error) {
-    console.error('Failed to update loan:', error);
-    return NextResponse.json({ error: 'Failed to update loan' }, { status: 500 });
-  }
-}
-
-function round2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
-
-export async function DELETE(request: Request) {
-  try {
-    await ensureDatabaseSchema();
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const repaymentId = searchParams.get('repaymentId');
-    const deletedBy = searchParams.get('deletedBy');
-
-    if (repaymentId) {
-      const rep = await prisma.loanRepayment.findUnique({
-        where: { id: Number(repaymentId) }
-      });
-      if (!rep) {
-        return NextResponse.json({ error: 'Loan repayment not found' }, { status: 404 });
-      }
-      await prisma.loanRepayment.delete({ where: { id: rep.id } });
 
       const parentLoan = await prisma.loan.findUnique({
-        where: { id: rep.loanId },
+        where: { id: existingRep.loanId },
         include: {
           member: true,
           repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
@@ -769,13 +657,27 @@ export async function DELETE(request: Request) {
       });
 
       if (parentLoan) {
-        const profile = calculateLoanProfile({
-          ...parentLoan,
-          status: 'Active',
-          clearedDate: null,
-          paidAmount: 0,
-          repayments: parentLoan.repayments
-        });
+        const evalDate = body.asOfDate ? toUTCMidnight(body.asOfDate) : toUTCMidnight(new Date());
+        const profile = calculateLoanProfile(
+          {
+            ...parentLoan,
+            status: parentLoan.status === 'Cancelled' ? 'Cancelled' : 'Active',
+            repayments: parentLoan.repayments
+          },
+          evalDate
+        );
+
+        for (const ep of profile.repayments) {
+          if (ep.id && Number(ep.id) > 0) {
+            await prisma.loanRepayment.update({
+              where: { id: Number(ep.id) },
+              data: {
+                interestAllocated: ep.computedInterestAllocated,
+                principalAllocated: ep.computedPrincipalAllocated
+              }
+            });
+          }
+        }
 
         const updatedParent = await prisma.loan.update({
           where: { id: parentLoan.id },
@@ -794,17 +696,381 @@ export async function DELETE(request: Request) {
           }
         });
 
-        await prisma.editLog.create({
+        await createAuditLog({
+          model: 'LoanRepayment',
+          action: 'Updated',
+          recordId: updatedRep.id,
+          recordRef: `${parentLoan.id} (REP-${updatedRep.id})`,
+          userEmail: authUser,
+          userName: resolveEditorName(authUser),
+          member: updatedParent.member?.fullName || 'Member',
+          oldValues: oldRepValues,
+          newValues: {
+            'Repayment ID': `REP-${updatedRep.id}`,
+            'Loan ID': updatedRep.loanId,
+            'Amount': `KES ${Number(updatedRep.amount).toLocaleString()}`,
+            'Payment Date': updatedRep.paymentDateStr || newPayDateStr,
+            'Method': updatedRep.paymentMethod || 'M-Pesa',
+            'Reference': updatedRep.reference || updatedRep.mpesaRef || updatedRep.bankRef || '-',
+            'Remarks': updatedRep.remarks || '-'
+          },
+          reason: body.editReason || body.reason || null,
+          remarks: body.editReason || body.reason || `Edited loan repayment REP-${updatedRep.id} on Loan ${parentLoan.id}`
+        });
+
+        const enriched = enrichLoanForResponse(updatedParent, evalDate);
+        return NextResponse.json({ ...enriched, success: true, data: enriched });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    const {
+      id,
+      borrower,
+      memberName,
+      memberId,
+      issueDate,
+      principal,
+      interestRate,
+      interestMethod,
+      compoundingFrequency,
+      durationMonths,
+      loanDurationMonths,
+      repaymentTerms,
+      allocationPolicy,
+      purpose,
+      loanPurpose,
+      approvalRef,
+      remarks,
+      notes,
+      paid,
+      status,
+      clearedDate,
+      asOfDate,
+      editReason,
+      reason,
+      updatedBy
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Loan ID is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.loan.findUnique({
+      where: { id: String(id) },
+      include: {
+        member: true,
+        repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+      }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+    }
+
+    const evalDate = asOfDate ? toUTCMidnight(asOfDate) : null;
+    const oldSnapshot = buildLoanAuditSnapshot(existing, evalDate);
+
+    const members = await prisma.member.findMany();
+    let resolvedMemberId = existing.memberId;
+    if (memberId !== undefined && memberId !== null && memberId !== '') {
+      const found = members.find(m => m.id === Number(memberId));
+      if (!found) {
+        return NextResponse.json({ error: `Invalid memberId: ${memberId}` }, { status: 400 });
+      }
+      resolvedMemberId = found.id;
+    } else if (borrower || memberName) {
+      const targetName = String(borrower || memberName).toLowerCase().trim();
+      const m = members.find(
+        mem =>
+          mem.fullName.toLowerCase().trim() === targetName ||
+          mem.fullName.toLowerCase().includes(targetName) ||
+          targetName.includes(mem.fullName.toLowerCase().trim())
+      );
+      if (m) resolvedMemberId = m.id;
+    }
+
+    const newPrincipal = principal !== undefined ? Number(principal) : existing.principal;
+    if (isNaN(newPrincipal) || newPrincipal <= 0) {
+      return NextResponse.json({ error: 'Principal Amount must be greater than 0.' }, { status: 400 });
+    }
+
+    const newRate = interestRate !== undefined ? Number(interestRate) : existing.interestRate;
+    if (isNaN(newRate) || newRate < 0) {
+      return NextResponse.json({ error: 'Interest Rate cannot be negative.' }, { status: 400 });
+    }
+
+    const newMethod = interestMethod || existing.interestMethod || 'Simple';
+    const newIssueDate = issueDate ? toUTCMidnight(issueDate) : existing.issueDate;
+    const newDuration =
+      durationMonths !== undefined
+        ? Number(durationMonths)
+        : loanDurationMonths !== undefined
+        ? Number(loanDurationMonths)
+        : existing.durationMonths;
+    const newPolicy = allocationPolicy || existing.allocationPolicy || 'Interest First';
+    const newPurpose = purpose ?? loanPurpose ?? existing.purpose;
+    const newRemarks = remarks ?? notes ?? existing.remarks;
+
+    // Preserve existing repayments unless caller explicitly settles an un-repaid loan via quick-settle
+    const currentReps = [...existing.repayments];
+    if (
+      status === 'Settled' &&
+      existing.status !== 'Settled' &&
+      currentReps.length === 0 &&
+      paid !== undefined &&
+      Number(paid) > 0
+    ) {
+      const settleAmt = Number(paid);
+      const settleDt =
+        clearedDate && clearedDate !== '-' ? toUTCMidnight(clearedDate) : toUTCMidnight(new Date());
+
+      await prisma.loanRepayment.create({
+        data: {
+          loanId: existing.id,
+          memberId: resolvedMemberId,
+          paymentDate: settleDt,
+          paymentDateStr: formatISODate(settleDt),
+          amount: settleAmt,
+          interestAllocated: Math.max(0, settleAmt - newPrincipal),
+          principalAllocated: newPrincipal,
+          paymentMethod: 'M-Pesa',
+          reference: `SET-${existing.id}-${Date.now().toString().slice(-4)}`,
+          remarks: 'Full loan settlement',
+          recordedBy: updatedBy || resolveEditorName(authUser)
+        }
+      });
+    }
+
+    const reloadedReps = await prisma.loanRepayment.findMany({
+      where: { loanId: existing.id },
+      orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }]
+    });
+
+    // If memberId was changed on the loan, keep repayment memberId aligned
+    if (resolvedMemberId !== existing.memberId && reloadedReps.length > 0) {
+      await prisma.loanRepayment.updateMany({
+        where: { loanId: existing.id },
+        data: { memberId: resolvedMemberId }
+      });
+    }
+
+    const requestedStatus = status || existing.status;
+
+    const profile = calculateLoanProfile(
+      {
+        ...existing,
+        memberId: resolvedMemberId,
+        issueDate: newIssueDate,
+        principal: newPrincipal,
+        interestRate: newRate,
+        interestMethod: newMethod,
+        compoundingFrequency: compoundingFrequency || existing.compoundingFrequency,
+        durationMonths: newDuration,
+        repaymentTerms: repaymentTerms ?? existing.repaymentTerms,
+        allocationPolicy: newPolicy,
+        purpose: newPurpose,
+        approvalRef: approvalRef ?? existing.approvalRef,
+        remarks: newRemarks,
+        status: requestedStatus,
+        clearedDate:
+          clearedDate && clearedDate !== '-'
+            ? toUTCMidnight(clearedDate)
+            : requestedStatus === 'Settled' || requestedStatus === 'Cancelled'
+            ? existing.clearedDate || toUTCMidnight(new Date())
+            : null,
+        repayments: reloadedReps
+      },
+      evalDate
+    );
+
+    // Update each repayment's computed allocation in DB after loan parameter changes
+    for (const ep of profile.repayments) {
+      if (ep.id && Number(ep.id) > 0) {
+        await prisma.loanRepayment.update({
+          where: { id: Number(ep.id) },
           data: {
-            model: 'LoanRepayment',
-            action: 'delete',
-            changes: JSON.stringify({
-              loanId: parentLoan.id,
-              deletedRepaymentId: rep.id,
-              amount: rep.amount,
-              deletedBy: deletedBy || 'System'
-            })
+            interestAllocated: ep.computedInterestAllocated,
+            principalAllocated: ep.computedPrincipalAllocated
           }
+        });
+      }
+    }
+
+    // If user explicitly set status to 'Cancelled', keep 'Cancelled'; otherwise use recalculated profile.status
+    const finalStatus = requestedStatus === 'Cancelled' ? 'Cancelled' : profile.status;
+
+    const updatedLoan = await prisma.loan.update({
+      where: { id: existing.id },
+      data: {
+        memberId: resolvedMemberId,
+        issueDate: newIssueDate,
+        principal: newPrincipal,
+        interest: profile.totalInterestAccrued,
+        totalPayable: profile.totalLoanAmount,
+        paidAmount: profile.totalAmountPaid,
+        principalPaid: profile.principalRepaid,
+        interestPaid: profile.interestPaid,
+        interestRate: newRate,
+        interestMethod: profile.interestMethod,
+        compoundingFrequency: compoundingFrequency || existing.compoundingFrequency,
+        durationMonths: newDuration,
+        repaymentTerms: repaymentTerms ?? existing.repaymentTerms,
+        allocationPolicy: profile.allocationPolicy,
+        purpose: newPurpose,
+        approvalRef: approvalRef ?? existing.approvalRef,
+        remarks: newRemarks,
+        status: finalStatus,
+        clearedDate:
+          finalStatus === 'Settled' || finalStatus === 'Cancelled'
+            ? profile.settlementDate !== '-'
+              ? toUTCMidnight(profile.settlementDate)
+              : toUTCMidnight(new Date())
+            : null
+      },
+      include: {
+        member: true,
+        repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+      }
+    });
+
+    await createAuditLog({
+      model: 'Loan',
+      action: finalStatus === 'Cancelled' && existing.status !== 'Cancelled' ? 'Cancelled' : 'Updated',
+      recordRef: updatedLoan.id,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: updatedLoan.member?.fullName || 'Member',
+      oldValues: oldSnapshot,
+      newValues: buildLoanAuditSnapshot(updatedLoan, evalDate),
+      reason: editReason || reason || null,
+      remarks:
+        editReason ||
+        reason ||
+        `Edited Loan ${updatedLoan.id} for ${updatedLoan.member?.fullName || 'Member'} (Principal: KES ${Number(updatedLoan.principal).toLocaleString()}, Rate: ${updatedLoan.interestRate}% ${updatedLoan.interestMethod}, Status: ${updatedLoan.status})`
+    });
+
+    const enrichedUpdated = enrichLoanForResponse(updatedLoan, evalDate);
+    return NextResponse.json({ ...enrichedUpdated, success: true, data: enrichedUpdated });
+  } catch (error: any) {
+    console.error('Failed to update loan:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update loan' },
+      { status: 500 }
+    );
+  }
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+export async function DELETE(request: Request) {
+  try {
+    await ensureDatabaseSchema();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const repaymentId = searchParams.get('repaymentId');
+    const mode = searchParams.get('mode'); // 'cancel' | 'delete'
+    const forcePermanentDelete = searchParams.get('forcePermanentDelete') === 'true';
+    const reason = searchParams.get('reason') || '';
+    const authUser =
+      searchParams.get('userEmail') ||
+      searchParams.get('deletedBy') ||
+      request.headers.get('x-user-email');
+
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can delete or cancel loans.' },
+        { status: 403 }
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // MODE 1: Reverse / Delete a Specific Loan Repayment Record
+    // -------------------------------------------------------------------------
+    if (repaymentId) {
+      const rep = await prisma.loanRepayment.findUnique({
+        where: { id: Number(repaymentId) }
+      });
+      if (!rep) {
+        return NextResponse.json({ error: 'Loan repayment not found' }, { status: 404 });
+      }
+
+      const parentBefore = await prisma.loan.findUnique({
+        where: { id: rep.loanId },
+        include: {
+          member: true,
+          repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+        }
+      });
+      const oldSnapshot = parentBefore ? buildLoanAuditSnapshot(parentBefore) : {};
+
+      await prisma.loanRepayment.delete({ where: { id: rep.id } });
+
+      const parentLoan = await prisma.loan.findUnique({
+        where: { id: rep.loanId },
+        include: {
+          member: true,
+          repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+        }
+      });
+
+      if (parentLoan) {
+        const profile = calculateLoanProfile({
+          ...parentLoan,
+          status: parentLoan.status === 'Cancelled' ? 'Cancelled' : 'Active',
+          clearedDate: null,
+          paidAmount: 0,
+          repayments: parentLoan.repayments
+        });
+
+        for (const ep of profile.repayments) {
+          if (ep.id && Number(ep.id) > 0) {
+            await prisma.loanRepayment.update({
+              where: { id: Number(ep.id) },
+              data: {
+                interestAllocated: ep.computedInterestAllocated,
+                principalAllocated: ep.computedPrincipalAllocated
+              }
+            });
+          }
+        }
+
+        const updatedParent = await prisma.loan.update({
+          where: { id: parentLoan.id },
+          data: {
+            interest: profile.totalInterestAccrued,
+            totalPayable: profile.totalLoanAmount,
+            paidAmount: profile.totalAmountPaid,
+            interestPaid: profile.interestPaid,
+            principalPaid: profile.principalRepaid,
+            status: profile.status,
+            clearedDate: profile.status === 'Settled' ? toUTCMidnight(profile.settlementDate) : null
+          },
+          include: {
+            member: true,
+            repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+          }
+        });
+
+        await createAuditLog({
+          model: 'LoanRepayment',
+          action: 'Reversed',
+          recordId: rep.id,
+          recordRef: `${parentLoan.id} (REP-${rep.id})`,
+          userEmail: authUser,
+          userName: resolveEditorName(authUser),
+          member: updatedParent.member?.fullName || 'Member',
+          oldValues: {
+            ...oldSnapshot,
+            'Reversed Repayment': `KES ${Number(rep.amount).toLocaleString()} (${rep.paymentDateStr || formatISODate(toUTCMidnight(rep.paymentDate))}, Ref: ${rep.reference || rep.mpesaRef || rep.bankRef || '-'})`
+          },
+          newValues: buildLoanAuditSnapshot(updatedParent),
+          reason: reason || null,
+          remarks:
+            reason ||
+            `Reversed loan repayment of KES ${Number(rep.amount).toLocaleString()} on Loan ${parentLoan.id} (${updatedParent.member?.fullName || 'Member'})`
         });
 
         return NextResponse.json({
@@ -820,19 +1086,94 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Loan ID is required' }, { status: 400 });
     }
 
-    await prisma.loan.delete({ where: { id } });
-
-    await prisma.editLog.create({
-      data: {
-        model: 'Loan',
-        action: 'delete',
-        changes: JSON.stringify({ deletedLoanId: id, deletedBy: deletedBy || 'System' })
+    const existing = await prisma.loan.findUnique({
+      where: { id: String(id) },
+      include: {
+        member: true,
+        repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
       }
     });
 
-    return NextResponse.json({ success: true });
+    if (!existing) {
+      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+    }
+
+    const oldSnapshot = buildLoanAuditSnapshot(existing);
+    const hasRepayments =
+      (Array.isArray(existing.repayments) && existing.repayments.length > 0) ||
+      Number(existing.paidAmount) > 0;
+
+    // -------------------------------------------------------------------------
+    // MODE 2: Safe Cancellation for Loans with Repayment History (or explicit mode=cancel)
+    // Never silently erase repayment records!
+    // -------------------------------------------------------------------------
+    if ((hasRepayments || mode === 'cancel') && !forcePermanentDelete) {
+      const cancelNote = reason
+        ? `${existing.remarks || ''} [Cancelled: ${reason}]`.trim()
+        : `${existing.remarks || ''} [Cancelled - Repayment History Preserved]`.trim();
+
+      const cancelledLoan = await prisma.loan.update({
+        where: { id: existing.id },
+        data: {
+          status: 'Cancelled',
+          clearedDate: existing.clearedDate || toUTCMidnight(new Date()),
+          remarks: cancelNote
+        },
+        include: {
+          member: true,
+          repayments: { orderBy: [{ paymentDate: 'asc' }, { id: 'asc' }] }
+        }
+      });
+
+      await createAuditLog({
+        model: 'Loan',
+        action: 'Cancelled',
+        recordRef: cancelledLoan.id,
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        member: cancelledLoan.member?.fullName || oldSnapshot['Member Name'],
+        oldValues: oldSnapshot,
+        newValues: buildLoanAuditSnapshot(cancelledLoan),
+        reason: reason || null,
+        remarks:
+          reason ||
+          `Safely cancelled Loan ${cancelledLoan.id} (${oldSnapshot['Member Name']}) preserving ${cancelledLoan.repayments.length} repayment record(s) in audit history`
+      });
+
+      const enrichedCancelled = enrichLoanForResponse(cancelledLoan);
+      return NextResponse.json({
+        success: true,
+        mode: 'cancelled',
+        preservedRepaymentsCount: cancelledLoan.repayments.length,
+        loan: enrichedCancelled,
+        data: enrichedCancelled
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // MODE 3: Delete Un-Repaid Loan Record
+    // -------------------------------------------------------------------------
+    await prisma.loan.delete({ where: { id: existing.id } });
+
+    await createAuditLog({
+      model: 'Loan',
+      action: 'Deleted',
+      recordRef: existing.id,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: existing.member?.fullName || oldSnapshot['Member Name'],
+      oldValues: oldSnapshot,
+      newValues: { Status: 'Deleted from Loan Portfolio' },
+      reason: reason || null,
+      remarks:
+        reason ||
+        `Deleted Loan ${existing.id} (${oldSnapshot['Member Name']}, Principal: ${oldSnapshot['Principal Amount']})`
+    });
+
+    return NextResponse.json({ success: true, mode: 'deleted' });
   } catch (error) {
     console.error('Failed to delete loan:', error);
     return NextResponse.json({ error: 'Failed to delete loan' }, { status: 500 });
   }
 }
+

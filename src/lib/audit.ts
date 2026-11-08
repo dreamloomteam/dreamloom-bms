@@ -2,14 +2,51 @@ import { prisma } from '@/lib/prisma';
 
 export interface AuditRecordParams {
   model: string;
-  action: 'Added' | 'Updated' | 'Deleted';
+  action: 'Added' | 'Updated' | 'Deleted' | 'Cancelled' | 'Reversed';
   recordId?: number | null;
+  recordRef?: string | null;
   userEmail?: string | null;
   userName?: string | null;
   member: string;
   oldValues: Record<string, any>;
   newValues: Record<string, any>;
   remarks?: string;
+  reason?: string | null;
+}
+
+const AUTHORIZED_EDITORS: Record<string, string> = {
+  'simon@dreamloom.co.ke': 'Simon Memia Wanjiru',
+  'elijah@dreamloom.co.ke': 'Elijah Waitara Gichari',
+  'simon memia wanjiru': 'Simon Memia Wanjiru',
+  'elijah waitara gichari': 'Elijah Waitara Gichari',
+  'simon memia': 'Simon Memia Wanjiru',
+  'elijah waitara': 'Elijah Waitara Gichari',
+};
+
+/**
+ * Server-side permission enforcement: only authorized Dreamloom editors
+ * (Simon Memia Wanjiru and Elijah Waitara Gichari) may create, edit, or delete financial records.
+ */
+export function isAuthorizedEditor(emailOrUser?: string | null): boolean {
+  if (!emailOrUser) return false;
+  const normalized = String(emailOrUser).toLowerCase().trim();
+  return Boolean(AUTHORIZED_EDITORS[normalized]);
+}
+
+/**
+ * Resolves the canonical full name of the authorized user performing an action.
+ */
+export function resolveEditorName(emailOrUser?: string | null): string {
+  if (!emailOrUser) return 'Simon Memia Wanjiru';
+  const normalized = String(emailOrUser).toLowerCase().trim();
+  if (AUTHORIZED_EDITORS[normalized]) return AUTHORIZED_EDITORS[normalized];
+  if (normalized.includes('@')) {
+    return normalized
+      .split('@')[0]
+      .replace(/[._]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return String(emailOrUser).trim();
 }
 
 /**
@@ -28,8 +65,8 @@ export function computeChangedFields(
     if (key.toLowerCase().includes('status') && oldValues[key] === newValues[key]) {
       continue;
     }
-    const oldVal = oldValues[key] !== undefined ? String(oldValues[key]).trim() : '';
-    const newVal = newValues[key] !== undefined ? String(newValues[key]).trim() : '';
+    const oldVal = oldValues[key] !== undefined && oldValues[key] !== null ? String(oldValues[key]).trim() : '';
+    const newVal = newValues[key] !== undefined && newValues[key] !== null ? String(newValues[key]).trim() : '';
     if (oldVal !== newVal) {
       changed[key] = {
         from: oldValues[key] ?? '-',
@@ -53,11 +90,13 @@ export async function createAuditLog(params: AuditRecordParams) {
       if (user) userId = user.id;
     }
 
-    const changedFields = params.action === 'Updated'
-      ? computeChangedFields(params.oldValues, params.newValues)
-      : {};
+    const changedFields =
+      params.action === 'Updated' || params.action === 'Cancelled' || params.action === 'Reversed'
+        ? computeChangedFields(params.oldValues, params.newValues)
+        : {};
 
-    const authorName = params.userName || (params.userEmail ? params.userEmail.split('@')[0].replace('.', ' ') : 'Simon Memia');
+    const authorName = params.userName || resolveEditorName(params.userEmail);
+    const nowIso = new Date().toISOString();
 
     const payload = {
       user: authorName,
@@ -65,11 +104,13 @@ export async function createAuditLog(params: AuditRecordParams) {
       member: params.member || 'Member Record',
       module: params.model,
       action: params.action,
+      recordRef: params.recordRef || (params.recordId ? String(params.recordId) : '-'),
       oldValues: params.oldValues || {},
       newValues: params.newValues || {},
       changedFields,
+      reason: params.reason || null,
       remarks: params.remarks || `${params.action} ${params.model} record for ${params.member}`,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso,
     };
 
     const log = await prisma.editLog.create({
@@ -89,3 +130,4 @@ export async function createAuditLog(params: AuditRecordParams) {
     return null;
   }
 }
+

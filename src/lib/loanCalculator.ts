@@ -12,7 +12,7 @@ import { MONTH_ABBRS } from './dateUtils';
 
 export type InterestMethod = 'Simple' | 'Reducing Balance' | 'Compound';
 export type AllocationPolicy = 'Interest First' | 'Principal First' | 'Proportional';
-export type LoanComputedStatus = 'Active' | 'Partially Paid' | 'Overdue' | 'Settled';
+export type LoanComputedStatus = 'Active' | 'Partially Paid' | 'Overdue' | 'Settled' | 'Cancelled';
 
 export interface LoanRepaymentInput {
   id?: number | string;
@@ -533,15 +533,18 @@ export function calculateLoanProfile(
     }
   }
 
-  const remainingPrincipal = roundCurrency(Math.max(0, originalPrincipal - cumulativePrincipalPaid));
-  const unpaidInterest = roundCurrency(Math.max(0, cumulativeInterestAccrued - cumulativeInterestPaid));
+  const isCancelled = loan.status === 'Cancelled';
+  const remainingPrincipal = isCancelled ? 0 : roundCurrency(Math.max(0, originalPrincipal - cumulativePrincipalPaid));
+  const unpaidInterest = isCancelled ? 0 : roundCurrency(Math.max(0, cumulativeInterestAccrued - cumulativeInterestPaid));
   const totalLoanAmount = roundCurrency(originalPrincipal + cumulativeInterestAccrued);
   const totalAmountPaid = roundCurrency(cumulativePrincipalPaid + cumulativeInterestPaid);
-  const totalOutstandingBalance = roundCurrency(remainingPrincipal + unpaidInterest);
+  const totalOutstandingBalance = isCancelled ? 0 : roundCurrency(remainingPrincipal + unpaidInterest);
 
   // Determine authoritative loan status
   let computedStatus: LoanComputedStatus = 'Active';
-  if (
+  if (isCancelled) {
+    computedStatus = 'Cancelled';
+  } else if (
     (totalOutstandingBalance <= 0.005 && (accruedPeriodCount > 0 || totalAmountPaid >= originalPrincipal)) ||
     (loan.status === 'Settled' && totalOutstandingBalance <= 0.005)
   ) {

@@ -14,6 +14,9 @@ import {
   Users,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  RotateCcw,
+  MoreVertical,
   Clock,
   FileText,
   Search,
@@ -59,6 +62,7 @@ export default function ContributionsTab({
 }: ContributionsTabProps) {
   const [subView, setSubView] = useState<ContribSubView>('monthly-register');
   const [searchQuery, setSearchQuery] = useState('');
+  const [openMobileMenuKey, setOpenMobileMenuKey] = useState<string | null>(null);
 
   // Add / Edit Contribution Modal State (Section 3.3 & 3.8)
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -73,7 +77,9 @@ export default function ContributionsTab({
     paymentMethod: 'M-Pesa',
     mpesaRef: '',
     bankRef: '',
-    remarks: ''
+    paymentReference: '',
+    remarks: '',
+    editReason: ''
   });
   const [entryError, setEntryError] = useState<string | null>(null);
   const [isSavingEntry, setIsSavingEntry] = useState(false);
@@ -91,6 +97,29 @@ export default function ContributionsTab({
   });
   const [instalmentError, setInstalmentError] = useState<string | null>(null);
   const [isSavingInstalment, setIsSavingInstalment] = useState(false);
+
+  // Edit Individual Instalment Payment Modal State
+  const [editingPaymentTarget, setEditingPaymentTarget] = useState<any | null>(null);
+  const [editPaymentForm, setEditPaymentForm] = useState({
+    amount: '',
+    paymentDate: getEATISODate(),
+    paymentMethod: 'M-Pesa',
+    reference: '',
+    remarks: '',
+    reason: ''
+  });
+  const [isSavingPaymentEdit, setIsSavingPaymentEdit] = useState(false);
+
+  // Delete / Reverse Contribution Confirmation Modal State
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<any | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'reverse_payments' | 'delete_record'>('reverse_payments');
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeletingContrib, setIsDeletingContrib] = useState(false);
+
+  // Reverse Individual Instalment Confirmation Modal State
+  const [reversePaymentTarget, setReversePaymentTarget] = useState<any | null>(null);
+  const [reversePaymentReason, setReversePaymentReason] = useState('');
+  const [isReversingPayment, setIsReversingPayment] = useState(false);
 
   // View Payment History Modal for a Specific Member Obligation
   const [historyModalTarget, setHistoryModalTarget] = useState<any | null>(null);
@@ -230,7 +259,9 @@ export default function ContributionsTab({
         for (const p of c.payments) {
           list.push({
             id: p.id,
+            isInstalmentRow: true,
             contributionId: c.dbId || c.id,
+            parentRow: c,
             memberName: c.member || c.memberName,
             month: c.canonicalMonth,
             year: c.canonicalYear,
@@ -244,7 +275,9 @@ export default function ContributionsTab({
       } else if (c.amount > 0) {
         list.push({
           id: `legacy-${c.id}`,
+          isInstalmentRow: false,
           contributionId: c.dbId || c.id,
+          parentRow: c,
           memberName: c.member || c.memberName,
           month: c.canonicalMonth,
           year: c.canonicalYear,
@@ -262,22 +295,29 @@ export default function ContributionsTab({
   // Open Add / Edit Contribution Modal (Section 3.3)
   const handleOpenAddModal = (rowToEdit?: any) => {
     setEntryError(null);
-    if (rowToEdit && (rowToEdit.dbId || rowToEdit.customId || rowToEdit.amount > 0)) {
+    setOpenMobileMenuKey(null);
+    if (rowToEdit) {
       setEditingRecord(rowToEdit);
+      const existingRef =
+        rowToEdit.paymentReference && rowToEdit.paymentReference !== '-'
+          ? rowToEdit.paymentReference
+          : '';
       setEntryForm({
-        memberName: rowToEdit.memberName || rowToEdit.member,
+        memberName: rowToEdit.memberName || rowToEdit.member || members[0]?.fullName || 'Simon Memia Wanjiru',
         month: rowToEdit.canonicalMonth || activeMonth,
         year: String(rowToEdit.canonicalYear || activeYear),
-        expectedAmount: String(rowToEdit.expectedAmount || 6000),
-        amount: String(rowToEdit.amount || 0),
+        expectedAmount: String(rowToEdit.expectedAmount ?? 6000),
+        amount: String(rowToEdit.amount ?? 0),
         paymentDate:
           rowToEdit.paymentDate && rowToEdit.paymentDate !== '-'
             ? rowToEdit.paymentDate
             : getEATISODate(),
         paymentMethod: rowToEdit.paymentMethod || 'M-Pesa',
-        mpesaRef: rowToEdit.mpesaRef || '',
-        bankRef: rowToEdit.bankRef || '',
-        remarks: rowToEdit.remarks || rowToEdit.notes || ''
+        mpesaRef: rowToEdit.mpesaRef || (rowToEdit.paymentMethod !== 'Bank Transfer' ? existingRef : ''),
+        bankRef: rowToEdit.bankRef || (rowToEdit.paymentMethod === 'Bank Transfer' ? existingRef : ''),
+        paymentReference: existingRef,
+        remarks: rowToEdit.remarks || rowToEdit.notes || '',
+        editReason: ''
       });
     } else {
       const defMonth = selectedMonth === 'All' ? 'December' : selectedMonth;
@@ -286,7 +326,7 @@ export default function ContributionsTab({
         defYear === 2025 && (defMonth === 'October' || defMonth === 'November') ? 5025 : 6000;
       setEditingRecord(null);
       setEntryForm({
-        memberName: rowToEdit?.memberName || members[0]?.fullName || 'Simon Memia Wanjiru',
+        memberName: members[0]?.fullName || 'Simon Memia Wanjiru',
         month: defMonth,
         year: String(defYear),
         expectedAmount: String(defExp),
@@ -295,7 +335,9 @@ export default function ContributionsTab({
         paymentMethod: 'M-Pesa',
         mpesaRef: '',
         bankRef: '',
-        remarks: `Monthly Contribution (${defMonth} ${defYear})`
+        paymentReference: '',
+        remarks: `Monthly Contribution (${defMonth} ${defYear})`,
+        editReason: ''
       });
     }
     setIsEntryModalOpen(true);
@@ -341,14 +383,21 @@ export default function ContributionsTab({
       );
       const unsettledVal = Math.max(0, expVal - paidVal);
 
-      const method = editingRecord && (editingRecord.dbId || editingRecord.customId) ? 'PUT' : 'POST';
+      const isExistingInDb = Boolean(editingRecord && (editingRecord.dbId || editingRecord.customId || editingRecord.id));
+      const method = isExistingInDb ? 'PUT' : 'POST';
+      const combinedRef =
+        entryForm.mpesaRef.trim() ||
+        entryForm.bankRef.trim() ||
+        entryForm.paymentReference.trim() ||
+        undefined;
+
       const res = await fetch('/api/contributions', {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingRecord?.dbId || undefined,
           customId: editingRecord?.customId || editingRecord?.id || undefined,
-          memberId: matchedMember?.dbId,
+          memberId: matchedMember?.dbId || matchedMember?.id,
           memberName: entryForm.memberName,
           month: entryForm.month,
           year: yearVal,
@@ -357,13 +406,14 @@ export default function ContributionsTab({
           unsettled: unsettledVal,
           paymentDate: entryForm.paymentDate,
           paymentMethod: entryForm.paymentMethod,
-          mpesaRef: entryForm.mpesaRef.trim() || undefined,
-          bankRef: entryForm.bankRef.trim() || undefined,
-          paymentReference:
-            entryForm.mpesaRef.trim() || entryForm.bankRef.trim() || undefined,
+          mpesaRef: entryForm.mpesaRef.trim() || '',
+          bankRef: entryForm.bankRef.trim() || '',
+          paymentReference: combinedRef,
           remarks:
             entryForm.remarks.trim() ||
             `Monthly Contribution (Member: ${entryForm.memberName})`,
+          editReason: entryForm.editReason.trim() || undefined,
+          userEmail,
           createdBy: userEmail,
           updatedBy: userEmail
         })
@@ -376,13 +426,12 @@ export default function ContributionsTab({
         return;
       }
 
-      // Switch view to the saved month and year so the user sees it immediately in its exact period!
       onSelectMonth(entryForm.month);
       onSelectYear(yearVal);
       await onRefreshContributions();
       setIsEntryModalOpen(false);
       showToast(
-        `Saved ${entryForm.memberName}'s contribution for ${entryForm.month} ${yearVal} (KES ${paidVal.toLocaleString()}).`
+        `${editingRecord ? 'Updated' : 'Saved'} ${entryForm.memberName}'s contribution for ${entryForm.month} ${yearVal} (KES ${paidVal.toLocaleString()}).`
       );
     } catch (err: any) {
       setEntryError(err?.message || 'Network error while saving contribution.');
@@ -394,6 +443,7 @@ export default function ContributionsTab({
   // Open Record Additional Payment (Instalment) Modal (Section 3.7)
   const handleOpenInstalmentModal = (row: any) => {
     setInstalmentError(null);
+    setOpenMobileMenuKey(null);
     setInstalmentTarget(row);
     const remainingDue = Math.max(0, (row.expectedAmount || 6000) - (row.amount || 0));
     setInstalmentForm({
@@ -442,6 +492,7 @@ export default function ContributionsTab({
           mpesaRef: instalmentForm.mpesaRef.trim() || undefined,
           bankRef: instalmentForm.bankRef.trim() || undefined,
           remarks: instalmentForm.remarks.trim() || 'Contribution instalment payment',
+          userEmail,
           createdBy: userEmail
         })
       });
@@ -465,42 +516,147 @@ export default function ContributionsTab({
     }
   };
 
-  const handleDeleteContribution = async (row: any) => {
-    if (!row.dbId && !row.customId && !row.id) return;
+  // Open Delete / Reverse Contribution Confirmation Modal
+  const handleOpenDeleteModal = (row: any) => {
+    setOpenMobileMenuKey(null);
+    if (!row.dbId && !row.customId && !row.id) {
+      showToast(`No saved database record to delete for ${row.memberName} in ${row.canonicalMonth} ${row.canonicalYear}.`);
+      return;
+    }
+    setDeleteConfirmTarget(row);
+    const hasPayments = (Number(row.amount) || 0) > 0 || (Array.isArray(row.payments) && row.payments.length > 0);
+    setDeleteMode(hasPayments ? 'reverse_payments' : 'delete_record');
+    setDeleteReason('');
+  };
+
+  // Execute Confirmed Delete or Payment Reversal on Contribution
+  const handleConfirmDeleteContribution = async () => {
+    if (!deleteConfirmTarget) return;
+    setIsDeletingContrib(true);
     try {
+      const row = deleteConfirmTarget;
       const query = row.customId
         ? `customId=${encodeURIComponent(row.customId)}`
         : `id=${encodeURIComponent(row.dbId || row.id)}`;
       const res = await fetch(
-        `/api/contributions?${query}&deletedBy=${encodeURIComponent(userEmail)}`,
+        `/api/contributions?${query}&mode=${encodeURIComponent(deleteMode)}&reason=${encodeURIComponent(deleteReason.trim())}&userEmail=${encodeURIComponent(userEmail)}&deletedBy=${encodeURIComponent(userEmail)}`,
         { method: 'DELETE' }
       );
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast('Failed to delete contribution record.');
+        showToast(data.error || 'Failed to delete or reverse contribution record.');
+        setIsDeletingContrib(false);
         return;
       }
       await onRefreshContributions();
-      showToast(`Deleted contribution record for ${row.memberName}.`);
+      setDeleteConfirmTarget(null);
+      if (deleteMode === 'reverse_payments') {
+        showToast(
+          `Reversed payment(s) for ${row.memberName || row.member} (${row.canonicalMonth} ${row.canonicalYear}). Monthly obligation retained as Unpaid.`
+        );
+      } else {
+        showToast(
+          `Deleted contribution record for ${row.memberName || row.member} (${row.canonicalMonth} ${row.canonicalYear}).`
+        );
+      }
     } catch (e) {
       showToast('Error deleting contribution.');
+    } finally {
+      setIsDeletingContrib(false);
     }
   };
 
-  const handleReversePaymentInstalment = async (paymentId: number) => {
+  // Open Edit Individual Payment Instalment Modal
+  const handleOpenEditPaymentModal = (payment: any) => {
+    if (!payment.isInstalmentRow && payment.parentRow) {
+      // Legacy payment stored directly on the parent Contribution row
+      handleOpenAddModal(payment.parentRow);
+      return;
+    }
+    setEditingPaymentTarget(payment);
+    setEditPaymentForm({
+      amount: String(payment.amount || 0),
+      paymentDate: payment.paymentDate && payment.paymentDate !== '-' ? payment.paymentDate : getEATISODate(),
+      paymentMethod: payment.paymentMethod || 'M-Pesa',
+      reference: payment.reference && payment.reference !== '-' ? payment.reference : '',
+      remarks: payment.remarks || '',
+      reason: ''
+    });
+  };
+
+  const handleSavePaymentEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPaymentTarget) return;
+    setIsSavingPaymentEdit(true);
     try {
-      const res = await fetch(
-        `/api/contributions?paymentId=${paymentId}&deletedBy=${encodeURIComponent(userEmail)}`,
-        { method: 'DELETE' }
-      );
+      const res = await fetch('/api/contributions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'edit_payment',
+          paymentId: editingPaymentTarget.id,
+          amount: Number(editPaymentForm.amount),
+          paymentDate: editPaymentForm.paymentDate,
+          paymentMethod: editPaymentForm.paymentMethod,
+          paymentReference: editPaymentForm.reference.trim(),
+          mpesaRef: editPaymentForm.paymentMethod === 'M-Pesa' ? editPaymentForm.reference.trim() : undefined,
+          bankRef: editPaymentForm.paymentMethod === 'Bank Transfer' ? editPaymentForm.reference.trim() : undefined,
+          remarks: editPaymentForm.remarks.trim(),
+          reason: editPaymentForm.reason.trim() || undefined,
+          userEmail,
+          updatedBy: userEmail
+        })
+      });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast('Failed to reverse instalment.');
+        showToast(data.error || 'Failed to update instalment payment.');
+        setIsSavingPaymentEdit(false);
         return;
       }
       await onRefreshContributions();
+      setEditingPaymentTarget(null);
+      setHistoryModalTarget(null);
+      showToast('Instalment payment updated and monthly obligation recalculated.');
+    } catch (err) {
+      showToast('Error updating instalment payment.');
+    } finally {
+      setIsSavingPaymentEdit(false);
+    }
+  };
+
+  // Open Confirmation Modal for Reversing a Single Instalment Payment
+  const handleRequestReversePayment = (payment: any) => {
+    if (!payment.isInstalmentRow && payment.parentRow && String(payment.id).startsWith('legacy-')) {
+      handleOpenDeleteModal(payment.parentRow);
+      return;
+    }
+    setReversePaymentTarget(payment);
+    setReversePaymentReason('');
+  };
+
+  const handleConfirmReversePayment = async () => {
+    if (!reversePaymentTarget) return;
+    setIsReversingPayment(true);
+    try {
+      const paymentId = reversePaymentTarget.id;
+      const res = await fetch(
+        `/api/contributions?paymentId=${encodeURIComponent(paymentId)}&reason=${encodeURIComponent(reversePaymentReason.trim())}&userEmail=${encodeURIComponent(userEmail)}&deletedBy=${encodeURIComponent(userEmail)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Failed to reverse instalment.');
+        setIsReversingPayment(false);
+        return;
+      }
+      await onRefreshContributions();
+      setReversePaymentTarget(null);
       setHistoryModalTarget(null);
       showToast('Instalment payment reversed and monthly obligation recalculated.');
     } catch (e) {
       showToast('Error reversing instalment.');
+    } finally {
+      setIsReversingPayment(false);
     }
   };
 
@@ -758,75 +914,166 @@ export default function ContributionsTab({
                     <th className="py-3.5 px-4">7. Payment Date</th>
                     <th className="py-3.5 px-4">8. Payment Reference</th>
                     <th className="py-3.5 px-4 text-center">9. Payment Status</th>
-                    <th className="py-3.5 px-4 text-center">10. Action</th>
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
+                      10. Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {monthlyMemberRows.map((row, idx) => (
-                    <tr key={row.memberId || idx} className="hover:bg-slate-800/35 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-white">{row.memberName}</td>
-                      <td className="py-3.5 px-4 text-emerald-400 font-semibold">
-                        {row.canonicalMonth}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-300 font-semibold">
-                        {row.canonicalYear}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
-                        {row.expectedAmount.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
-                        {row.amount.toLocaleString()}
-                        {row.payments && row.payments.length > 1 && (
-                          <span className="block text-[10px] text-teal-300 font-normal">
-                            ({row.payments.length} instalments)
+                  {monthlyMemberRows.map((row, idx) => {
+                    const hasDbRecord = Boolean(row.dbId || row.customId || row.id);
+                    const rowMenuKey = `monthly-${row.memberId || idx}`;
+                    return (
+                      <tr key={row.memberId || idx} className="hover:bg-slate-800/35 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-white">{row.memberName}</td>
+                        <td className="py-3.5 px-4 text-emerald-400 font-semibold">
+                          {row.canonicalMonth}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-300 font-semibold">
+                          {row.canonicalYear}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                          {row.expectedAmount.toLocaleString()}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
+                          {row.amount.toLocaleString()}
+                          {row.payments && row.payments.length > 1 && (
+                            <span className="block text-[10px] text-teal-300 font-normal">
+                              ({row.payments.length} instalments)
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-extrabold">
+                          <span className={row.unsettled > 0 ? 'text-amber-400' : 'text-slate-500'}>
+                            {row.unsettled.toLocaleString()}
                           </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold">
-                        <span className={row.unsettled > 0 ? 'text-amber-400' : 'text-slate-500'}>
-                          {row.unsettled.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
-                        {row.paymentDate || '-'}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-emerald-400">
-                        {row.paymentReference || '-'}
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {renderContribStatusBadge(row.status)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {canEdit && (
-                            <>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
+                          {row.paymentDate || '-'}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-emerald-400">
+                          {row.paymentReference || '-'}
+                        </td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {renderContribStatusBadge(row.status)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
+                          {/* Desktop Actions */}
+                          <div className="hidden sm:flex items-center justify-center gap-1.5">
+                            {canEdit && (
+                              <>
+                                <button
+                                  onClick={() => handleOpenAddModal(row)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
+                                  title="Edit Contribution"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => handleOpenInstalmentModal(row)}
+                                  className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold"
+                                  title="Record Additional Instalment Payment"
+                                >
+                                  + Pay
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => setHistoryModalTarget(row)}
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
+                              title="View Payment Instalment History"
+                            >
+                              History
+                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleOpenDeleteModal(row)}
+                                disabled={!hasDbRecord}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
+                                  hasDbRecord
+                                    ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
+                                    : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed'
+                                }`}
+                                title={
+                                  hasDbRecord
+                                    ? 'Delete or Reverse Contribution'
+                                    : 'No saved contribution record to delete'
+                                }
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Mobile Three-Dot Menu + Quick Buttons */}
+                          <div className="flex sm:hidden items-center justify-center gap-1 relative">
+                            {canEdit && (
                               <button
                                 onClick={() => handleOpenAddModal(row)}
-                                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-[11px] font-bold"
-                                title="Edit or Record Contribution"
+                                className="px-2 py-1 bg-slate-800 text-emerald-400 rounded text-[11px] font-bold"
                               >
                                 Edit
                               </button>
-                              <button
-                                onClick={() => handleOpenInstalmentModal(row)}
-                                className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold"
-                                title="Record Additional Instalment Payment"
-                              >
-                                + Pay
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => setHistoryModalTarget(row)}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
-                            title="View Payment Instalment History"
-                          >
-                            History
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            )}
+                            <button
+                              onClick={() =>
+                                setOpenMobileMenuKey(
+                                  openMobileMenuKey === rowMenuKey ? null : rowMenuKey
+                                )
+                              }
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
+                              aria-label="More actions"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {openMobileMenuKey === rowMenuKey && (
+                              <div className="absolute right-0 top-8 z-30 w-44 bg-[#090F1D] border border-slate-700 rounded-xl shadow-2xl py-1 text-left">
+                                {canEdit && (
+                                  <>
+                                    <button
+                                      onClick={() => handleOpenAddModal(row)}
+                                      className="w-full px-3 py-2 text-xs text-emerald-400 hover:bg-slate-800 flex items-center gap-2 font-bold"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                      <span>Edit Contribution</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenInstalmentModal(row)}
+                                      className="w-full px-3 py-2 text-xs text-teal-300 hover:bg-slate-800 flex items-center gap-2 font-bold"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>Add Instalment (+Pay)</span>
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setOpenMobileMenuKey(null);
+                                    setHistoryModalTarget(row);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-2"
+                                >
+                                  <History className="w-3.5 h-3.5" />
+                                  <span>Payment History</span>
+                                </button>
+                                {canEdit && hasDbRecord && (
+                                  <button
+                                    onClick={() => handleOpenDeleteModal(row)}
+                                    className="w-full px-3 py-2 text-xs text-rose-400 hover:bg-slate-800 flex items-center gap-2 font-bold border-t border-slate-800"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete / Reverse</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -860,22 +1107,49 @@ export default function ContributionsTab({
                   <th className="py-3.5 px-4">Payment Method</th>
                   <th className="py-3.5 px-4">Reference</th>
                   <th className="py-3.5 px-4">Remarks</th>
+                  {canEdit && (
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {allPaymentTransactions.slice(0, 150).map((t, idx) => (
                   <tr key={`${t.id}-${idx}`} className="hover:bg-slate-800/30">
-                    <td className="py-3 px-4 text-slate-300">{t.paymentDate}</td>
+                    <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{t.paymentDate}</td>
                     <td className="py-3 px-4 font-bold text-white">{t.memberName}</td>
-                    <td className="py-3 px-4 text-emerald-400 font-semibold">
+                    <td className="py-3 px-4 text-emerald-400 font-semibold whitespace-nowrap">
                       {t.month} {t.year}
                     </td>
-                    <td className="py-3 px-4 text-right font-extrabold text-emerald-400">
+                    <td className="py-3 px-4 text-right font-extrabold text-emerald-400 whitespace-nowrap">
                       KES {t.amount.toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-slate-300">{t.paymentMethod}</td>
                     <td className="py-3 px-4 font-mono text-emerald-400">{t.reference}</td>
                     <td className="py-3 px-4 text-slate-400">{t.remarks}</td>
+                    {canEdit && (
+                      <td className="py-3 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditPaymentModal(t)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
+                            title="Edit Payment Transaction"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleRequestReversePayment(t)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                            title="Delete / Reverse Payment Transaction"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -919,7 +1193,6 @@ export default function ContributionsTab({
                   );
                   const totalPaid = mRows.reduce((s, r) => s + r.amount, 0);
                   const totalUnsettled = mRows.reduce((s, r) => {
-                    // Only count active unsettled where remarks don't say future "Pending" with 0 unsettled
                     return s + (Number(r.unsettled) || 0);
                   }, 0);
                   const totalCredit = mRows.reduce((s, r) => s + (Number(r.creditBalance) || 0), 0);
@@ -983,7 +1256,7 @@ export default function ContributionsTab({
           </div>
           <div className="overflow-x-auto max-h-[600px]">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="sticky top-0 bg-[#090F1D]">
+              <thead className="sticky top-0 bg-[#090F1D] z-20">
                 <tr className="border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
                   <th className="py-3 px-4">ID</th>
                   <th className="py-3 px-4">Month & Year</th>
@@ -993,6 +1266,11 @@ export default function ContributionsTab({
                   <th className="py-3 px-4 text-right">Unsettled</th>
                   <th className="py-3 px-4 text-right">Payout</th>
                   <th className="py-3 px-4 text-center">Status</th>
+                  {canEdit && (
+                    <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -1010,7 +1288,7 @@ export default function ContributionsTab({
                   .map(c => (
                     <tr key={c.id} className="hover:bg-slate-800/30">
                       <td className="py-2.5 px-4 font-mono text-slate-400">{c.id}</td>
-                      <td className="py-2.5 px-4 text-emerald-400 font-semibold">
+                      <td className="py-2.5 px-4 text-emerald-400 font-semibold whitespace-nowrap">
                         {c.canonicalMonth} {c.canonicalYear}
                       </td>
                       <td className="py-2.5 px-4 font-bold text-white">{c.member}</td>
@@ -1035,6 +1313,32 @@ export default function ContributionsTab({
                           renderContribStatusBadge(c.status)
                         )}
                       </td>
+                      {canEdit && (
+                        <td className="py-2.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
+                          {c.payout > 0 ? (
+                            <span className="text-[10px] text-slate-500 font-semibold">Protected Payout</span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenAddModal({ ...c, memberName: c.member })}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
+                                title="Edit Contribution"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenDeleteModal({ ...c, memberName: c.member })}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                title="Delete or Reverse Contribution"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
               </tbody>
@@ -1055,8 +1359,9 @@ export default function ContributionsTab({
                   {editingRecord ? 'Edit Monthly Contribution' : 'Add Member Contribution'}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Defaults to currently selected period ({entryForm.month} {entryForm.year}) and
-                  saves directly to PostgreSQL
+                  {editingRecord
+                    ? `Editing ${editingRecord.customId || editingRecord.id || 'obligation'} — updates member balances and Dashboard immediately`
+                    : `Defaults to currently selected period (${entryForm.month} ${entryForm.year}) and saves directly to PostgreSQL`}
                 </p>
               </div>
               <button
@@ -1206,7 +1511,7 @@ export default function ContributionsTab({
 
                 <div>
                   <label className="block font-bold text-slate-300 mb-1">
-                    9. Bank Reference
+                    9. Bank / General Reference
                   </label>
                   <input
                     type="text"
@@ -1219,7 +1524,7 @@ export default function ContributionsTab({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">10. Remarks</label>
+                <label className="block font-bold text-slate-300 mb-1">10. Notes / Remarks</label>
                 <input
                   type="text"
                   value={entryForm.remarks}
@@ -1228,6 +1533,21 @@ export default function ContributionsTab({
                   className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2.5 text-white"
                 />
               </div>
+
+              {editingRecord && (
+                <div>
+                  <label className="block font-bold text-amber-400 mb-1">
+                    11. Reason for Correction / Edit (Recorded in Audit Log)
+                  </label>
+                  <input
+                    type="text"
+                    value={entryForm.editReason}
+                    onChange={e => setEntryForm({ ...entryForm, editReason: e.target.value })}
+                    placeholder="e.g. Corrected payment date or M-Pesa reference after statement reconciliation"
+                    className="w-full bg-[#070D18] border border-amber-500/40 rounded-xl px-3 py-2.5 text-white"
+                  />
+                </div>
+              )}
 
               {/* Balance Preview */}
               <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-3.5 flex items-center justify-between text-xs">
@@ -1270,7 +1590,7 @@ export default function ContributionsTab({
                   disabled={isSavingEntry}
                   className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                 >
-                  {isSavingEntry ? 'Saving to Database...' : 'Save Contribution'}
+                  {isSavingEntry ? 'Saving to Database...' : editingRecord ? 'Update Contribution' : 'Save Contribution'}
                 </button>
               </div>
             </form>
@@ -1432,7 +1752,7 @@ export default function ContributionsTab({
       {/* ===================================================================== */}
       {historyModalTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0F172A] border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-[#0F172A] border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-base font-extrabold text-white">
@@ -1460,7 +1780,7 @@ export default function ContributionsTab({
                     <th className="py-2.5 px-3 text-right">Amount</th>
                     <th className="py-2.5 px-3">Method</th>
                     <th className="py-2.5 px-3">Reference</th>
-                    {canEdit && <th className="py-2.5 px-3 text-center">Action</th>}
+                    {canEdit && <th className="py-2.5 px-3 text-center">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -1486,12 +1806,38 @@ export default function ContributionsTab({
                         {canEdit && (
                           <td className="py-2.5 px-3 text-center">
                             {p.id && (
-                              <button
-                                onClick={() => handleReversePaymentInstalment(p.id)}
-                                className="text-rose-400 hover:text-rose-300 font-bold text-[11px]"
-                              >
-                                Reverse
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() =>
+                                    handleOpenEditPaymentModal({
+                                      ...p,
+                                      isInstalmentRow: true,
+                                      memberName: historyModalTarget.memberName,
+                                      month: historyModalTarget.canonicalMonth,
+                                      year: historyModalTarget.canonicalYear,
+                                      reference: p.reference || p.mpesaRef || p.bankRef || ''
+                                    })
+                                  }
+                                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-[11px]"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleRequestReversePayment({
+                                      ...p,
+                                      isInstalmentRow: true,
+                                      memberName: historyModalTarget.memberName,
+                                      month: historyModalTarget.canonicalMonth,
+                                      year: historyModalTarget.canonicalYear,
+                                      reference: p.reference || p.mpesaRef || p.bankRef || '-'
+                                    })
+                                  }
+                                  className="px-2 py-0.5 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-[11px]"
+                                >
+                                  Reverse
+                                </button>
+                              </div>
                             )}
                           </td>
                         )}
@@ -1501,6 +1847,378 @@ export default function ContributionsTab({
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 4: DELETE / REVERSE CONTRIBUTION CONFIRMATION MODAL             */}
+      {/* ===================================================================== */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-500/15 text-rose-400">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    Confirm Contribution Deletion / Reversal
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Review the member, month, and amount before confirming
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="text-slate-400 hover:text-white text-sm font-bold px-2.5 py-1 rounded-lg bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Record Identification Banner */}
+            <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-4 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Record Reference:</span>
+                <span className="font-mono font-bold text-slate-200">
+                  {deleteConfirmTarget.customId || deleteConfirmTarget.id || `ID-${deleteConfirmTarget.dbId}`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Member Name:</span>
+                <span className="font-extrabold text-white">
+                  {deleteConfirmTarget.memberName || deleteConfirmTarget.member}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Contribution Period:</span>
+                <span className="font-bold text-emerald-400">
+                  {deleteConfirmTarget.canonicalMonth} {deleteConfirmTarget.canonicalYear}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Amount Paid:</span>
+                <span className="font-extrabold text-emerald-400">
+                  KES {Number(deleteConfirmTarget.amount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Expected Obligation:</span>
+                <span className="font-bold text-slate-300">
+                  KES {Number(deleteConfirmTarget.expectedAmount || 6000).toLocaleString()}
+                </span>
+              </div>
+              {Array.isArray(deleteConfirmTarget.payments) && deleteConfirmTarget.payments.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Associated Instalments:</span>
+                  <span className="font-bold text-teal-300">
+                    {deleteConfirmTarget.payments.length} payment record(s)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Safe Action Selector when payments exist */}
+            {(Number(deleteConfirmTarget.amount) > 0 ||
+              (Array.isArray(deleteConfirmTarget.payments) &&
+                deleteConfirmTarget.payments.length > 0)) && (
+              <div className="space-y-2 text-xs">
+                <label className="block font-bold text-slate-300">
+                  Choose Reversal / Deletion Mode:
+                </label>
+                <label
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer ${
+                    deleteMode === 'reverse_payments'
+                      ? 'bg-amber-500/10 border-amber-500/50 text-white'
+                      : 'bg-[#070D18] border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="contribDeleteMode"
+                    checked={deleteMode === 'reverse_payments'}
+                    onChange={() => setDeleteMode('reverse_payments')}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="font-extrabold block text-amber-300">
+                      Reverse Payment(s) Only — Keep Monthly Obligation as Unpaid (Recommended)
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Reverses the KES {Number(deleteConfirmTarget.amount || 0).toLocaleString()} payment(s) and resets paid amount to KES 0 while preserving the {deleteConfirmTarget.canonicalMonth} {deleteConfirmTarget.canonicalYear} monthly obligation.
+                    </span>
+                  </div>
+                </label>
+
+                <label
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer ${
+                    deleteMode === 'delete_record'
+                      ? 'bg-rose-500/10 border-rose-500/50 text-white'
+                      : 'bg-[#070D18] border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="contribDeleteMode"
+                    checked={deleteMode === 'delete_record'}
+                    onChange={() => setDeleteMode('delete_record')}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="font-extrabold block text-rose-400">
+                      Delete Entire Contribution Record
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Removes the entire database entry for {deleteConfirmTarget.memberName || deleteConfirmTarget.member} in {deleteConfirmTarget.canonicalMonth} {deleteConfirmTarget.canonicalYear}.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            )}
+
+            <div className="text-xs">
+              <label className="block font-bold text-slate-300 mb-1">
+                Reason for Deletion / Reversal (Recorded in Audit Log)
+              </label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="e.g. Reversing duplicate entry or test payment"
+                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingContrib}
+                onClick={handleConfirmDeleteContribution}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold shadow-lg shadow-rose-500/20 disabled:opacity-50"
+              >
+                {isDeletingContrib
+                  ? 'Processing...'
+                  : deleteMode === 'reverse_payments'
+                  ? 'Confirm Payment Reversal'
+                  : 'Confirm Delete Record'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 5: CONFIRM REVERSE SINGLE INSTALMENT PAYMENT                    */}
+      {/* ===================================================================== */}
+      {reversePaymentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white">
+                Confirm Instalment Payment Reversal
+              </h3>
+              <button
+                onClick={() => setReversePaymentTarget(null)}
+                className="text-slate-400 hover:text-white text-sm font-bold px-2.5 py-1 rounded-lg bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-3.5 space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Member:</span>
+                <span className="font-bold text-white">{reversePaymentTarget.memberName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Contribution Period:</span>
+                <span className="font-bold text-emerald-400">
+                  {reversePaymentTarget.month} {reversePaymentTarget.year}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Instalment Amount:</span>
+                <span className="font-extrabold text-rose-400">
+                  KES {Number(reversePaymentTarget.amount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Payment Date / Ref:</span>
+                <span className="font-mono text-slate-300">
+                  {reversePaymentTarget.paymentDate} ({reversePaymentTarget.reference || '-'})
+                </span>
+              </div>
+            </div>
+
+            <p className="text-slate-400 text-[11px]">
+              Only this single payment instalment will be reversed. The monthly obligation for{' '}
+              <strong className="text-white">
+                {reversePaymentTarget.month} {reversePaymentTarget.year}
+              </strong>{' '}
+              and any other instalments will remain intact and automatically recalculate.
+            </p>
+
+            <div>
+              <label className="block font-bold text-slate-300 mb-1">
+                Reason for Reversal (Recorded in Audit Log)
+              </label>
+              <input
+                type="text"
+                value={reversePaymentReason}
+                onChange={e => setReversePaymentReason(e.target.value)}
+                placeholder="e.g. Reversing duplicate instalment entry"
+                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setReversePaymentTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isReversingPayment}
+                onClick={handleConfirmReversePayment}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold"
+              >
+                {isReversingPayment ? 'Reversing...' : 'Confirm Reverse Instalment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 6: EDIT INDIVIDUAL INSTALMENT PAYMENT                           */}
+      {/* ===================================================================== */}
+      {editingPaymentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-white">
+                  Edit Instalment Payment
+                </h3>
+                <p className="text-slate-400 text-[11px]">
+                  {editingPaymentTarget.memberName} • {editingPaymentTarget.month}{' '}
+                  {editingPaymentTarget.year}
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingPaymentTarget(null)}
+                className="text-slate-400 hover:text-white text-sm font-bold px-2.5 py-1 rounded-lg bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePaymentEdit} className="space-y-3">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Amount Paid (KES) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={editPaymentForm.amount}
+                  onChange={e => setEditPaymentForm({ ...editPaymentForm, amount: e.target.value })}
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-extrabold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Payment Date *</label>
+                <input
+                  type="date"
+                  value={editPaymentForm.paymentDate}
+                  onChange={e =>
+                    setEditPaymentForm({ ...editPaymentForm, paymentDate: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Payment Method</label>
+                <select
+                  value={editPaymentForm.paymentMethod}
+                  onChange={e =>
+                    setEditPaymentForm({ ...editPaymentForm, paymentMethod: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="M-Pesa">M-Pesa</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Transaction Reference</label>
+                <input
+                  type="text"
+                  value={editPaymentForm.reference}
+                  onChange={e =>
+                    setEditPaymentForm({ ...editPaymentForm, reference: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Remarks</label>
+                <input
+                  type="text"
+                  value={editPaymentForm.remarks}
+                  onChange={e =>
+                    setEditPaymentForm({ ...editPaymentForm, remarks: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-amber-400 mb-1">
+                  Reason for Correction (Audit Log)
+                </label>
+                <input
+                  type="text"
+                  value={editPaymentForm.reason}
+                  onChange={e =>
+                    setEditPaymentForm({ ...editPaymentForm, reason: e.target.value })
+                  }
+                  placeholder="Optional reason for editing this payment..."
+                  className="w-full bg-[#070D18] border border-amber-500/40 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingPaymentTarget(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPaymentEdit}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold"
+                >
+                  {isSavingPaymentEdit ? 'Saving...' : 'Save Payment Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

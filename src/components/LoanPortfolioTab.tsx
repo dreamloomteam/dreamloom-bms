@@ -11,6 +11,7 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Clock,
   DollarSign,
   FileText,
@@ -24,7 +25,11 @@ import {
   ArrowUpDown,
   RefreshCw,
   ShieldCheck,
-  History
+  History,
+  MoreVertical,
+  Ban,
+  RotateCcw,
+  X
 } from 'lucide-react';
 import {
   calculateLoanProfile,
@@ -68,6 +73,7 @@ export default function LoanPortfolioTab({
   const [selectedMemberName, setSelectedMemberName] = useState<string>(
     members[0]?.fullName || 'Simon Memia Wanjiru'
   );
+  const [openMobileMenuLoanId, setOpenMobileMenuLoanId] = useState<string | null>(null);
 
   // Calculation Settings (defaults for NEW loans only; never alters existing loans' agreed methods)
   const [defaultInterestRate, setDefaultInterestRate] = useState<number>(10.0);
@@ -112,10 +118,18 @@ export default function LoanPortfolioTab({
     allocationPolicy: 'Interest First' as AllocationPolicy,
     purpose: 'Personal / Business Development',
     approvalRef: '',
-    remarks: ''
+    status: 'Active',
+    remarks: '',
+    editReason: ''
   });
   const [loanFormError, setLoanFormError] = useState<string | null>(null);
   const [isSubmittingLoan, setIsSubmittingLoan] = useState(false);
+
+  // Delete / Cancel Loan Confirmation Modal State
+  const [deleteLoanTarget, setDeleteLoanTarget] = useState<CalculatedLoanProfile | null>(null);
+  const [deleteLoanReason, setDeleteLoanReason] = useState<string>('');
+  const [deleteLoanError, setDeleteLoanError] = useState<string | null>(null);
+  const [isDeletingLoan, setIsDeletingLoan] = useState<boolean>(false);
 
   // Record Repayment Modal State (Section 2.7)
   const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
@@ -131,6 +145,24 @@ export default function LoanPortfolioTab({
   });
   const [repaymentError, setRepaymentError] = useState<string | null>(null);
   const [isSubmittingRepayment, setIsSubmittingRepayment] = useState(false);
+
+  // Edit Individual Repayment Modal State
+  const [editingRepaymentTarget, setEditingRepaymentTarget] = useState<any | null>(null);
+  const [editRepaymentForm, setEditRepaymentForm] = useState({
+    paymentDate: '',
+    amount: '',
+    paymentMethod: 'M-Pesa',
+    mpesaRef: '',
+    bankRef: '',
+    remarks: '',
+    editReason: ''
+  });
+  const [isSavingRepaymentEdit, setIsSavingRepaymentEdit] = useState(false);
+
+  // Reverse Individual Repayment Confirmation Modal State
+  const [reverseRepaymentTarget, setReverseRepaymentTarget] = useState<any | null>(null);
+  const [reverseRepaymentReason, setReverseRepaymentReason] = useState<string>('');
+  const [isReversingRepayment, setIsReversingRepayment] = useState(false);
 
   // Compute authoritative profiles for all loans using reportingAsOfDate
   const calculatedLoans: CalculatedLoanProfile[] = useMemo(() => {
@@ -165,13 +197,22 @@ export default function LoanPortfolioTab({
     );
   }, [loans, reportingAsOfDate]);
 
-  // Separate Active (Active / Partially Paid / Overdue) vs Settled loans
+  // Separate Active (Active / Partially Paid / Overdue) vs Settled vs Cancelled loans
+  // Cancelled loans never appear as active loans or distort Dashboard totals
   const activePortfolioLoans = useMemo(
-    () => calculatedLoans.filter(l => l.status !== 'Settled'),
+    () => calculatedLoans.filter(l => l.status !== 'Settled' && l.status !== 'Cancelled'),
     [calculatedLoans]
   );
   const settledHistoryLoans = useMemo(
     () => calculatedLoans.filter(l => l.status === 'Settled'),
+    [calculatedLoans]
+  );
+  const cancelledLoans = useMemo(
+    () => calculatedLoans.filter(l => l.status === 'Cancelled'),
+    [calculatedLoans]
+  );
+  const nonCancelledLoans = useMemo(
+    () => calculatedLoans.filter(l => l.status !== 'Cancelled'),
     [calculatedLoans]
   );
 
@@ -180,8 +221,10 @@ export default function LoanPortfolioTab({
     const baseList =
       filterStatus === 'Settled'
         ? settledHistoryLoans
+        : filterStatus === 'Cancelled'
+        ? cancelledLoans
         : filterStatus === 'All'
-        ? calculatedLoans
+        ? nonCancelledLoans
         : calculatedLoans.filter(l => l.status === filterStatus);
 
     const filtered = baseList.filter(l => {
@@ -232,6 +275,8 @@ export default function LoanPortfolioTab({
   }, [
     calculatedLoans,
     settledHistoryLoans,
+    cancelledLoans,
+    nonCancelledLoans,
     filterMember,
     filterLoanId,
     filterStatus,
@@ -242,27 +287,28 @@ export default function LoanPortfolioTab({
     sortOrder
   ]);
 
-  // Portfolio Aggregate Metrics (Settled loans strictly excluded from active outstanding totals per Section 2.8)
+  // Portfolio Aggregate Metrics (Settled & Cancelled loans strictly excluded from active exposure)
   const portfolioStats = useMemo(() => {
-    const totalDisbursedAll = calculatedLoans.reduce((s, l) => s + l.originalPrincipal, 0);
+    const totalDisbursedAll = nonCancelledLoans.reduce((s, l) => s + l.originalPrincipal, 0);
     const activePrincipal = activePortfolioLoans.reduce((s, l) => s + l.remainingPrincipal, 0);
     const activeUnpaidInterest = activePortfolioLoans.reduce((s, l) => s + l.unpaidInterest, 0);
     const activeOutstandingTotal = activePortfolioLoans.reduce(
       (s, l) => s + l.totalOutstandingBalance,
       0
     );
-    const totalInterestAccruedAll = calculatedLoans.reduce(
+    const totalInterestAccruedAll = nonCancelledLoans.reduce(
       (s, l) => s + l.totalInterestAccrued,
       0
     );
-    const totalRepaidAll = calculatedLoans.reduce((s, l) => s + l.totalAmountPaid, 0);
+    const totalRepaidAll = nonCancelledLoans.reduce((s, l) => s + l.totalAmountPaid, 0);
     const settledPrincipalTotal = settledHistoryLoans.reduce((s, l) => s + l.principalRepaid, 0);
     const settledInterestTotal = settledHistoryLoans.reduce((s, l) => s + l.interestPaid, 0);
 
     return {
-      totalLoansCount: calculatedLoans.length,
+      totalLoansCount: nonCancelledLoans.length,
       activeCount: activePortfolioLoans.length,
       settledCount: settledHistoryLoans.length,
+      cancelledCount: cancelledLoans.length,
       partiallyPaidCount: activePortfolioLoans.filter(l => l.status === 'Partially Paid').length,
       overdueCount: activePortfolioLoans.filter(l => l.status === 'Overdue').length,
       totalDisbursedAll,
@@ -274,7 +320,7 @@ export default function LoanPortfolioTab({
       settledPrincipalTotal,
       settledInterestTotal
     };
-  }, [calculatedLoans, activePortfolioLoans, settledHistoryLoans]);
+  }, [nonCancelledLoans, activePortfolioLoans, settledHistoryLoans, cancelledLoans]);
 
   // Flatten all repayments across all loans for the Repayments Register
   const allRepaymentsList = useMemo(() => {
@@ -340,6 +386,7 @@ export default function LoanPortfolioTab({
   // Handlers
   const handleOpenDisburseModal = (loanToEdit?: CalculatedLoanProfile) => {
     setLoanFormError(null);
+    setOpenMobileMenuLoanId(null);
     if (loanToEdit) {
       setEditingLoanId(loanToEdit.id);
       setLoanForm({
@@ -355,7 +402,9 @@ export default function LoanPortfolioTab({
         allocationPolicy: loanToEdit.allocationPolicy || 'Interest First',
         purpose: loanToEdit.purpose || 'Personal / Business Development',
         approvalRef: loanToEdit.approvalRef || `APR-${loanToEdit.id}`,
-        remarks: loanToEdit.remarks || ''
+        status: loanToEdit.status || 'Active',
+        remarks: loanToEdit.remarks || '',
+        editReason: ''
       });
     } else {
       const autoId = nextAutoLoanId;
@@ -373,7 +422,9 @@ export default function LoanPortfolioTab({
         allocationPolicy: defaultAllocationPolicy,
         purpose: 'Personal / Business Development',
         approvalRef: `APR-${autoId}-${new Date().getFullYear()}`,
-        remarks: ''
+        status: 'Active',
+        remarks: '',
+        editReason: ''
       });
     }
     setIsDisburseModalOpen(true);
@@ -431,7 +482,10 @@ export default function LoanPortfolioTab({
           allocationPolicy: loanForm.allocationPolicy,
           purpose: loanForm.purpose,
           approvalRef: loanForm.approvalRef.trim(),
+          status: editingLoanId ? loanForm.status : undefined,
           remarks: loanForm.remarks.trim(),
+          editReason: loanForm.editReason.trim() || undefined,
+          userEmail,
           createdBy: userEmail,
           updatedBy: userEmail
         })
@@ -449,7 +503,7 @@ export default function LoanPortfolioTab({
       setSelectedLoanId(data.id);
       showToast(
         editingLoanId
-          ? `Loan ${data.id} updated successfully in PostgreSQL.`
+          ? `Loan ${data.id} updated and interest recalculated in PostgreSQL.`
           : `Loan ${data.id} disbursed to ${loanForm.memberName} (KES ${principalVal.toLocaleString()}).`
       );
     } catch (err: any) {
@@ -461,6 +515,7 @@ export default function LoanPortfolioTab({
 
   const handleOpenRepaymentModal = (loan?: CalculatedLoanProfile) => {
     setRepaymentError(null);
+    setOpenMobileMenuLoanId(null);
     const targetLoan =
       loan || activePortfolioLoans[0] || calculatedLoans[0] || null;
     setRepaymentForm({
@@ -538,6 +593,7 @@ export default function LoanPortfolioTab({
           mpesaRef: repaymentForm.mpesaRef.trim() || undefined,
           bankRef: repaymentForm.bankRef.trim() || undefined,
           remarks: repaymentForm.remarks.trim() || 'Loan repayment',
+          userEmail,
           recordedBy: userEmail,
           asOfDate: reportingAsOfDate
         })
@@ -564,37 +620,137 @@ export default function LoanPortfolioTab({
     }
   };
 
-  const handleDeleteLoan = async (loanId: string) => {
+  // Open Delete / Cancel Loan Confirmation Modal
+  const handlePromptDeleteLoan = (loan: CalculatedLoanProfile) => {
+    if (!canEdit) return;
+    setOpenMobileMenuLoanId(null);
+    setDeleteLoanTarget(loan);
+    setDeleteLoanReason('');
+    setDeleteLoanError(null);
+  };
+
+  // Execute Confirmed Loan Delete / Safe Cancellation
+  const handleConfirmDeleteLoan = async () => {
+    if (!deleteLoanTarget) return;
+    setIsDeletingLoan(true);
+    setDeleteLoanError(null);
     try {
-      const res = await fetch(`/api/loans?id=${encodeURIComponent(loanId)}&deletedBy=${encodeURIComponent(userEmail)}`, {
-        method: 'DELETE'
-      });
+      const hasRepayments =
+        (deleteLoanTarget.repayments && deleteLoanTarget.repayments.length > 0) ||
+        deleteLoanTarget.totalAmountPaid > 0;
+      const modeParam = hasRepayments ? 'cancel' : 'delete';
+      const url = `/api/loans?id=${encodeURIComponent(deleteLoanTarget.id)}&mode=${modeParam}&deletedBy=${encodeURIComponent(userEmail)}&reason=${encodeURIComponent(deleteLoanReason.trim() || (hasRepayments ? 'Safe loan cancellation preserving repayment audit history' : 'Authorized loan deletion'))}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      const data = await res.json();
       if (!res.ok) {
-        showToast('Failed to delete loan record.');
+        setDeleteLoanError(data.error || 'Failed to delete or cancel loan.');
+        setIsDeletingLoan(false);
         return;
       }
       await onRefreshLoans(reportingAsOfDate);
-      showToast(`Loan ${loanId} deleted from database.`);
-    } catch (e) {
-      showToast('Error deleting loan.');
+      setDeleteLoanTarget(null);
+      showToast(
+        data.mode === 'cancelled'
+          ? `Loan ${deleteLoanTarget.id} safely cancelled in PostgreSQL (${data.preservedRepaymentsCount || deleteLoanTarget.repayments.length} repayment record(s) preserved in audit history).`
+          : `Loan ${deleteLoanTarget.id} deleted from PostgreSQL and logged.`
+      );
+    } catch (e: any) {
+      setDeleteLoanError(e?.message || 'Network error while deleting/cancelling loan.');
+    } finally {
+      setIsDeletingLoan(false);
     }
   };
 
-  const handleDeleteRepayment = async (repaymentId: number | string) => {
-    if (!repaymentId || Number(repaymentId) <= 0) return;
+  // Open Edit Repayment Modal
+  const handleOpenEditRepayment = (rep: any, loanId?: string, memberName?: string) => {
+    if (!canEdit) return;
+    setEditingRepaymentTarget({
+      ...rep,
+      loanId: rep.loanId || loanId || activeSelectedLoan?.id,
+      memberName: rep.memberName || memberName || activeSelectedLoan?.memberName
+    });
+    setEditRepaymentForm({
+      paymentDate: rep.paymentDate || rep.paymentDateStr || String(rep.paymentDate || '').slice(0, 10) || getEATISODate(),
+      amount: String(rep.amount ?? 0),
+      paymentMethod: rep.paymentMethod || 'M-Pesa',
+      mpesaRef: rep.mpesaRef && rep.mpesaRef !== '-' ? rep.mpesaRef : '',
+      bankRef: rep.bankRef && rep.bankRef !== '-' ? rep.bankRef : '',
+      remarks: rep.remarks || 'Loan repayment',
+      editReason: ''
+    });
+  };
+
+  // Save Edited Repayment
+  const handleSaveEditedRepayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRepaymentTarget) return;
+    setIsSavingRepaymentEdit(true);
+    try {
+      const res = await fetch('/api/loans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'edit_repayment',
+          repaymentId: editingRepaymentTarget.id,
+          amount: Number(editRepaymentForm.amount),
+          paymentDate: editRepaymentForm.paymentDate,
+          paymentMethod: editRepaymentForm.paymentMethod,
+          mpesaRef: editRepaymentForm.mpesaRef.trim() || null,
+          bankRef: editRepaymentForm.bankRef.trim() || null,
+          remarks: editRepaymentForm.remarks.trim(),
+          editReason: editRepaymentForm.editReason.trim() || 'Repayment correction',
+          userEmail,
+          updatedBy: userEmail
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update repayment.');
+        setIsSavingRepaymentEdit(false);
+        return;
+      }
+      await onRefreshLoans(reportingAsOfDate);
+      setEditingRepaymentTarget(null);
+      showToast(`Repayment on Loan ${editingRepaymentTarget.loanId} updated and balance recalculated.`);
+    } catch (e: any) {
+      showToast(e?.message || 'Error updating repayment.');
+    } finally {
+      setIsSavingRepaymentEdit(false);
+    }
+  };
+
+  // Prompt Reverse Individual Repayment
+  const handlePromptReverseRepayment = (rep: any, loanId?: string, memberName?: string) => {
+    if (!canEdit || !rep?.id || Number(rep.id) <= 0) return;
+    setReverseRepaymentTarget({
+      ...rep,
+      loanId: rep.loanId || loanId || activeSelectedLoan?.id,
+      memberName: rep.memberName || memberName || activeSelectedLoan?.memberName
+    });
+    setReverseRepaymentReason('');
+  };
+
+  // Execute Confirmed Repayment Reversal
+  const handleConfirmReverseRepayment = async () => {
+    if (!reverseRepaymentTarget) return;
+    setIsReversingRepayment(true);
     try {
       const res = await fetch(
-        `/api/loans?repaymentId=${encodeURIComponent(String(repaymentId))}&deletedBy=${encodeURIComponent(userEmail)}`,
+        `/api/loans?repaymentId=${encodeURIComponent(String(reverseRepaymentTarget.id))}&deletedBy=${encodeURIComponent(userEmail)}&reason=${encodeURIComponent(reverseRepaymentReason.trim() || 'Repayment reversal')}`,
         { method: 'DELETE' }
       );
       if (!res.ok) {
         showToast('Failed to reverse repayment.');
+        setIsReversingRepayment(false);
         return;
       }
       await onRefreshLoans(reportingAsOfDate);
+      setReverseRepaymentTarget(null);
       showToast('Repayment transaction reversed and loan schedule updated.');
     } catch (e) {
       showToast('Error reversing repayment.');
+    } finally {
+      setIsReversingRepayment(false);
     }
   };
 
@@ -655,6 +811,14 @@ export default function LoanPortfolioTab({
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
           Settled
+        </span>
+      );
+    }
+    if (status === 'Cancelled') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-700/50 text-slate-300 border border-slate-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          Cancelled
         </span>
       );
     }
@@ -876,11 +1040,12 @@ export default function LoanPortfolioTab({
                   onChange={e => setFilterStatus(e.target.value)}
                   className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
                 >
-                  <option value="All">All Statuses</option>
+                  <option value="All">All Active & Settled</option>
                   <option value="Active">Active</option>
                   <option value="Partially Paid">Partially Paid</option>
                   <option value="Overdue">Overdue</option>
                   <option value="Settled">Settled</option>
+                  <option value="Cancelled">Cancelled (Archived)</option>
                 </select>
               </div>
 
@@ -1006,7 +1171,9 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
                     <th className="py-3.5 px-4 text-right">Outstanding Balance (KES)</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center">Action</th>
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 z-10">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-xs">
@@ -1081,8 +1248,9 @@ export default function LoanPortfolioTab({
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           {renderStatusBadge(loan.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1.5">
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] group-hover:bg-[#162033] border-l border-slate-800/80 z-10">
+                          {/* Desktop Actions */}
+                          <div className="hidden sm:flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {
                                 setSelectedLoanId(loan.id);
@@ -1093,7 +1261,7 @@ export default function LoanPortfolioTab({
                             >
                               View
                             </button>
-                            {canEdit && loan.status !== 'Settled' && (
+                            {canEdit && loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
                               <button
                                 onClick={() => handleOpenRepaymentModal(loan)}
                                 className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold transition-colors"
@@ -1105,20 +1273,84 @@ export default function LoanPortfolioTab({
                             {canEdit && (
                               <button
                                 onClick={() => handleOpenDisburseModal(loan)}
-                                className="p-1.5 text-slate-400 hover:text-blue-400 rounded-lg"
-                                title="Edit Loan"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold transition-colors"
+                                title="Edit Loan Details"
                               >
-                                <Edit2 className="w-3.5 h-3.5" />
+                                <Edit2 className="w-3 h-3" />
+                                <span>Edit</span>
                               </button>
                             )}
-                            {canEdit && (
+                            {canEdit && loan.status !== 'Cancelled' && (
                               <button
-                                onClick={() => handleDeleteLoan(loan.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg"
-                                title="Delete Loan"
+                                onClick={() => handlePromptDeleteLoan(loan)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold transition-colors"
+                                title="Delete or Safely Cancel Loan"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
                               </button>
+                            )}
+                          </div>
+
+                          {/* Mobile Three-Dot Actions Menu */}
+                          <div className="sm:hidden relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenMobileMenuLoanId(prev =>
+                                  prev === loan.id ? null : loan.id
+                                )
+                              }
+                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                              aria-label="Loan Actions"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {openMobileMenuLoanId === loan.id && (
+                              <div className="origin-top-right absolute right-0 mt-1 w-40 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-30">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMobileMenuLoanId(null);
+                                    setSelectedLoanId(loan.id);
+                                    setSubView('loan-profile');
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-slate-800 flex items-center gap-2"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View Schedule</span>
+                                </button>
+                                {canEdit && loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenRepaymentModal(loan)}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-amber-300 hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <CreditCard className="w-3.5 h-3.5" />
+                                    <span>Record Payment</span>
+                                  </button>
+                                )}
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDisburseModal(loan)}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-blue-300 hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                    <span>Edit Loan</span>
+                                  </button>
+                                )}
+                                {canEdit && loan.status !== 'Cancelled' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePromptDeleteLoan(loan)}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-rose-300 hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Delete / Cancel</span>
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         </td>
@@ -1162,14 +1394,32 @@ export default function LoanPortfolioTab({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {canEdit && activeSelectedLoan.status !== 'Settled' && (
+            <div className="flex flex-wrap items-center gap-2">
+              {canEdit && activeSelectedLoan.status !== 'Settled' && activeSelectedLoan.status !== 'Cancelled' && (
                 <button
                   onClick={() => handleOpenRepaymentModal(activeSelectedLoan)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   <span>Record Repayment</span>
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={() => handleOpenDisburseModal(activeSelectedLoan)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Loan</span>
+                </button>
+              )}
+              {canEdit && activeSelectedLoan.status !== 'Cancelled' && (
+                <button
+                  onClick={() => handlePromptDeleteLoan(activeSelectedLoan)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete / Cancel Loan</span>
                 </button>
               )}
               <button
@@ -1454,7 +1704,11 @@ export default function LoanPortfolioTab({
                     <th className="py-3 px-4 text-right">Balance After</th>
                     <th className="py-3 px-4">Method & Reference</th>
                     <th className="py-3 px-4">Remarks</th>
-                    {canEdit && <th className="py-3 px-4 text-center">Action</th>}
+                    {canEdit && (
+                      <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -1490,14 +1744,36 @@ export default function LoanPortfolioTab({
                         </td>
                         <td className="py-3 px-4 text-slate-400">{rep.remarks || '-'}</td>
                         {canEdit && (
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
                             {Number(rep.id) > 0 && (
-                              <button
-                                onClick={() => handleDeleteRepayment(rep.id!)}
-                                className="text-rose-400 hover:text-rose-300 text-[11px] font-bold"
-                              >
-                                Reverse
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() =>
+                                    handleOpenEditRepayment(
+                                      rep,
+                                      activeSelectedLoan.id,
+                                      activeSelectedLoan.memberName
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handlePromptReverseRepayment(
+                                      rep,
+                                      activeSelectedLoan.id,
+                                      activeSelectedLoan.memberName
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Reverse</span>
+                                </button>
+                              </div>
                             )}
                           </td>
                         )}
@@ -1558,9 +1834,13 @@ export default function LoanPortfolioTab({
             const memberLoans = calculatedLoans.filter(
               l => l.memberName.toLowerCase().trim() === selectedMemberName.toLowerCase().trim()
             );
-            const activeMemberLoans = memberLoans.filter(l => l.status !== 'Settled');
+            const activeMemberLoans = memberLoans.filter(
+              l => l.status !== 'Settled' && l.status !== 'Cancelled'
+            );
             const settledMemberLoans = memberLoans.filter(l => l.status === 'Settled');
-            const totalBorrowed = memberLoans.reduce((s, l) => s + l.originalPrincipal, 0);
+            const totalBorrowed = memberLoans
+              .filter(l => l.status !== 'Cancelled')
+              .reduce((s, l) => s + l.originalPrincipal, 0);
             const totalPaid = memberLoans.reduce((s, l) => s + l.totalAmountPaid, 0);
             const activeBalance = activeMemberLoans.reduce(
               (s, l) => s + l.totalOutstandingBalance,
@@ -1625,7 +1905,9 @@ export default function LoanPortfolioTab({
                           <th className="py-3 px-4 text-right">Total Paid</th>
                           <th className="py-3 px-4 text-right">Outstanding Balance</th>
                           <th className="py-3 px-4 text-center">Status</th>
-                          <th className="py-3 px-4 text-center">Action</th>
+                          <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60">
@@ -1656,16 +1938,36 @@ export default function LoanPortfolioTab({
                                 KES {l.totalOutstandingBalance.toLocaleString()}
                               </td>
                               <td className="py-3 px-4 text-center">{renderStatusBadge(l.status)}</td>
-                              <td className="py-3 px-4 text-center">
-                                <button
-                                  onClick={() => {
-                                    setSelectedLoanId(l.id);
-                                    setSubView('loan-profile');
-                                  }}
-                                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg font-bold"
-                                >
-                                  Open Schedule
-                                </button>
+                              <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedLoanId(l.id);
+                                      setSubView('loan-profile');
+                                    }}
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg font-bold"
+                                  >
+                                    Schedule
+                                  </button>
+                                  {canEdit && (
+                                    <button
+                                      onClick={() => handleOpenDisburseModal(l)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg font-bold"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                      <span>Edit</span>
+                                    </button>
+                                  )}
+                                  {canEdit && l.status !== 'Cancelled' && (
+                                    <button
+                                      onClick={() => handlePromptDeleteLoan(l)}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg font-bold"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -1721,12 +2023,17 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4">Method</th>
                     <th className="py-3.5 px-4">M-Pesa / Bank Ref</th>
                     <th className="py-3.5 px-4">Remarks</th>
+                    {canEdit && (
+                      <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                        Actions
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {allRepaymentsList.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-10 text-center text-slate-500">
+                      <td colSpan={11} className="py-10 text-center text-slate-500">
                         No repayment transactions recorded.
                       </td>
                     </tr>
@@ -1761,6 +2068,28 @@ export default function LoanPortfolioTab({
                         <td className="py-3 px-4 text-slate-300">{r.paymentMethod}</td>
                         <td className="py-3 px-4 font-mono text-emerald-400">{r.reference}</td>
                         <td className="py-3 px-4 text-slate-400">{r.remarks}</td>
+                        {canEdit && (
+                          <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                            {Number(r.id) > 0 && (
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => handleOpenEditRepayment(r)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => handlePromptReverseRepayment(r)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Reverse</span>
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -1810,7 +2139,9 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
                     <th className="py-3.5 px-4">Settlement Date</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center">Action</th>
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -1841,16 +2172,36 @@ export default function LoanPortfolioTab({
                         <td className="py-3.5 px-4 text-center">
                           {renderStatusBadge('Settled')}
                         </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedLoanId(loan.id);
-                              setSubView('loan-profile');
-                            }}
-                            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-[11px] font-bold"
-                          >
-                            View Schedule
-                          </button>
+                        <td className="py-3.5 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedLoanId(loan.id);
+                                setSubView('loan-profile');
+                              }}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-[11px] font-bold"
+                            >
+                              View Schedule
+                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={() => handleOpenDisburseModal(loan)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                            )}
+                            {canEdit && (
+                              <button
+                                onClick={() => handlePromptDeleteLoan(loan)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1913,8 +2264,8 @@ export default function LoanPortfolioTab({
                       : reportType === 'settled-loans'
                       ? settledHistoryLoans
                       : reportMemberFilter !== 'All'
-                      ? calculatedLoans.filter(l => l.memberName === reportMemberFilter)
-                      : calculatedLoans;
+                      ? nonCancelledLoans.filter(l => l.memberName === reportMemberFilter)
+                      : nonCancelledLoans;
                   handleExportLoansCSV(targetRows, `dreamloom_${reportType}_${reportingAsOfDate}.csv`);
                 }}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
@@ -2005,8 +2356,8 @@ export default function LoanPortfolioTab({
                       : reportType === 'settled-loans'
                       ? settledHistoryLoans
                       : reportMemberFilter !== 'All'
-                      ? calculatedLoans.filter(l => l.memberName === reportMemberFilter)
-                      : calculatedLoans
+                      ? nonCancelledLoans.filter(l => l.memberName === reportMemberFilter)
+                      : nonCancelledLoans
                     ).map(l => (
                       <tr key={l.id}>
                         <td className="py-2.5 px-4 font-bold text-emerald-400">{l.id}</td>
@@ -2142,7 +2493,9 @@ export default function LoanPortfolioTab({
                   {editingLoanId ? `Edit Loan Facility ${editingLoanId}` : 'Disburse New Member Loan'}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  All fields are validated and saved permanently to PostgreSQL
+                  {editingLoanId
+                    ? 'Modify member, principal, issue date, interest settings, duration, status, or notes — interest & balances recalculate automatically'
+                    : 'All fields are validated and saved permanently to PostgreSQL'}
                 </p>
               </div>
               <button
@@ -2333,11 +2686,30 @@ export default function LoanPortfolioTab({
                     className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2.5 text-white"
                   />
                 </div>
+
+                {editingLoanId && (
+                  <div className="sm:col-span-2">
+                    <label className="block font-bold text-emerald-300 mb-1">
+                      10. Loan Status
+                    </label>
+                    <select
+                      value={loanForm.status}
+                      onChange={e => setLoanForm({ ...loanForm, status: e.target.value })}
+                      className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold"
+                    >
+                      <option value="Active">Active (Recalculate from Schedule)</option>
+                      <option value="Partially Paid">Partially Paid</option>
+                      <option value="Overdue">Overdue</option>
+                      <option value="Settled">Settled (Fully Cleared)</option>
+                      <option value="Cancelled">Cancelled (Archived — Excluded from Active Totals)</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block font-bold text-slate-300 mb-1">
-                  10. Notes or Remarks
+                  {editingLoanId ? '11. Notes or Remarks' : '10. Notes or Remarks'}
                 </label>
                 <textarea
                   rows={2}
@@ -2347,6 +2719,21 @@ export default function LoanPortfolioTab({
                   className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
+
+              {editingLoanId && (
+                <div>
+                  <label className="block font-bold text-amber-300 mb-1">
+                    12. Reason for Correction / Edit (Audit Trail)
+                  </label>
+                  <input
+                    type="text"
+                    value={loanForm.editReason}
+                    onChange={e => setLoanForm({ ...loanForm, editReason: e.target.value })}
+                    placeholder="e.g. Corrected principal / issue date / interest method per member statement"
+                    className="w-full bg-[#070D18] border border-amber-500/40 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+              )}
 
               {/* Live Calculation Preview */}
               {Number(loanForm.principal) > 0 && (
@@ -2437,7 +2824,10 @@ export default function LoanPortfolioTab({
                     onChange={e => {
                       const mName = e.target.value;
                       const firstLoan = calculatedLoans.find(
-                        l => l.memberName === mName && l.status !== 'Settled'
+                        l =>
+                          l.memberName === mName &&
+                          l.status !== 'Settled' &&
+                          l.status !== 'Cancelled'
                       );
                       setRepaymentForm({
                         ...repaymentForm,
@@ -2475,7 +2865,11 @@ export default function LoanPortfolioTab({
                   >
                     <option value="">-- Select Loan --</option>
                     {calculatedLoans
-                      .filter(l => l.status !== 'Settled' || l.id === repaymentForm.loanId)
+                      .filter(
+                        l =>
+                          (l.status !== 'Settled' && l.status !== 'Cancelled') ||
+                          l.id === repaymentForm.loanId
+                      )
                       .map(l => (
                         <option key={l.id} value={l.id}>
                           {l.id} — {l.memberName} (Bal: KES {l.totalOutstandingBalance.toLocaleString()})
@@ -2613,6 +3007,355 @@ export default function LoanPortfolioTab({
           </div>
         </div>
       )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 3: CONFIRM LOAN DELETION / SAFE CANCELLATION                    */}
+      {/* ===================================================================== */}
+      {deleteLoanTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">
+                    {(deleteLoanTarget.repayments && deleteLoanTarget.repayments.length > 0) ||
+                    deleteLoanTarget.totalAmountPaid > 0
+                      ? `Confirm Safe Cancellation of Loan ${deleteLoanTarget.id}`
+                      : `Confirm Deletion of Loan ${deleteLoanTarget.id}`}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Please verify the loan reference, member, and balance before proceeding
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteLoanTarget(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {deleteLoanError && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-300 font-semibold">
+                {deleteLoanError}
+              </div>
+            )}
+
+            <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-4 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Loan Reference:</span>
+                <span className="font-extrabold text-emerald-400">
+                  {deleteLoanTarget.id} ({deleteLoanTarget.approvalRef})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Member Name:</span>
+                <span className="font-bold text-white">{deleteLoanTarget.memberName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Issue Date & Principal:</span>
+                <span className="font-semibold text-slate-200">
+                  {deleteLoanTarget.issueDate} • KES {deleteLoanTarget.originalPrincipal.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Total Repaid to Date:</span>
+                <span className="font-bold text-emerald-400">
+                  KES {deleteLoanTarget.totalAmountPaid.toLocaleString()} (
+                  {deleteLoanTarget.repayments?.length || 0} repayment record(s))
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-slate-800">
+                <span className="text-slate-400">Current Outstanding Amount:</span>
+                <span className="font-extrabold text-amber-400">
+                  KES {deleteLoanTarget.totalOutstandingBalance.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {((deleteLoanTarget.repayments && deleteLoanTarget.repayments.length > 0) ||
+              deleteLoanTarget.totalAmountPaid > 0) ? (
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed">
+                <strong className="text-amber-300 block mb-1">
+                  Audit Safeguard — Repayment History Detected:
+                </strong>
+                Because this loan has recorded repayments (KES{' '}
+                {deleteLoanTarget.totalAmountPaid.toLocaleString()}), it will be{' '}
+                <strong>safely cancelled (`Status = Cancelled`)</strong> rather than erased. All
+                repayment records and audit logs will remain preserved in PostgreSQL, and the loan
+                will be removed from active loan exposure and Dashboard totals.
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+                This loan has <strong className="text-white">KES 0</strong> in repayments. Confirming
+                will permanently remove this un-repaid loan facility from PostgreSQL and record the
+                deletion in the Forensic Audit Log.
+              </div>
+            )}
+
+            <div className="text-xs">
+              <label className="block font-bold text-slate-300 mb-1">
+                Reason for Cancellation / Deletion (Recorded in Audit Log)
+              </label>
+              <input
+                type="text"
+                value={deleteLoanReason}
+                onChange={e => setDeleteLoanReason(e.target.value)}
+                placeholder="e.g. Duplicate disbursement entry / Cancelled by board resolution"
+                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setDeleteLoanTarget(null)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+              >
+                Keep Loan
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteLoan}
+                disabled={isDeletingLoan}
+                className="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-extrabold shadow-lg shadow-rose-500/20 disabled:opacity-50"
+              >
+                {isDeletingLoan
+                  ? 'Processing...'
+                  : (deleteLoanTarget.repayments && deleteLoanTarget.repayments.length > 0) ||
+                    deleteLoanTarget.totalAmountPaid > 0
+                  ? 'Confirm Safe Loan Cancellation'
+                  : 'Confirm Loan Deletion'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 4: EDIT INDIVIDUAL LOAN REPAYMENT                               */}
+      {/* ===================================================================== */}
+      {editingRepaymentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-white">
+                  Edit Repayment on Loan {editingRepaymentTarget.loanId}
+                </h3>
+                <p className="text-xs text-slate-400">{editingRepaymentTarget.memberName}</p>
+              </div>
+              <button
+                onClick={() => setEditingRepaymentTarget(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedRepayment} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Payment Date *</label>
+                  <input
+                    type="date"
+                    value={editRepaymentForm.paymentDate}
+                    onChange={e =>
+                      setEditRepaymentForm({ ...editRepaymentForm, paymentDate: e.target.value })
+                    }
+                    className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Amount (KES) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    value={editRepaymentForm.amount}
+                    onChange={e =>
+                      setEditRepaymentForm({ ...editRepaymentForm, amount: e.target.value })
+                    }
+                    className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-extrabold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Payment Method</label>
+                <select
+                  value={editRepaymentForm.paymentMethod}
+                  onChange={e =>
+                    setEditRepaymentForm({ ...editRepaymentForm, paymentMethod: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="M-Pesa">M-Pesa</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cash">Cash Deposit</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">M-Pesa Ref</label>
+                  <input
+                    type="text"
+                    value={editRepaymentForm.mpesaRef}
+                    onChange={e =>
+                      setEditRepaymentForm({ ...editRepaymentForm, mpesaRef: e.target.value })
+                    }
+                    className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Bank Ref</label>
+                  <input
+                    type="text"
+                    value={editRepaymentForm.bankRef}
+                    onChange={e =>
+                      setEditRepaymentForm({ ...editRepaymentForm, bankRef: e.target.value })
+                    }
+                    className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Remarks</label>
+                <input
+                  type="text"
+                  value={editRepaymentForm.remarks}
+                  onChange={e =>
+                    setEditRepaymentForm({ ...editRepaymentForm, remarks: e.target.value })
+                  }
+                  className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-amber-300 mb-1">
+                  Reason for Correction (Audit Log)
+                </label>
+                <input
+                  type="text"
+                  value={editRepaymentForm.editReason}
+                  onChange={e =>
+                    setEditRepaymentForm({ ...editRepaymentForm, editReason: e.target.value })
+                  }
+                  placeholder="e.g. Updated payment date / reference"
+                  className="w-full bg-[#070D18] border border-amber-500/40 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingRepaymentTarget(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingRepaymentEdit}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold disabled:opacity-50"
+                >
+                  {isSavingRepaymentEdit ? 'Saving...' : 'Save Repayment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 5: CONFIRM REPAYMENT REVERSAL                                   */}
+      {/* ===================================================================== */}
+      {reverseRepaymentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-rose-400" />
+                <h3 className="text-base font-extrabold text-white">
+                  Confirm Repayment Reversal
+                </h3>
+              </div>
+              <button
+                onClick={() => setReverseRepaymentTarget(null)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-3.5 space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Loan Reference:</span>
+                <span className="font-extrabold text-emerald-400">
+                  {reverseRepaymentTarget.loanId}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Member:</span>
+                <span className="font-bold text-white">{reverseRepaymentTarget.memberName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Repayment Amount:</span>
+                <span className="font-extrabold text-amber-400">
+                  KES {Number(reverseRepaymentTarget.amount || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Payment Date:</span>
+                <span className="text-slate-200">
+                  {reverseRepaymentTarget.paymentDate || reverseRepaymentTarget.paymentDateStr}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-xs">
+              <label className="block font-bold text-slate-300 mb-1">
+                Reason for Reversing Repayment
+              </label>
+              <input
+                type="text"
+                value={reverseRepaymentReason}
+                onChange={e => setReverseRepaymentReason(e.target.value)}
+                placeholder="e.g. Duplicate repayment entry reversal"
+                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setReverseRepaymentTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+              >
+                Keep Repayment
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReverseRepayment}
+                disabled={isReversingRepayment}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-extrabold disabled:opacity-50"
+              >
+                {isReversingRepayment ? 'Reversing...' : 'Confirm Reversal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

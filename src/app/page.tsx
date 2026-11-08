@@ -1019,7 +1019,13 @@ export default function Home() {
 
   const changedFieldsList = useMemo(() => {
     if (!activeSelectedLog) return [];
-    if (activeSelectedLog.action !== 'Updated') return [];
+    if (
+      activeSelectedLog.action !== 'Updated' &&
+      activeSelectedLog.action !== 'Cancelled' &&
+      activeSelectedLog.action !== 'Reversed'
+    ) {
+      return [];
+    }
     const cf = activeSelectedLog.changedFields;
     if (cf && typeof cf === 'object' && Object.keys(cf).length > 0) {
       return Object.entries(cf).map(([field, obj]: [string, any]) => ({
@@ -1061,22 +1067,22 @@ export default function Home() {
     return expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   }, [expenses]);
 
-  // Active Loans Principal Remaining (Excludes Settled Loans)
+  // Active Loans Principal Remaining (Excludes Settled and Cancelled Loans)
   const totalActiveLoansPrincipal = useMemo(() => {
     return loans
-      .filter(l => l.status !== 'Settled')
+      .filter(l => l.status !== 'Settled' && l.status !== 'Cancelled')
       .reduce((sum, l) => sum + (Number(l.remainingPrincipal ?? l.principal) || 0), 0);
   }, [loans]);
 
-  // Active Loans Outstanding Balance (Principal + Accrued Interest, Excludes Settled Loans)
+  // Active Loans Outstanding Balance (Principal + Accrued Interest, Excludes Settled and Cancelled Loans)
   const totalActiveLoansAmount = useMemo(() => {
     return loans
-      .filter(l => l.status !== 'Settled')
+      .filter(l => l.status !== 'Settled' && l.status !== 'Cancelled')
       .reduce((sum, l) => sum + (Number(l.balance ?? l.totalOutstandingBalance) || 0), 0);
   }, [loans]);
 
   const activeLoansCount = useMemo(() => {
-    return loans.filter(l => l.status !== 'Settled').length;
+    return loans.filter(l => l.status !== 'Settled' && l.status !== 'Cancelled').length;
   }, [loans]);
 
   // Total Penalties Paid (Dynamically calculated from all settled & partial payments)
@@ -1107,11 +1113,12 @@ export default function Home() {
       const memberUnsettled = memberContribs.reduce((sum, c) => sum + (Number(c.unsettled) || 0), 0);
       const effectiveTotalContrib = memberPaid > 0 ? memberPaid : m.totalContribution;
 
-      // 2. Active loans balance for this member (strictly excluding Settled loans)
+      // 2. Active loans balance for this member (strictly excluding Settled and Cancelled loans)
       const memberActiveLoans = loans
         .filter(
           l =>
             l.status !== 'Settled' &&
+            l.status !== 'Cancelled' &&
             ((l.memberId && Number(l.memberId) === mDbId) || (l.borrower && isSameMemberName(l.borrower, m.fullName)))
         )
         .reduce((sum, l) => sum + (Number(l.balance ?? l.totalOutstandingBalance) || 0), 0);
@@ -1580,6 +1587,8 @@ export default function Home() {
         try { localStorage.setItem('dreamloom_contributions', JSON.stringify(mapped)); } catch (e) {}
       }
       await refreshPenalties();
+      await refreshMembers();
+      await refreshAuditLogs();
     } catch (e) {
       console.warn('Could not refresh contributions:', e);
     }
@@ -1609,6 +1618,8 @@ export default function Home() {
         setLoans(mapped);
         try { localStorage.setItem('dreamloom_loans', JSON.stringify(mapped)); } catch (e) {}
       }
+      await refreshMembers();
+      await refreshAuditLogs();
     } catch (e) {
       console.warn('Could not refresh loans:', e);
     }

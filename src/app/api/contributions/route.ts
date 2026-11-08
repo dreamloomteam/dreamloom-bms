@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
 import { syncContributionToPenalty } from '@/lib/syncService';
 import { normalizeMonthYear, ALL_MONTHS } from '@/lib/dateUtils';
+import { createAuditLog, isAuthorizedEditor, resolveEditorName } from '@/lib/audit';
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -94,6 +95,24 @@ function formatContributionRecord(c: any) {
   };
 }
 
+function buildContribAuditSnapshot(c: any) {
+  const formatted = formatContributionRecord(c);
+  return {
+    'Record Ref': formatted.customId || `ID-${formatted.id}`,
+    'Member Name': formatted.memberName,
+    'Contribution Month': formatted.month,
+    'Contribution Year': formatted.year,
+    'Expected Amount': `KES ${Number(formatted.expectedAmount || 0).toLocaleString()}`,
+    'Amount Paid': `KES ${Number(formatted.amount || 0).toLocaleString()}`,
+    'Outstanding Balance': `KES ${Number(formatted.unsettled || 0).toLocaleString()}`,
+    'Payment Date': formatted.paymentDate || '-',
+    'Payment Method': formatted.paymentMethod || 'M-Pesa',
+    'Reference': formatted.paymentReference || formatted.mpesaRef || formatted.bankRef || '-',
+    'Status': formatted.status,
+    'Notes': formatted.remarks || '-'
+  };
+}
+
 export async function GET(request: Request) {
   try {
     await ensureDatabaseSchema();
@@ -150,6 +169,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action } = body;
 
+    const authUser =
+      body.userEmail ||
+      body.updatedBy ||
+      body.createdBy ||
+      body.recordedBy ||
+      request.headers.get('x-user-email');
+
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can record or modify contributions.' },
+        { status: 403 }
+      );
+    }
+
     // -------------------------------------------------------------------------
     // MODE 1: Batch Save Monthly Contributions for Selected Month & Year
     // -------------------------------------------------------------------------
@@ -195,7 +228,6 @@ export async function POST(request: Request) {
         const creditBalance = round2(Math.max(0, paidAmt - expectedAmt));
         const status = computeContribStatus(paidAmt, expectedAmt, 0);
 
-        // Find existing obligation for (memberId, month, year)
         const allMemberContribs = await prisma.contribution.findMany({
           where: { memberId: memberObj.id, payout: 0 }
         });
@@ -257,17 +289,16 @@ export async function POST(request: Request) {
         savedRecords.push(formatContributionRecord(saved));
       }
 
-      await prisma.editLog.create({
-        data: {
-          model: 'Contribution',
-          action: 'batch_month_save',
-          changes: JSON.stringify({
-            month: norm.monthName,
-            year: norm.year,
-            count: savedRecords.length,
-            updatedBy: updatedBy || 'System'
-          })
-        }
+      await createAuditLog({
+        model: 'Contribution',
+        action: 'Updated',
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        member: `${norm.monthName} ${norm.year} Register (${savedRecords.length} members)`,
+        recordRef: `BATCH-${norm.monthYearShort}`,
+        oldValues: { 'Cycle': `${norm.monthName} ${norm.year}` },
+        newValues: { 'Cycle': `${norm.monthName} ${norm.year}`, 'Saved Entries': savedRecords.length },
+        remarks: `Batch saved ${savedRecords.length} monthly contributions for ${norm.monthName} ${norm.year}`
       });
 
       return NextResponse.json({
@@ -406,9 +437,9 @@ export async function POST(request: Request) {
         );
       }
 
+      const oldSnapshot = buildContribAuditSnapshot(targetContrib);
       const norm = normalizeMonthYear(targetContrib.month, targetContrib.year, targetContrib.monthYear);
 
-      // If targetContrib had an existing amount > 0 but 0 payment rows, seed initial payment row first so we don't lose prior amount
       if (targetContrib.payments.length === 0 && Number(targetContrib.amount) > 0) {
         await prisma.contributionPayment.create({
           data: {
@@ -426,7 +457,6 @@ export async function POST(request: Request) {
         });
       }
 
-      // Create the new instalment payment record
       await prisma.contributionPayment.create({
         data: {
           contributionId: targetContrib.id,
@@ -438,7 +468,7 @@ export async function POST(request: Request) {
           bankRef: bankRef || null,
           reference: refToCheck || `INST-${Date.now().toString().slice(-6)}`,
           remarks: remarks || 'Instalment payment',
-          recordedBy: createdBy || 'System'
+          recordedBy: createdBy || resolveEditorName(authUser)
         }
       });
 
@@ -484,21 +514,18 @@ export async function POST(request: Request) {
 
       await syncContributionToPenalty(updated.id);
 
-      await prisma.editLog.create({
-        data: {
-          model: 'Contribution',
-          action: 'instalment_payment',
-          recordId: updated.id,
-          changes: JSON.stringify({
-            contributionId: updated.id,
-            instalmentAmount: payAmt,
-            totalPaid: newTotalPaid,
-            unsettled: newUnsettled,
-            status: newStatus,
-            paymentDate,
-            reference: refToCheck
-          })
-        }
+      const newSnapshot = buildContribAuditSnapshot(updated);
+      await createAuditLog({
+        model: 'Contribution',
+        action: 'Updated',
+        recordId: updated.id,
+        recordRef: updated.customId || `CNT-${updated.id}`,
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        member: updated.member?.fullName || memberName || 'Member',
+        oldValues: oldSnapshot,
+        newValues: { ...newSnapshot, 'Instalment Added': `KES ${payAmt.toLocaleString()}` },
+        remarks: `Recorded KES ${payAmt.toLocaleString()} instalment payment for ${updated.member?.fullName || memberName} (${norm.monthName} ${norm.year})`
       });
 
       const formattedUpdated = formatContributionRecord(updated);
@@ -553,7 +580,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate member
     const members = await prisma.member.findMany();
     let memberObj = null;
     if (memberId !== undefined && memberId !== null && memberId !== '') {
@@ -576,7 +602,6 @@ export async function POST(request: Request) {
     }
 
     if (!isPayout && !memberObj) {
-      // Allow raw persistence test script if it passes a customId starting with CNT-TEST- and no member
       const isLegacyPersistenceScript =
         customId && String(customId).startsWith('CNT-TEST-') && !memberId && !memberName;
       if (!isLegacyPersistenceScript) {
@@ -587,7 +612,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate month & year
     if (month && month !== 'All') {
       const cleanM = String(month).trim();
       const validMonth =
@@ -628,7 +652,6 @@ export async function POST(request: Request) {
 
     const norm = normalizeMonthYear(month, year, monthYear);
 
-    // Check duplicate payment reference if provided
     const refStr = (paymentReference || mpesaRef || bankRef || '').trim();
     if (refStr && refStr !== '-') {
       const existingRef = await prisma.contributionPayment.findFirst({
@@ -644,7 +667,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Compute unsettled and status
     const computedUnsettled = isPayout
       ? 0
       : unsettled !== undefined && unsettled !== null && expectedAmount === undefined
@@ -672,7 +694,6 @@ export async function POST(request: Request) {
       notes ||
       (memberObj ? `Monthly Contribution (Member: ${memberObj.fullName})` : 'System Entry');
 
-    // Check if an obligation for (memberId, norm.monthName, norm.year) already exists
     let existingObligation = null;
     if (memberObj && !isPayout) {
       const memberContribs = await prisma.contribution.findMany({
@@ -695,9 +716,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const oldSnapshot = existingObligation ? buildContribAuditSnapshot(existingObligation) : {};
+
     let savedRecord;
     if (existingObligation) {
-      // If mode === 'append_instalment', add to existing amount; otherwise set the obligation to the submitted values
       const isAppend = mode === 'append_instalment';
       const updatedPaid = isAppend ? round2(Number(existingObligation.amount) + paidAmt) : paidAmt;
       const updatedUnsettled = round2(Math.max(0, finalExpected - updatedPaid));
@@ -725,7 +747,6 @@ export async function POST(request: Request) {
         include: { member: true, payments: true }
       });
 
-      // Synchronise ContributionPayment records
       if (!isAppend) {
         await prisma.contributionPayment.deleteMany({
           where: { contributionId: savedRecord.id }
@@ -743,7 +764,7 @@ export async function POST(request: Request) {
             bankRef: bankRef || null,
             reference: refStr || `REF-${savedRecord.customId || savedRecord.id}`,
             remarks: finalRemarks,
-            recordedBy: createdBy || 'System'
+            recordedBy: createdBy || resolveEditorName(authUser)
           }
         });
       }
@@ -787,13 +808,12 @@ export async function POST(request: Request) {
             bankRef: bankRef || null,
             reference: refStr || `REF-${savedRecord.customId || savedRecord.id}`,
             remarks: finalRemarks,
-            recordedBy: createdBy || 'System'
+            recordedBy: createdBy || resolveEditorName(authUser)
           }
         });
       }
     }
 
-    // Re-fetch with updated payments
     const refreshed = await prisma.contribution.findUnique({
       where: { id: savedRecord.id },
       include: {
@@ -802,24 +822,17 @@ export async function POST(request: Request) {
       }
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Contribution',
-        action: existingObligation ? 'update' : 'create',
-        recordId: savedRecord.id,
-        changes: JSON.stringify({
-          customId: savedRecord.customId,
-          memberId: savedRecord.memberId,
-          memberName: memberObj?.fullName || memberName,
-          month: norm.monthName,
-          year: norm.year,
-          expectedAmount: finalExpected,
-          amount: savedRecord.amount,
-          unsettled: savedRecord.unsettled,
-          paymentDate: savedRecord.paymentDate,
-          createdBy: createdBy || 'System'
-        })
-      }
+    await createAuditLog({
+      model: 'Contribution',
+      action: existingObligation ? 'Updated' : 'Added',
+      recordId: savedRecord.id,
+      recordRef: savedRecord.customId || `CNT-${savedRecord.id}`,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: memberObj?.fullName || memberName || 'Member',
+      oldValues: oldSnapshot,
+      newValues: buildContribAuditSnapshot(refreshed || savedRecord),
+      remarks: `${existingObligation ? 'Updated' : 'Recorded'} contribution for ${memberObj?.fullName || memberName || 'Member'} (${norm.monthName} ${norm.year})`
     });
 
     await syncContributionToPenalty(savedRecord.id);
@@ -839,6 +852,120 @@ export async function PUT(request: Request) {
   try {
     await ensureDatabaseSchema();
     const body = await request.json();
+
+    const authUser =
+      body.userEmail ||
+      body.updatedBy ||
+      body.createdBy ||
+      body.recordedBy ||
+      request.headers.get('x-user-email');
+
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can edit contributions.' },
+        { status: 403 }
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // SUB-ACTION: Edit an Individual Instalment Payment Record
+    // -------------------------------------------------------------------------
+    if (body.action === 'edit_payment' || (body.paymentId && !body.id && !body.customId)) {
+      const paymentId = Number(body.paymentId);
+      const existingPay = await prisma.contributionPayment.findUnique({
+        where: { id: paymentId }
+      });
+      if (!existingPay) {
+        return NextResponse.json({ error: 'Instalment payment record not found.' }, { status: 404 });
+      }
+
+      const newPayAmt = body.amount !== undefined ? round2(Number(body.amount)) : Number(existingPay.amount);
+      if (isNaN(newPayAmt) || newPayAmt <= 0) {
+        return NextResponse.json({ error: 'Payment amount must be greater than 0.' }, { status: 400 });
+      }
+
+      const oldPayValues = {
+        'Payment ID': `PAY-${existingPay.id}`,
+        'Amount': `KES ${Number(existingPay.amount).toLocaleString()}`,
+        'Payment Date': existingPay.paymentDate || '-',
+        'Payment Method': existingPay.paymentMethod || 'M-Pesa',
+        'Reference': existingPay.reference || existingPay.mpesaRef || existingPay.bankRef || '-',
+        'Remarks': existingPay.remarks || '-'
+      };
+
+      const refVal = (body.paymentReference || body.mpesaRef || body.bankRef || existingPay.reference || '').trim();
+      const updatedPay = await prisma.contributionPayment.update({
+        where: { id: existingPay.id },
+        data: {
+          amount: newPayAmt,
+          paymentDate: body.paymentDate !== undefined ? String(body.paymentDate).trim() : existingPay.paymentDate,
+          paymentMethod: body.paymentMethod || existingPay.paymentMethod || 'M-Pesa',
+          mpesaRef: body.mpesaRef !== undefined ? body.mpesaRef : existingPay.mpesaRef,
+          bankRef: body.bankRef !== undefined ? body.bankRef : existingPay.bankRef,
+          reference: refVal || existingPay.reference,
+          remarks: body.remarks ?? body.notes ?? existingPay.remarks
+        }
+      });
+
+      const parent = await prisma.contribution.findUnique({
+        where: { id: existingPay.contributionId },
+        include: { payments: { orderBy: { id: 'asc' } }, member: true }
+      });
+
+      if (parent) {
+        const newTotalPaid = round2(parent.payments.reduce((s, p) => s + Number(p.amount), 0));
+        const expAmt = Number(parent.expectedAmount) || 6000;
+        const newUnsettled = round2(Math.max(0, expAmt - newTotalPaid));
+        const newCredit = round2(Math.max(0, newTotalPaid - expAmt));
+        const newStatus = computeContribStatus(newTotalPaid, expAmt, Number(parent.payout) || 0);
+        const lastPay = parent.payments.length > 0 ? parent.payments[parent.payments.length - 1] : null;
+
+        const updatedParent = await prisma.contribution.update({
+          where: { id: parent.id },
+          data: {
+            amount: newTotalPaid,
+            unsettled: newUnsettled,
+            creditBalance: newCredit,
+            status: newStatus,
+            paymentDate: lastPay ? lastPay.paymentDate : parent.paymentDate,
+            paymentMethod: lastPay ? lastPay.paymentMethod : parent.paymentMethod,
+            mpesaRef: lastPay ? lastPay.mpesaRef : parent.mpesaRef,
+            bankRef: lastPay ? lastPay.bankRef : parent.bankRef,
+            paymentReference: lastPay ? lastPay.reference : parent.paymentReference
+          },
+          include: { member: true, payments: { orderBy: { id: 'asc' } } }
+        });
+
+        await syncContributionToPenalty(updatedParent.id);
+
+        await createAuditLog({
+          model: 'ContributionPayment',
+          action: 'Updated',
+          recordId: updatedPay.id,
+          recordRef: updatedParent.customId || `PAY-${updatedPay.id}`,
+          userEmail: authUser,
+          userName: resolveEditorName(authUser),
+          member: updatedParent.member?.fullName || 'Member',
+          oldValues: oldPayValues,
+          newValues: {
+            'Payment ID': `PAY-${updatedPay.id}`,
+            'Amount': `KES ${Number(updatedPay.amount).toLocaleString()}`,
+            'Payment Date': updatedPay.paymentDate || '-',
+            'Payment Method': updatedPay.paymentMethod || 'M-Pesa',
+            'Reference': updatedPay.reference || updatedPay.mpesaRef || updatedPay.bankRef || '-',
+            'Remarks': updatedPay.remarks || '-'
+          },
+          reason: body.editReason || body.reason || null,
+          remarks: body.editReason || body.reason || `Edited instalment payment PAY-${updatedPay.id}`
+        });
+
+        const formattedParent = formatContributionRecord(updatedParent);
+        return NextResponse.json({ ...formattedParent, success: true, data: formattedParent });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     const {
       id,
       customId,
@@ -858,6 +985,8 @@ export async function PUT(request: Request) {
       paymentReference,
       notes,
       remarks,
+      editReason,
+      reason,
       updatedBy
     } = body;
 
@@ -878,21 +1007,21 @@ export async function PUT(request: Request) {
     if (id && !isNaN(Number(id))) {
       existing = await prisma.contribution.findUnique({
         where: { id: Number(id) },
-        include: { member: true, payments: true }
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
       });
     }
     if (!existing && customId) {
       existing = await prisma.contribution.findUnique({
         where: { customId: String(customId) },
-        include: { member: true, payments: true }
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
       });
     }
 
     const members = await prisma.member.findMany();
     let memberObj = existing?.member || null;
-    if (memberId) {
+    if (memberId !== undefined && memberId !== null && memberId !== '') {
       memberObj = members.find(m => m.id === Number(memberId)) || memberObj;
-    } else if (!memberObj && memberName) {
+    } else if (memberName) {
       const cleanName = String(memberName).toLowerCase().trim();
       memberObj =
         members.find(
@@ -900,7 +1029,7 @@ export async function PUT(request: Request) {
             m.fullName.toLowerCase().trim() === cleanName ||
             m.fullName.toLowerCase().includes(cleanName) ||
             cleanName.includes(m.fullName.toLowerCase().trim())
-        ) || null;
+        ) || memberObj;
     }
 
     const norm = normalizeMonthYear(
@@ -909,11 +1038,11 @@ export async function PUT(request: Request) {
       monthYear || month || existing?.monthYear
     );
 
-    // Fallback lookup by (memberId, month, year) if customId wasn't found!
+    // Fallback lookup by (memberId, month, year) if customId/id wasn't found
     if (!existing && memberObj) {
       const memberContribs = await prisma.contribution.findMany({
         where: { memberId: memberObj.id, payout: 0 },
-        include: { member: true, payments: true }
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
       });
       existing =
         memberContribs.find(c => {
@@ -921,6 +1050,8 @@ export async function PUT(request: Request) {
           return cNorm.monthName === norm.monthName && cNorm.year === norm.year;
         }) || null;
     }
+
+    const oldSnapshot = existing ? buildContribAuditSnapshot(existing) : {};
 
     const isPayout = (Number(payout ?? existing?.payout) || 0) > 0;
     const paidAmt = round2(Number(amount ?? existing?.amount) || 0);
@@ -943,10 +1074,18 @@ export async function PUT(request: Request) {
         : round2(Math.max(0, expAmt - paidAmt));
     const finalCredit = isPayout ? 0 : round2(Math.max(0, paidAmt - expAmt));
     const finalStatus = computeContribStatus(paidAmt, expAmt, Number(payout ?? existing?.payout) || 0);
-    const refStr = (paymentReference || mpesaRef || bankRef || existing?.paymentReference || '').trim();
+    const refStr = (
+      paymentReference !== undefined
+        ? paymentReference
+        : mpesaRef !== undefined
+        ? mpesaRef
+        : bankRef !== undefined
+        ? bankRef
+        : existing?.paymentReference || ''
+    ).trim();
     const finalPaymentDate =
-      paymentDate !== undefined
-        ? paymentDate
+      paymentDate !== undefined && String(paymentDate).trim() !== ''
+        ? String(paymentDate).trim()
         : existing?.paymentDate || (paidAmt > 0 ? norm.defaultDateStr : null);
     const finalRemarks =
       remarks ??
@@ -956,10 +1095,27 @@ export async function PUT(request: Request) {
 
     let updated;
     if (existing) {
+      const targetMemberId = memberObj ? memberObj.id : existing.memberId;
+
+      // Prevent duplicate record collision if user changed member, month, or year to a cycle that already has another row
+      if (targetMemberId && !isPayout) {
+        const conflicting = await prisma.contribution.findFirst({
+          where: {
+            memberId: targetMemberId,
+            month: norm.monthName,
+            year: norm.year,
+            id: { not: existing.id }
+          }
+        });
+        if (conflicting) {
+          await prisma.contribution.delete({ where: { id: conflicting.id } });
+        }
+      }
+
       updated = await prisma.contribution.update({
         where: { id: existing.id },
         data: {
-          memberId: memberObj ? memberObj.id : existing.memberId,
+          memberId: targetMemberId,
           month: norm.monthName,
           year: norm.year,
           monthYear: norm.monthYearShort,
@@ -968,7 +1124,7 @@ export async function PUT(request: Request) {
           unsettled: finalUnsettled,
           creditBalance: finalCredit,
           payout: round2(Number(payout ?? existing.payout) || 0),
-          paymentDate: finalPaymentDate,
+          paymentDate: paidAmt > 0 ? finalPaymentDate : (paymentDate || null),
           paymentMethod: paymentMethod || existing.paymentMethod || 'M-Pesa',
           mpesaRef: mpesaRef !== undefined ? mpesaRef : existing.mpesaRef,
           bankRef: bankRef !== undefined ? bankRef : existing.bankRef,
@@ -976,10 +1132,10 @@ export async function PUT(request: Request) {
           status: finalStatus,
           remarks: finalRemarks
         },
-        include: { member: true, payments: true }
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
       });
 
-      // Keep payment history consistent when direct amount edit occurs
+      // Keep payment history consistent when direct edit occurs
       const currentPaymentSum = round2(
         updated.payments.reduce((s: number, p: any) => s + Number(p.amount), 0)
       );
@@ -995,17 +1151,31 @@ export async function PUT(request: Request) {
               amount: paidAmt,
               paymentDate: finalPaymentDate || norm.defaultDateStr,
               paymentMethod: paymentMethod || updated.paymentMethod || 'M-Pesa',
-              mpesaRef: mpesaRef || updated.mpesaRef || null,
-              bankRef: bankRef || updated.bankRef || null,
+              mpesaRef: mpesaRef !== undefined ? mpesaRef : updated.mpesaRef,
+              bankRef: bankRef !== undefined ? bankRef : updated.bankRef,
               reference: refStr || `REF-${updated.customId || updated.id}`,
               remarks: finalRemarks,
-              recordedBy: updatedBy || 'System'
+              recordedBy: updatedBy || resolveEditorName(authUser)
             }
           });
         }
+      } else if (updated.payments.length === 1 && paidAmt > 0 && !isPayout) {
+        // Amount didn't change, but paymentDate, paymentMethod, reference, or remarks may have been edited
+        const singlePay = updated.payments[0];
+        await prisma.contributionPayment.update({
+          where: { id: singlePay.id },
+          data: {
+            memberId: updated.memberId,
+            paymentDate: finalPaymentDate || singlePay.paymentDate || norm.defaultDateStr,
+            paymentMethod: paymentMethod || updated.paymentMethod || singlePay.paymentMethod || 'M-Pesa',
+            mpesaRef: mpesaRef !== undefined ? mpesaRef : singlePay.mpesaRef,
+            bankRef: bankRef !== undefined ? bankRef : singlePay.bankRef,
+            reference: refStr || singlePay.reference || `REF-${updated.customId || updated.id}`,
+            remarks: finalRemarks
+          }
+        });
       }
     } else if (memberObj) {
-      // Upsert new record if not found instead of failing with 404
       const newCustomId =
         customId ||
         `CNT-${norm.year}${String(norm.monthIdx + 1).padStart(2, '0')}-M${memberObj.id}-${Date.now().toString().slice(-4)}`;
@@ -1044,7 +1214,7 @@ export async function PUT(request: Request) {
             bankRef: bankRef || null,
             reference: refStr || `REF-${updated.customId || updated.id}`,
             remarks: finalRemarks,
-            recordedBy: updatedBy || 'System'
+            recordedBy: updatedBy || resolveEditorName(authUser)
           }
         });
       }
@@ -1060,31 +1230,33 @@ export async function PUT(request: Request) {
       }
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Contribution',
-        action: 'update',
-        recordId: updated.id,
-        changes: JSON.stringify({
-          customId: updated.customId,
-          memberName: memberObj?.fullName || memberName,
-          month: norm.monthName,
-          year: norm.year,
-          expectedAmount: expAmt,
-          amount: paidAmt,
-          unsettled: finalUnsettled,
-          updatedBy: updatedBy || 'System'
-        })
-      }
+    await createAuditLog({
+      model: 'Contribution',
+      action: existing ? 'Updated' : 'Added',
+      recordId: updated.id,
+      recordRef: updated.customId || `CNT-${updated.id}`,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: refreshed?.member?.fullName || memberObj?.fullName || memberName || 'Member',
+      oldValues: oldSnapshot,
+      newValues: buildContribAuditSnapshot(refreshed || updated),
+      reason: editReason || reason || null,
+      remarks:
+        editReason ||
+        reason ||
+        `Edited contribution ${updated.customId || updated.id} for ${refreshed?.member?.fullName || memberObj?.fullName || memberName} (${norm.monthName} ${norm.year})`
     });
 
     await syncContributionToPenalty(updated.id);
 
     const formattedUpdated = formatContributionRecord(refreshed);
     return NextResponse.json({ ...formattedUpdated, success: true, data: formattedUpdated });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to update contribution:', error);
-    return NextResponse.json({ error: 'Failed to update contribution' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update contribution' },
+      { status: 500 }
+    );
   }
 }
 
@@ -1095,9 +1267,23 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     const customId = searchParams.get('customId');
     const paymentId = searchParams.get('paymentId');
-    const deletedBy = searchParams.get('deletedBy');
+    const mode = searchParams.get('mode'); // 'reverse_payments' | 'delete_record'
+    const reason = searchParams.get('reason') || '';
+    const authUser =
+      searchParams.get('userEmail') ||
+      searchParams.get('deletedBy') ||
+      request.headers.get('x-user-email');
 
-    // Delete/reverse a specific instalment payment
+    if (!isAuthorizedEditor(authUser)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized administrators can delete or reverse contributions.' },
+        { status: 403 }
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // MODE 1: Delete / Reverse a Specific Instalment Payment Record
+    // -------------------------------------------------------------------------
     if (paymentId) {
       const payment = await prisma.contributionPayment.findUnique({
         where: { id: Number(paymentId) }
@@ -1105,6 +1291,12 @@ export async function DELETE(request: Request) {
       if (!payment) {
         return NextResponse.json({ error: 'Payment transaction not found' }, { status: 404 });
       }
+
+      const parentBefore = await prisma.contribution.findUnique({
+        where: { id: payment.contributionId },
+        include: { payments: { orderBy: { id: 'asc' } }, member: true }
+      });
+      const oldSnapshot = parentBefore ? buildContribAuditSnapshot(parentBefore) : {};
 
       await prisma.contributionPayment.delete({
         where: { id: payment.id }
@@ -1131,6 +1323,8 @@ export async function DELETE(request: Request) {
             creditBalance: newCredit,
             status: newStatus,
             paymentDate: lastPay ? lastPay.paymentDate : null,
+            mpesaRef: lastPay ? lastPay.mpesaRef : null,
+            bankRef: lastPay ? lastPay.bankRef : null,
             paymentReference: lastPay ? lastPay.reference : null
           },
           include: { member: true, payments: { orderBy: { id: 'asc' } } }
@@ -1138,47 +1332,148 @@ export async function DELETE(request: Request) {
 
         await syncContributionToPenalty(updatedParent.id);
 
+        await createAuditLog({
+          model: 'Contribution',
+          action: 'Reversed',
+          recordId: updatedParent.id,
+          recordRef: updatedParent.customId || `PAY-${payment.id}`,
+          userEmail: authUser,
+          userName: resolveEditorName(authUser),
+          member: updatedParent.member?.fullName || 'Member',
+          oldValues: {
+            ...oldSnapshot,
+            'Reversed Instalment': `KES ${Number(payment.amount).toLocaleString()} (${payment.paymentDate || '-'}, Ref: ${payment.reference || payment.mpesaRef || payment.bankRef || '-'})`
+          },
+          newValues: buildContribAuditSnapshot(updatedParent),
+          reason: reason || null,
+          remarks:
+            reason ||
+            `Reversed instalment payment of KES ${Number(payment.amount).toLocaleString()} for ${updatedParent.member?.fullName || 'Member'} (${updatedParent.month} ${updatedParent.year})`
+        });
+
+        const formattedParent = formatContributionRecord(updatedParent);
         return NextResponse.json({
           success: true,
-          contribution: formatContributionRecord(updatedParent)
+          mode: 'reversed_single_payment',
+          contribution: formattedParent,
+          data: formattedParent
         });
       }
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, mode: 'reversed_single_payment' });
     }
 
+    // Locate target Contribution record
     let existing = null;
     if (customId) {
-      existing = await prisma.contribution.findUnique({ where: { customId } });
+      existing = await prisma.contribution.findUnique({
+        where: { customId },
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
+      });
     }
     if (!existing && id && !isNaN(Number(id))) {
-      existing = await prisma.contribution.findUnique({ where: { id: Number(id) } });
+      existing = await prisma.contribution.findUnique({
+        where: { id: Number(id) },
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
+      });
     }
 
     if (!existing) {
       return NextResponse.json({ error: 'Contribution record not found' }, { status: 404 });
     }
 
+    const oldSnapshot = buildContribAuditSnapshot(existing);
+
+    // -------------------------------------------------------------------------
+    // MODE 2: Reverse Payments Only (Keep Monthly Obligation as Unpaid)
+    // -------------------------------------------------------------------------
+    if (mode === 'reverse_payments') {
+      const expAmt = Number(existing.expectedAmount) || 6000;
+      await prisma.contributionPayment.deleteMany({
+        where: { contributionId: existing.id }
+      });
+
+      const updated = await prisma.contribution.update({
+        where: { id: existing.id },
+        data: {
+          amount: 0,
+          unsettled: expAmt,
+          creditBalance: 0,
+          status: 'Unpaid',
+          paymentDate: null,
+          mpesaRef: null,
+          bankRef: null,
+          paymentReference: null,
+          remarks: reason
+            ? `${existing.remarks || ''} [Payments Reversed: ${reason}]`.trim()
+            : existing.remarks
+        },
+        include: { member: true, payments: { orderBy: { id: 'asc' } } }
+      });
+
+      await syncContributionToPenalty(updated.id);
+
+      await createAuditLog({
+        model: 'Contribution',
+        action: 'Reversed',
+        recordId: updated.id,
+        recordRef: updated.customId || `CNT-${updated.id}`,
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        member: updated.member?.fullName || oldSnapshot['Member Name'],
+        oldValues: oldSnapshot,
+        newValues: buildContribAuditSnapshot(updated),
+        reason: reason || null,
+        remarks:
+          reason ||
+          `Reversed payment(s) for ${updated.member?.fullName || oldSnapshot['Member Name']} (${updated.month} ${updated.year}); monthly obligation retained as Unpaid`
+      });
+
+      const formattedUpdated = formatContributionRecord(updated);
+      return NextResponse.json({
+        success: true,
+        mode: 'reverse_payments',
+        contribution: formattedUpdated,
+        data: formattedUpdated
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // MODE 3: Delete Entire Contribution Record
+    // -------------------------------------------------------------------------
     await prisma.contribution.delete({ where: { id: existing.id } });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Contribution',
-        action: 'delete',
-        recordId: existing.id,
-        changes: JSON.stringify({
-          deletedId: existing.id,
-          customId: existing.customId,
+    // Clean up any auto-generated Unpaid penalty for this member & monthYear if no other contribution exists
+    if (existing.memberId && existing.monthYear) {
+      await prisma.penalty.deleteMany({
+        where: {
+          memberId: existing.memberId,
           monthYear: existing.monthYear,
-          amount: existing.amount,
-          deletedBy: deletedBy || 'System'
-        })
-      }
+          status: { in: ['Unpaid', 'UNPAID'] }
+        }
+      });
+    }
+
+    await createAuditLog({
+      model: 'Contribution',
+      action: 'Deleted',
+      recordId: existing.id,
+      recordRef: existing.customId || `CNT-${existing.id}`,
+      userEmail: authUser,
+      userName: resolveEditorName(authUser),
+      member: existing.member?.fullName || oldSnapshot['Member Name'],
+      oldValues: oldSnapshot,
+      newValues: { Status: 'Deleted from Register' },
+      reason: reason || null,
+      remarks:
+        reason ||
+        `Deleted contribution record ${existing.customId || existing.id} (${oldSnapshot['Member Name']} - ${existing.month} ${existing.year}, Amount: ${oldSnapshot['Amount Paid']})`
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, mode: 'delete_record' });
   } catch (error) {
     console.error('Failed to delete contribution:', error);
     return NextResponse.json({ error: 'Failed to delete contribution' }, { status: 500 });
   }
 }
+
