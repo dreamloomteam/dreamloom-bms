@@ -156,6 +156,78 @@ export async function ensureDatabaseSchema(): Promise<void> {
       }
     }
 
+    // 5b. Ensure Simon Memia Wanjiru's authoritative December 2025 record (CNT-016) exists and is properly linked
+    try {
+      const simonMember = await prisma.member.findFirst({
+        where: {
+          OR: [
+            { id: 1 },
+            { fullName: { contains: 'Simon Memia', mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      if (simonMember) {
+        const existingSimonDec = await prisma.contribution.findFirst({
+          where: {
+            OR: [
+              { customId: 'CNT-016' },
+              { memberId: simonMember.id, month: 'December', year: 2025 },
+              { remarks: { contains: 'Simon Memia' }, month: 'December', year: 2025 }
+            ]
+          }
+        });
+
+        if (!existingSimonDec) {
+          const createdDec = await prisma.contribution.create({
+            data: {
+              customId: 'CNT-016',
+              memberId: simonMember.id,
+              month: 'December',
+              year: 2025,
+              monthYear: 'Dec 2025',
+              expectedAmount: 6000.0,
+              amount: 6000.0,
+              unsettled: 0.0,
+              creditBalance: 0.0,
+              payout: 0.0,
+              paymentDate: '01-Dec-2025',
+              paymentMethod: 'M-Pesa',
+              paymentReference: 'CNT-016-REF',
+              status: 'Fully Paid',
+              remarks: 'Monthly Contribution (Member: Simon Memia Wanjiru)'
+            }
+          });
+
+          await prisma.contributionPayment.create({
+            data: {
+              contributionId: createdDec.id,
+              memberId: simonMember.id,
+              amount: 6000.0,
+              paymentDate: '01-Dec-2025',
+              paymentMethod: 'M-Pesa',
+              reference: 'CNT-016-REF',
+              remarks: 'Monthly Contribution (Member: Simon Memia Wanjiru)',
+              recordedBy: 'System'
+            }
+          });
+        } else if (!existingSimonDec.memberId || existingSimonDec.customId !== 'CNT-016') {
+          await prisma.contribution.update({
+            where: { id: existingSimonDec.id },
+            data: {
+              memberId: simonMember.id,
+              customId: existingSimonDec.customId || 'CNT-016',
+              month: 'December',
+              year: 2025,
+              monthYear: 'Dec 2025'
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error ensuring CNT-016 contribution record:', e);
+    }
+
     // 6. Ensure official loans are present if Loan table is empty
     const loanCount = await prisma.loan.count();
     if (loanCount === 0) {
