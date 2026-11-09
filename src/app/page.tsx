@@ -29,6 +29,7 @@ import {
   getMemberUnsettledForDate,
   isSameMemberName
 } from '@/lib/dateUtils';
+import { AUTHORIZED_USERS } from '@/lib/authConfig';
 
 const DREAMLOOM_MEMBER_NAMES: Record<number, string> = {
   1: 'Simon Memia Wanjiru',
@@ -58,40 +59,49 @@ const resolvePenaltyMemberName = (p: any): string => {
 };
 
 export default function Home() {
-  // 1. Authorized Member Credentials & Contact Register (Exact Requested PINs)
-  const authorizedUsers = [
-    { email: 'kamera@dreamloom.co.ke', password: 'Simon@%322', name: 'Simon Memia', fullName: 'Simon Memia Wanjiru', nationalId: '32242103', phone: '0719545283', role: 'Director / Super Admin' },
-    { email: 'simon@dreamloom.co.ke', password: 'Simon@%322', name: 'Simon Memia', fullName: 'Simon Memia Wanjiru', nationalId: '32242103', phone: '0719545283', role: 'Director / Member' },
-    { email: 'david@dreamloom.co.ke', password: 'David@399', name: 'David Wainaina', fullName: 'David Wainaina Kinyua', nationalId: '39929859', phone: '0714382925', role: 'Member' },
-    { email: 'elijah@dreamloom.co.ke', password: 'Elijah@342', name: 'Elijah Waitara', fullName: 'Elijah Waitara Gichari', nationalId: '34282968', phone: '0718963492', role: 'Member' },
-    { email: 'samuel@dreamloom.co.ke', password: 'Samuel@400', name: 'Samuel Kamau', fullName: 'Samuel Kamau Nguuro', nationalId: '40085139', phone: '0113114471', role: 'Member' },
-    { email: 'michael@dreamloom.co.ke', password: 'Michael@389', name: 'Michael Kiarie', fullName: 'Michael Kiarie Wanjiru', nationalId: '38927071', phone: '0748036136', role: 'Member' },
-    { email: 'daniel@dreamloom.co.ke', password: 'daniel@366', name: 'Daniel Kamau', fullName: 'Daniel Kamau Njiriri', nationalId: '36686858', phone: '0759818731', role: 'Member' },
-    { email: 'beatrice@dreamloom.co.ke', password: 'Beatrice@404', name: 'Beatrice Njoki', fullName: 'Beatrice Njoki Muthoni', nationalId: '40492876', phone: '0708665848', role: 'Member' },
-  ];
+  // 1. Authorized Member Credentials & Contact Register
+  const authorizedUsers = AUTHORIZED_USERS;
 
-  // 2. Authentication States (Persistent session across refresh & devices)
+  // 2. Authentication States (Secure persistent session across refresh & devices)
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Restore authenticated session from localStorage
+  // Restore authenticated session from server HttpOnly cookie
   useEffect(() => {
-    try {
-      const savedUserStr = localStorage.getItem('dreamloom_auth_user');
-      if (savedUserStr) {
-        const parsed = JSON.parse(savedUserStr);
-        if (parsed && parsed.email) {
-          setCurrentUser(parsed);
-          setIsLoggedIn(true);
+    let isMounted = true;
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted) {
+          if (data?.authenticated && data?.user) {
+            setCurrentUser(data.user);
+            setIsLoggedIn(true);
+          } else {
+            setIsLoggedIn(false);
+            setCurrentUser(null);
+          }
+          setIsAuthenticating(false);
         }
-      }
-    } catch (e) {
-      console.warn('Session restoration failed:', e);
-    }
+      })
+      .catch(err => {
+        console.warn('Session restoration failed:', err);
+        if (isMounted) {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+          setIsAuthenticating(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Synchronize database records on mount across all modules (PostgreSQL is the authoritative source of truth)
@@ -550,22 +560,23 @@ export default function Home() {
     );
   }, [currentUser]);
 
-  // Inactivity Auto-Logout Timer (10 Minutes)
+  // Inactivity Auto-Logout Timer (Only for non-persistent sessions)
   useEffect(() => {
     if (!isLoggedIn) return;
+
+    // Persistent Remember-Me sessions stay authenticated across idle periods and restarts
+    if (currentUser?.rememberMe) {
+      return;
+    }
 
     let timeoutId: NodeJS.Timeout;
     const resetTimer = () => {
       clearTimeout(timeoutId);
-      // 10 minutes = 600,000 ms
+      // 30 minutes of complete inactivity for non-remember-me sessions
       timeoutId = setTimeout(() => {
-        setIsLoggedIn(false);
-        setCurrentUser(null);
-        try {
-          localStorage.removeItem('dreamloom_auth_user');
-        } catch (e) {}
+        handleLogout();
         setAuthError('Your session has timed out due to inactivity. Please authenticate with your password to resume.');
-      }, 10 * 60 * 1000);
+      }, 30 * 60 * 1000);
     };
 
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -576,7 +587,7 @@ export default function Home() {
       clearTimeout(timeoutId);
       events.forEach(ev => window.removeEventListener(ev, resetTimer));
     };
-  }, [isLoggedIn]);
+  }, [isLoggedIn, currentUser]);
 
   // Core App States
   const [activeTab, setActiveTab] = useState('Overview');
@@ -1407,68 +1418,65 @@ export default function Home() {
     }
   };
 
-  // Login Authentication Handler
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Login Authentication Handler (Persistent Session & Audit Logging)
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    const targetUser = authorizedUsers.find(
-      u => u.email.toLowerCase() === loginEmail.trim().toLowerCase() && u.password === loginPassword.trim()
-    );
+    setIsLoginLoading(true);
 
-    if (targetUser) {
-      setCurrentUser(targetUser);
-      setIsLoggedIn(true);
-      try {
-        localStorage.setItem('dreamloom_auth_user', JSON.stringify(targetUser));
-      } catch (e) {}
-      setLoginEmail('');
-      setLoginPassword('');
-      
-      const newLoginEntry = {
-        id: `AUTH-${Date.now().toString().slice(-4)}`,
-        date: getEATISODate(),
-        time: new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date()) + ' EAT',
-        timestamp: getEATDateTimeString(),
-        user: targetUser.fullName,
-        role: targetUser.role,
-        ip: '197.232.84.' + Math.floor(Math.random() * 80 + 10),
-        device: 'Chrome 122 (Desktop Client)',
-        status: 'Active (Authorized)',
-        twoFa: 'Pass (TOTP Token)'
-      };
-
-      setLoginLogs(prev => {
-        const updated = [newLoginEntry, ...prev];
-        try { localStorage.setItem('dreamloom_login_logs', JSON.stringify(updated)); } catch(e){}
-        return updated;
-      });
-
-      // Persist to Neon DB
-      fetch('/api/login-logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: targetUser.email,
-          success: true,
-          ipAddress: newLoginEntry.ip
-        })
-      }).catch(err => console.error('Database login log failed:', err));
-    } else {
-      setAuthError('Invalid credentials. Please verify your authorized member email and permanent PIN.');
-      // Persist failed attempt to Neon DB
-      fetch('/api/login-logs', {
+    try {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: loginEmail,
-          success: false,
-          ipAddress: '197.232.84.12'
-        })
-      }).catch(err => console.error('Database login fail log failed:', err));
+          password: loginPassword,
+          rememberMe,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user) {
+        setCurrentUser(data.user);
+        setIsLoggedIn(true);
+        setLoginEmail('');
+        setLoginPassword('');
+
+        const newLoginEntry = {
+          id: `AUTH-${Date.now().toString().slice(-4)}`,
+          date: getEATISODate(),
+          time: new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date()) + ' EAT',
+          timestamp: getEATDateTimeString(),
+          user: data.user.fullName,
+          role: data.user.role,
+          ip: '197.232.84.' + Math.floor(Math.random() * 80 + 10),
+          device: 'Chrome 122 (Desktop Client)',
+          status: 'Active (Authorized)',
+          twoFa: 'Pass (TOTP Token)'
+        };
+
+        setLoginLogs(prev => {
+          const updated = [newLoginEntry, ...prev];
+          try { localStorage.setItem('dreamloom_login_logs', JSON.stringify(updated)); } catch(e){}
+          return updated;
+        });
+      } else {
+        setAuthError(data.message || 'Invalid credentials. Please verify your authorized member email and permanent PIN.');
+      }
+    } catch (err) {
+      setAuthError('Connection error during authentication. Please retry.');
+    } finally {
+      setIsLoginLoading(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.warn('Logout network error:', e);
+    }
     setIsLoggedIn(false);
     setCurrentUser(null);
     try {
@@ -2495,6 +2503,27 @@ export default function Home() {
   ];
 
   // =========================================================================
+  // INITIAL SESSION AUTHENTICATION LOADER (Prevents Login Screen Hydration Flicker)
+  // =========================================================================
+  if (isAuthenticating) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#070D18] p-4 font-sans text-slate-100">
+        <div className="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-400 rounded-2xl flex items-center justify-center text-white mb-4 shadow-xl shadow-emerald-950/60 animate-pulse">
+          <svg className="w-9 h-9 text-white filter drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.5 2 2 6.5 2 12c0 3.5 1.8 6.6 4.6 8.4C6.2 19.4 6 18.2 6 17c0-5 4-9 9-9 1.2 0 2.4.2 3.4.6C16.6 5.8 14.5 4 12 4z" />
+            <path d="M21.7 8.3C21.9 9.5 22 10.7 22 12c0 5.5-4.5 10-10 10-1.3 0-2.5-.1-3.7-.4C9.5 20.6 11 19 11 17c0-4.4 3.6-8 8-8 1 0 1.9.2 2.7.3z" opacity="0.8" />
+          </svg>
+        </div>
+        <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold tracking-wide mb-1">
+          <RotateCw className="w-4 h-4 animate-spin" />
+          <span>Verifying Authorized Session...</span>
+        </div>
+        <p className="text-xs text-slate-400 font-medium">Dreamloom Holding Limited • Financial Portal</p>
+      </div>
+    );
+  }
+
+  // =========================================================================
   // LOGIN SCREEN (Strict Authentication with Password Visibility Toggle)
   // =========================================================================
   if (!isLoggedIn) {
@@ -2568,11 +2597,39 @@ export default function Home() {
               </div>
             </div>
 
+            {/* REMEMBER ME ON THIS DEVICE */}
+            <div className="flex items-center justify-between py-1 bg-[#0A101D] border border-[#16233B] px-3 py-2.5 rounded-lg">
+              <label htmlFor="remember-me-toggle" className="flex items-center gap-2.5 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  id="remember-me-toggle"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#1E293B] bg-[#080E1A] text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 cursor-pointer accent-emerald-500"
+                />
+                <span className="text-xs text-slate-300 group-hover:text-white transition font-medium">
+                  Remember me on this device
+                </span>
+              </label>
+              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                30 Days
+              </span>
+            </div>
+
             <button
               type="submit"
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-medium text-xs rounded-lg transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
+              disabled={isLoginLoading}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-medium text-xs rounded-lg transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 disabled:opacity-60"
             >
-              <LogIn className="w-4 h-4" /> Authenticate & Access
+              {isLoginLoading ? (
+                <>
+                  <RotateCw className="w-4 h-4 animate-spin" /> Authenticating...
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" /> Authenticate & Access
+                </>
+              )}
             </button>
           </form>
 
@@ -2580,8 +2637,10 @@ export default function Home() {
             <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold block">
               Dreamloom Holding Limited • Confidential
             </span>
-            <span className="text-[9px] text-slate-600 mt-1 block">
-              Session automatically locks after 10 minutes of inactivity
+            <span className="text-[9px] text-slate-500 mt-1 block">
+              {rememberMe
+                ? 'Persistent session active — stays authenticated across browser restarts for up to 30 days'
+                : 'Temporary session — expires upon browser close or 30 minutes of inactivity'}
             </span>
           </div>
         </div>
