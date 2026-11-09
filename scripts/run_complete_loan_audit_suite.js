@@ -429,14 +429,10 @@ async function runAuditSuite() {
     });
     recordTest('3-Dot Action Buttons Visible in Register', actionButtonsCount > 0, `Found ${actionButtonsCount} action buttons`);
 
-    // Click first action menu
-    await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('tbody tr button'));
-      // Find an action button in the actions column
-      const actionBtn = btns.find(b => b.title && b.title.includes('Actions'));
-      if (actionBtn) actionBtn.click();
-    });
-    await wait(600);
+    // Click first action menu using Puppeteer native click for proper React event propagation
+    await page.waitForSelector('tbody tr button[title="Actions"]', { timeout: 5000 });
+    await page.click('tbody tr button[title="Actions"]');
+    await wait(1000);
 
     const menuOpen = await page.evaluate(() => {
       return document.body.textContent.includes('View Schedule') ||
