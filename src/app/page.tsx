@@ -2784,13 +2784,14 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* 3. MAIN DASHBOARD CONTENT */}
         {/* ========================================================================= */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto" id="dashboard-content-area">
+        <main className={`flex-1 p-4 md:p-8 overflow-y-auto ${activeTab === 'Loan Portfolio' ? 'bg-[#F2F7F4]' : ''}`} id="dashboard-content-area">
           {/* Top Title Bar with Month / Currency / Export Button */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
-              <p className="text-xs text-slate-400 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
-            </div>
+          {activeTab !== 'Loan Portfolio' && (
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-extrabold text-white tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
+                <p className="text-xs text-slate-400 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
+              </div>
 
             <div className="flex items-center gap-2.5">
               {/* Universal Month Dropdown (All 12 Months) */}
@@ -2849,6 +2850,7 @@ export default function Home() {
               </button>
             </div>
           </div>
+          )}
 
           {/* ===================================================================== */}
           {/* OVERVIEW TAB */}

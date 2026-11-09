@@ -29,7 +29,10 @@ import {
   MoreVertical,
   Ban,
   RotateCcw,
-  X
+  X,
+  Coins,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import {
   calculateLoanProfile,
@@ -75,7 +78,16 @@ export default function LoanPortfolioTab({
   const [selectedMemberName, setSelectedMemberName] = useState<string>(
     members[0]?.fullName || 'Simon Memia Wanjiru'
   );
-  const [openMobileMenuLoanId, setOpenMobileMenuLoanId] = useState<string | null>(null);
+  const [openActionMenuLoanId, setOpenActionMenuLoanId] = useState<string | null>(null);
+
+  // Close actions menu on click outside
+  React.useEffect(() => {
+    const handleClickOutside = () => setOpenActionMenuLoanId(null);
+    if (openActionMenuLoanId) {
+      window.addEventListener('click', handleClickOutside);
+      return () => window.removeEventListener('click', handleClickOutside);
+    }
+  }, [openActionMenuLoanId]);
 
   // Calculation Settings (defaults for NEW loans only; never alters existing loans' agreed methods)
   const [defaultInterestRate, setDefaultInterestRate] = useState<number>(10.0);
@@ -90,6 +102,7 @@ export default function LoanPortfolioTab({
   const [filterMember, setFilterMember] = useState<string>('All');
   const [filterLoanId, setFilterLoanId] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [filterInterestRate, setFilterInterestRate] = useState<string>('All');
   const [filterMonth, setFilterMonth] = useState<string>('All');
   const [filterYear, setFilterYear] = useState<string>('All');
   const [filterIssueDate, setFilterIssueDate] = useState<string>('');
@@ -295,6 +308,14 @@ export default function LoanPortfolioTab({
           return false;
         }
       }
+      if (filterInterestRate !== 'All') {
+        const rateNum = Number(l.monthlyInterestRate);
+        if (filterInterestRate === '0' && rateNum !== 0) return false;
+        if (filterInterestRate === '5' && rateNum !== 5) return false;
+        if (filterInterestRate === '10' && rateNum !== 10) return false;
+        if (filterInterestRate === '15' && rateNum !== 15) return false;
+        if (filterInterestRate === 'Custom' && [0, 5, 10, 15].includes(rateNum)) return false;
+      }
       if (filterIssueDate.trim() !== '' && l.issueDate !== filterIssueDate.trim()) {
         return false;
       }
@@ -331,6 +352,7 @@ export default function LoanPortfolioTab({
     filterMember,
     filterLoanId,
     filterStatus,
+    filterInterestRate,
     filterMonth,
     filterYear,
     filterIssueDate,
@@ -351,6 +373,7 @@ export default function LoanPortfolioTab({
       (s, l) => s + l.totalInterestAccrued,
       0
     );
+    const totalLoansAmount = nonCancelledLoans.reduce((s, l) => s + l.totalLoanAmount, 0);
     const totalRepaidAll = nonCancelledLoans.reduce((s, l) => s + l.totalAmountPaid, 0);
     const settledPrincipalTotal = settledHistoryLoans.reduce((s, l) => s + l.principalRepaid, 0);
     const settledInterestTotal = settledHistoryLoans.reduce((s, l) => s + l.interestPaid, 0);
@@ -368,6 +391,7 @@ export default function LoanPortfolioTab({
       activeUnpaidInterest,
       activeOutstandingTotal,
       totalInterestAccruedAll,
+      totalLoansAmount,
       totalRepaidAll,
       settledPrincipalTotal,
       settledInterestTotal,
@@ -439,7 +463,7 @@ export default function LoanPortfolioTab({
   // Handlers
   const handleOpenDisburseModal = (loanToEdit?: CalculatedLoanProfile) => {
     setLoanFormError(null);
-    setOpenMobileMenuLoanId(null);
+    setOpenActionMenuLoanId(null);
     if (loanToEdit) {
       setEditingLoanId(loanToEdit.id);
       setLoanForm({
@@ -569,7 +593,7 @@ export default function LoanPortfolioTab({
 
   const handleOpenRepaymentModal = (loan?: CalculatedLoanProfile) => {
     setRepaymentError(null);
-    setOpenMobileMenuLoanId(null);
+    setOpenActionMenuLoanId(null);
     const targetLoan =
       loan || activePortfolioLoans[0] || calculatedLoans[0] || null;
     setRepaymentForm({
@@ -677,7 +701,7 @@ export default function LoanPortfolioTab({
   // Open Delete / Cancel Loan Confirmation Modal
   const handlePromptDeleteLoan = (loan: CalculatedLoanProfile) => {
     if (!canEdit) return;
-    setOpenMobileMenuLoanId(null);
+    setOpenActionMenuLoanId(null);
     setDeleteLoanTarget(loan);
     setDeleteLoanReason('');
     setDeleteLoanError(null);
@@ -901,9 +925,9 @@ export default function LoanPortfolioTab({
   };
 
   return (
-    <div className="space-y-6 text-slate-100">
-      {/* Top Module Sub-Navigation Bar (Section 8) */}
-      <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+    <div className="space-y-6 text-slate-800">
+      {/* Top Module Sub-Navigation Bar */}
+      <div className="bg-white/95 backdrop-blur border border-slate-200/90 rounded-2xl p-2.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-1.5">
           {[
             { id: 'register', label: 'Loan Portfolio', icon: DollarSign },
@@ -920,10 +944,10 @@ export default function LoanPortfolioTab({
               <button
                 key={item.id}
                 onClick={() => setSubView(item.id as LoanSubView)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                   active
-                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-lg shadow-emerald-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                    ? 'bg-[#0A5C36] text-white font-bold shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -933,7 +957,7 @@ export default function LoanPortfolioTab({
           })}
           <button
             onClick={() => onNavigateTab('members')}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-teal-400 hover:bg-teal-500/10 border border-teal-500/20 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 hover:bg-emerald-50 border border-emerald-600/30 transition-all"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Member Directory</span>
@@ -941,9 +965,9 @@ export default function LoanPortfolioTab({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-[#070D18] border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
-            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-slate-400">Valuation Date:</span>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+            <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+            <span className="text-slate-600 font-medium">Valuation Date:</span>
             <input
               type="date"
               value={reportingAsOfDate}
@@ -951,24 +975,24 @@ export default function LoanPortfolioTab({
                 setReportingAsOfDate(e.target.value);
                 onRefreshLoans(e.target.value);
               }}
-              className="bg-transparent text-emerald-400 font-bold focus:outline-none"
+              className="bg-transparent text-emerald-800 font-bold focus:outline-none"
             />
           </div>
           {canEdit && (
             <>
               <button
                 onClick={() => handleOpenRepaymentModal()}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition-all"
               >
                 <CreditCard className="w-3.5 h-3.5" />
-                <span>RECORD REPAYMENT</span>
+                <span>Record Repayment</span>
               </button>
               <button
                 onClick={() => handleOpenDisburseModal()}
-                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold tracking-wide shadow-lg shadow-emerald-500/20 transition-all"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>DISBURSE LOAN</span>
+                <span>Disburse Loan</span>
               </button>
             </>
           )}
@@ -976,573 +1000,456 @@ export default function LoanPortfolioTab({
       </div>
 
       {/* ===================================================================== */}
-      {/* SUBVIEW 1: MAIN LOAN PORTFOLIO REGISTER (Section 2.1, 2.2, 2.10)      */}
+      {/* SUBVIEW 1: MAIN LOAN PORTFOLIO REGISTER (EXACT 3D REFERENCE MATCH)    */}
       {/* ===================================================================== */}
       {subView === 'register' && (
-        <div className="space-y-6">
-          {/* Analytics & Status Overview Panel matching Reference Design */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-6 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-              <div>
-                <h3 className="text-lg font-bold text-white">Loan Analytics & Status Overview</h3>
-                <p className="text-xs text-slate-400">
-                  Real-time breakdown of active vs settled credit facilities (Anniversary-Calculated as of{' '}
-                  <span className="text-emerald-400 font-semibold">{reportingAsOfDate}</span>)
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                  {portfolioStats.activeCount} Active Loans
-                </span>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  {portfolioStats.settledCount} Settled Loans
-                </span>
-              </div>
-            </div>
+        <div className="space-y-5">
+          {/* 1. LUSH 3D GREEN WAVE BANNER CARD */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+            {/* Subtle 3D wave gloss reflection */}
+            <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+            <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-400/15 blur-3xl pointer-events-none" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-[#090F1D] border border-slate-800/80 rounded-xl p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Total Principal Disbursed
-                </p>
-                <p className="text-xl font-black text-white mt-1">
-                  KES {portfolioStats.totalDisbursedAll.toLocaleString()}
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Across {portfolioStats.totalLoansCount} total facilities
-                </p>
-              </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 rounded-xl p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Total Interest Accrued
-                </p>
-                <p className="text-xl font-black text-amber-400 mt-1">
-                  KES {portfolioStats.totalInterestAccruedAll.toLocaleString()}
-                </p>
-                <div className="flex items-center justify-between text-[11px] mt-1">
-                  <span className="text-emerald-400 font-semibold">
-                    Paid Interest: KES {portfolioStats.totalInterestPaidAll.toLocaleString()}
-                  </span>
-                  <span className="text-amber-500/80 text-[10px]">
-                    Unpaid: KES {portfolioStats.activeUnpaidInterest.toLocaleString()}
-                  </span>
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                  {/* White 3D Money Bag Icon */}
+                  <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 14h12" />
+                    <path d="M4 8h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" />
+                    <path d="M12 4v4" />
+                    <path d="M8 4h8" />
+                    <circle cx="12" cy="14" r="2" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Loan Portfolio</h1>
+                  <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Register of all company loans</p>
                 </div>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 rounded-xl p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Total Repayments Collected
-                </p>
-                <p className="text-xl font-black text-emerald-400 mt-1">
-                  KES {portfolioStats.totalRepaidAll.toLocaleString()}
-                </p>
-                <p className="text-[11px] text-emerald-500/80 mt-1">
-                  Settled Principal: KES {portfolioStats.settledPrincipalTotal.toLocaleString()}
-                </p>
-              </div>
-              <div className="bg-[#090F1D] border border-amber-500/30 rounded-xl p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
-                  Active Outstanding Balance
-                </p>
-                <p className="text-xl font-black text-amber-400 mt-1">
-                  KES {portfolioStats.activeOutstandingTotal.toLocaleString()}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Excludes {portfolioStats.settledCount} settled facilities
-                </p>
+
+              <div className="flex items-center gap-3">
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDisburseModal()}
+                    className="bg-white hover:bg-slate-50 text-[#064E3B] font-extrabold text-sm px-5 py-2.5 rounded-2xl shadow-md hover:shadow-lg flex items-center gap-2 transition active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 text-[#064E3B] stroke-[3]" />
+                    <span>New Loan</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Search & Filters Bar (Section 2.10) */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-4 shadow-lg">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Search Loan ID / Ref
-                </label>
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    placeholder="e.g. L010, Simon..."
-                    value={filterLoanId}
-                    onChange={e => setFilterLoanId(e.target.value)}
-                    className="w-full bg-[#070D18] border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
+          {/* 2. FILTER & CONTROLS BAR (WHITE ROUNDED CARD) */}
+          <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[240px] max-w-sm">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search member or loan ref..."
+                value={filterLoanId}
+                onChange={e => setFilterLoanId(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 font-medium"
+              />
+              {filterLoanId && (
+                <button
+                  type="button"
+                  onClick={() => setFilterLoanId('')}
+                  className="absolute right-3 top-2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Member Name
-                </label>
+            {/* Dropdowns & Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* All Members */}
+              <div className="relative">
                 <select
                   value={filterMember}
                   onChange={e => setFilterMember(e.target.value)}
-                  className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="All">All 7 Members</option>
+                  <option value="All">All Members</option>
                   {members.map(m => (
                     <option key={m.id || m.fullName} value={m.fullName}>
                       {m.fullName}
                     </option>
                   ))}
                 </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Loan Status
-                </label>
+              {/* All Status */}
+              <div className="relative">
                 <select
                   value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value)}
-                  className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="All">All Active & Settled</option>
+                  <option value="All">All Status</option>
                   <option value="Active">Active</option>
                   <option value="Partially Paid">Partially Paid</option>
-                  <option value="Overdue">Overdue</option>
                   <option value="Settled">Settled</option>
-                  <option value="Cancelled">Cancelled (Archived)</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Issue Month
-                </label>
+              {/* All Interest Rates */}
+              <div className="relative">
                 <select
-                  value={filterMonth}
-                  onChange={e => setFilterMonth(e.target.value)}
-                  className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                  value={filterInterestRate}
+                  onChange={e => setFilterInterestRate(e.target.value)}
+                  className="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl pl-3 pr-8 py-2 text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-emerald-500"
                 >
-                  <option value="All">All Months</option>
-                  {ALL_MONTHS.map(m => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
+                  <option value="All">All Interest Rates</option>
+                  <option value="0">0% Interest</option>
+                  <option value="5">5% Interest</option>
+                  <option value="10">10% Interest</option>
+                  <option value="15">15% Interest</option>
+                  <option value="Custom">Custom Rates</option>
                 </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Issue Year
+              {/* Select Date Button */}
+              <div className="relative">
+                <label className="border border-emerald-600/70 hover:border-emerald-600 bg-white hover:bg-emerald-50/50 text-emerald-800 rounded-xl px-3.5 py-2 text-xs font-semibold flex items-center gap-2 cursor-pointer transition">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>{filterIssueDate ? filterIssueDate : 'Select Date'}</span>
+                  <input
+                    type="date"
+                    value={filterIssueDate}
+                    onChange={e => setFilterIssueDate(e.target.value)}
+                    className="sr-only"
+                  />
                 </label>
-                <select
-                  value={filterYear}
-                  onChange={e => setFilterYear(e.target.value)}
-                  className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
-                >
-                  <option value="All">All Years</option>
-                  {AVAILABLE_YEARS.map(y => (
-                    <option key={y} value={String(y)}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Exact Issue Date
-                </label>
-                <input
-                  type="date"
-                  value={filterIssueDate}
-                  onChange={e => setFilterIssueDate(e.target.value)}
-                  className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                  Sort By
-                </label>
-                <div className="flex items-center gap-1">
-                  <select
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
-                    className="w-full bg-[#070D18] border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value="issueDate">Issue Date</option>
-                    <option value="principal">Principal</option>
-                    <option value="interest">Interest</option>
-                    <option value="balance">Balance</option>
-                  </select>
+                {filterIssueDate && (
                   <button
-                    onClick={() => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))}
-                    className="p-1.5 bg-[#070D18] border border-slate-800 rounded-xl text-slate-300 hover:text-emerald-400"
-                    title={`Sort ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+                    type="button"
+                    onClick={() => setFilterIssueDate('')}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-slate-500 text-white flex items-center justify-center text-[10px]"
+                    title="Clear date filter"
                   >
-                    <ArrowUpDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Loan Portfolio Register Table (Section 2.2) */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="p-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-extrabold text-white tracking-tight">
-                  Loan Portfolio Register ({filteredLoans.length})
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Click any <span className="text-emerald-400 font-semibold">Loan ID</span> or{' '}
-                  <span className="text-emerald-400 font-semibold">View</span> to open the complete
-                  Individual Loan Profile & Monthly Anniversary Schedule
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleExportLoansCSV(filteredLoans, 'dreamloom_loan_portfolio.csv')}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Export CSV</span>
-                </button>
-                {canEdit && (
-                  <button
-                    onClick={() => handleOpenDisburseModal()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all"
-                  >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
-                    <span>DISBURSE LOAN</span>
+                    ×
                   </button>
                 )}
               </div>
-            </div>
 
+              {/* Export Button */}
+              <button
+                type="button"
+                onClick={() => handleExportLoansCSV(filteredLoans, 'dreamloom_loan_portfolio.csv')}
+                className="bg-[#0A5C36] hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition"
+              >
+                <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Export</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3. LIGHT MINT LOAN REGISTER TABLE CONTAINER */}
+          <div className="bg-[#EBF3EC] rounded-2xl p-4 shadow-sm border border-emerald-900/10 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1080px]">
+              <table className="w-full text-left border-collapse text-xs text-slate-800 min-w-[960px]">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    <th className="py-3.5 px-4">Loan ID</th>
-                    <th className="py-3.5 px-4">Issue Date</th>
+                  <tr className="border-b border-emerald-900/10 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    <th className="py-3.5 px-3 w-10">#</th>
                     <th className="py-3.5 px-4">Member Name</th>
-                    <th className="py-3.5 px-4 text-right">Principal (KES)</th>
-                    <th className="py-3.5 px-4 text-center">Monthly Rate</th>
-                    <th className="py-3.5 px-4 text-right">Interest Accrued (KES)</th>
-                    <th className="py-3.5 px-4 text-right">Total Loan (KES)</th>
-                    <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
-                    <th className="py-3.5 px-4 text-right">Outstanding Balance (KES)</th>
+                    <th className="py-3.5 px-4">Loan Ref</th>
+                    <th className="py-3.5 px-4 text-right">Principal (KSh)</th>
+                    <th className="py-3.5 px-4 text-center">Interest Rate</th>
+                    <th className="py-3.5 px-4 text-right">Interest Accrued (KSh)</th>
+                    <th className="py-3.5 px-4 text-right">Total Loan (KSh)</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 z-10 min-w-[210px]">
-                      Actions
-                    </th>
+                    <th className="py-3.5 px-4 text-center w-28">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
+                <tbody className="divide-y divide-emerald-900/5">
                   {filteredLoans.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center text-slate-500">
-                        No loan records match the selected filters.
+                      <td colSpan={9} className="py-12 text-center text-slate-500 font-medium">
+                        No loan records found matching the selected filters.
                       </td>
                     </tr>
                   ) : (
-                    filteredLoans.map(loan => (
-                      <tr
-                        key={loan.id}
-                        className="hover:bg-slate-800/35 transition-colors group"
-                      >
-                        <td className="py-3.5 px-4 font-bold">
-                          <button
-                            onClick={() => {
-                              setSelectedLoanId(loan.id);
-                              setSubView('loan-profile');
-                            }}
-                            className="text-emerald-400 hover:text-emerald-300 underline decoration-emerald-500/40 underline-offset-4 font-extrabold"
-                          >
-                            {loan.id}
-                          </button>
-                        </td>
-                        <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
-                          {loan.issueDate}
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-white">
-                          <button
-                            onClick={() => {
-                              setSelectedMemberName(loan.memberName);
-                              setSubView('member-profile');
-                            }}
-                            className="hover:text-emerald-400 text-left transition-colors flex items-center gap-2.5 group"
-                          >
-                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
-                              <img
-                                src={getMemberAvatar(loan.memberName)}
-                                alt={loan.memberName}
-                                className="w-full h-full object-cover"
-                              />
+                    filteredLoans.map((loan, idx) => {
+                      const loanRef = loan.approvalRef || loan.id;
+                      const isMenuOpen = openActionMenuLoanId === loan.id;
+
+                      return (
+                        <tr
+                          key={loan.id}
+                          className="hover:bg-emerald-100/50 transition-colors"
+                        >
+                          {/* # Index */}
+                          <td className="py-3.5 px-3 font-semibold text-slate-700">
+                            {idx + 1}
+                          </td>
+
+                          {/* Member Name with Avatar */}
+                          <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-200">
+                                <img
+                                  src={getMemberAvatar(loan.memberName)}
+                                  alt={loan.memberName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMemberName(loan.memberName);
+                                  setSubView('member-profile');
+                                }}
+                                className="hover:text-emerald-700 transition text-left"
+                              >
+                                {loan.memberName}
+                              </button>
                             </div>
-                            <span className="group-hover:text-emerald-400 transition">{loan.memberName}</span>
-                          </button>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-slate-200 whitespace-nowrap">
-                          {loan.originalPrincipal.toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className="font-bold text-amber-400">
-                            {loan.monthlyInterestRate}%
-                          </span>
-                          <span className="block text-[10px] text-slate-400">
-                            {loan.interestMethod} ({loan.completedPeriods}m)
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-amber-400 whitespace-nowrap">
-                          {loan.totalInterestAccrued.toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-white whitespace-nowrap">
-                          {loan.totalLoanAmount.toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-emerald-400 whitespace-nowrap">
-                          {loan.totalAmountPaid.toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold whitespace-nowrap">
-                          <span
-                            className={
-                              loan.totalOutstandingBalance > 0
-                                ? 'text-amber-400'
-                                : 'text-slate-500'
-                            }
-                          >
-                            {loan.totalOutstandingBalance.toLocaleString()}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          {renderStatusBadge(loan.status)}
-                        </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] group-hover:bg-[#162033] border-l border-slate-800/80 z-10 min-w-[210px]">
-                          {/* Desktop Actions */}
-                          <div className="hidden sm:flex items-center justify-center gap-1.5">
+                          </td>
+
+                          {/* Loan Ref */}
+                          <td className="py-3.5 px-4 font-medium text-slate-700 whitespace-nowrap">
                             <button
+                              type="button"
                               onClick={() => {
                                 setSelectedLoanId(loan.id);
                                 setSubView('loan-profile');
                               }}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-[11px] font-bold transition-colors"
-                              title="View Individual Loan Profile & Schedule"
+                              className="hover:text-emerald-700 hover:underline font-semibold"
                             >
-                              View
+                              {loanRef}
                             </button>
-                            {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
-                              <button
-                                onClick={() => {
-                                  if (!canEdit) {
-                                    showToast('Editor access required: Please log in as an authorized director or officer to record payments.');
-                                    return;
-                                  }
-                                  handleOpenRepaymentModal(loan);
-                                }}
-                                className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold transition-colors"
-                                title="Record Repayment"
-                              >
-                                Pay
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                if (!canEdit) {
-                                  showToast('Editor access required: Please log in as an authorized director or officer to edit loan details.');
-                                  return;
-                                }
-                                handleOpenDisburseModal(loan);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold transition-colors"
-                              title="Edit Loan Details"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                            {loan.status !== 'Cancelled' && (
-                              <button
-                                onClick={() => {
-                                  if (!canEdit) {
-                                    showToast('Editor access required: Please log in as an authorized director or officer to delete or cancel loans.');
-                                    return;
-                                  }
-                                  handlePromptDeleteLoan(loan);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold transition-colors"
-                                title="Delete or Safely Cancel Loan"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Delete</span>
-                              </button>
-                            )}
+                          </td>
 
-                            {/* Desktop 3-dot dropdown for complete action menu */}
+                          {/* Principal (KSh) */}
+                          <td className="py-3.5 px-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                            {loan.originalPrincipal.toLocaleString()}
+                          </td>
+
+                          {/* Interest Rate */}
+                          <td className="py-3.5 px-4 text-center font-semibold text-slate-800 whitespace-nowrap">
+                            {loan.monthlyInterestRate}%
+                          </td>
+
+                          {/* Interest Accrued (KSh) */}
+                          <td className="py-3.5 px-4 text-right font-semibold text-slate-900 whitespace-nowrap">
+                            {loan.totalInterestAccrued.toLocaleString()}
+                          </td>
+
+                          {/* Total Loan (KSh) */}
+                          <td className="py-3.5 px-4 text-right font-black text-slate-950 whitespace-nowrap">
+                            {loan.totalLoanAmount.toLocaleString()}
+                          </td>
+
+                          {/* Status Pill */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <span
+                              className={`inline-block px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide ${
+                                loan.status === 'Settled'
+                                  ? 'bg-[#E0F2FE] text-[#0284C7]'
+                                  : loan.status === 'Partially Paid'
+                                  ? 'bg-[#FEF3C7] text-[#D97706]'
+                                  : loan.status === 'Cancelled'
+                                  ? 'bg-slate-200 text-slate-600'
+                                  : 'bg-[#DCFCE7] text-[#16A34A]'
+                              }`}
+                            >
+                              {loan.status}
+                            </span>
+                          </td>
+
+                          {/* Actions Menu Pill Button (EXACT MATCH TO 3D IMAGE) */}
+                          <td className="py-3.5 px-4 text-center relative whitespace-nowrap">
                             <div className="relative inline-block text-left">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setOpenMobileMenuLoanId(prev =>
-                                    prev === loan.id ? null : loan.id
-                                  )
-                                }
-                                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenActionMenuLoanId(prev => (prev === loan.id ? null : loan.id));
+                                }}
+                                className="bg-[#0A5C36] hover:bg-emerald-800 text-white font-bold text-xs px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 shadow-sm transition active:scale-95"
                                 title="Actions"
                                 aria-label="Loan Actions"
                               >
-                                <MoreVertical className="w-3.5 h-3.5" />
+                                <span>Actions</span>
+                                <ChevronDown className="w-3.5 h-3.5" />
                               </button>
-                              {openMobileMenuLoanId === loan.id && (
-                                <div className="origin-top-right absolute right-0 mt-1 w-44 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-50 text-left">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMobileMenuLoanId(null);
-                                      setSelectedLoanId(loan.id);
-                                      setSubView('loan-profile');
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-slate-800 flex items-center gap-2"
-                                  >
-                                    <Eye className="w-3.5 h-3.5" />
-                                    <span>View Schedule</span>
-                                  </button>
-                                  {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
+
+                              {/* Dropdown Menu Card (White, Rounded-2xl, Shadow-2xl) */}
+                              {isMenuOpen && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="origin-top-right absolute right-0 mt-2 w-36 bg-white rounded-2xl shadow-2xl border border-slate-100 py-1.5 z-50 text-left divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100"
+                                >
+                                  <div className="py-1">
+                                    {/* 1. View */}
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setOpenMobileMenuLoanId(null);
+                                        setOpenActionMenuLoanId(null);
+                                        setSelectedLoanId(loan.id);
+                                        setSubView('loan-profile');
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition"
+                                    >
+                                      <Eye className="w-4 h-4 text-slate-700" />
+                                      <span>View</span>
+                                    </button>
+
+                                    {/* 2. Pay */}
+                                    {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenActionMenuLoanId(null);
+                                          if (!canEdit) {
+                                            showToast('Editor access required: Please log in as an authorized director or officer.');
+                                            return;
+                                          }
+                                          handleOpenRepaymentModal(loan);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition"
+                                      >
+                                        <CreditCard className="w-4 h-4 text-slate-700" />
+                                        <span>Pay</span>
+                                      </button>
+                                    )}
+
+                                    {/* 3. Edit */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionMenuLoanId(null);
                                         if (!canEdit) {
                                           showToast('Editor access required: Please log in as an authorized director or officer.');
                                           return;
                                         }
-                                        handleOpenRepaymentModal(loan);
+                                        handleOpenDisburseModal(loan);
                                       }}
-                                      className="w-full text-left px-3 py-2 text-xs font-bold text-amber-300 hover:bg-slate-800 flex items-center gap-2"
+                                      className="w-full text-left px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition"
                                     >
-                                      <CreditCard className="w-3.5 h-3.5" />
-                                      <span>Record Payment</span>
+                                      <Edit2 className="w-4 h-4 text-slate-700" />
+                                      <span>Edit</span>
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMobileMenuLoanId(null);
-                                      if (!canEdit) {
-                                        showToast('Editor access required: Please log in as an authorized director or officer.');
-                                        return;
-                                      }
-                                      handleOpenDisburseModal(loan);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs font-bold text-blue-300 hover:bg-slate-800 flex items-center gap-2"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                    <span>Edit Loan</span>
-                                  </button>
+                                  </div>
+
+                                  {/* 4. Delete */}
                                   {loan.status !== 'Cancelled' && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMobileMenuLoanId(null);
-                                        if (!canEdit) {
-                                          showToast('Editor access required: Please log in as an authorized director or officer.');
-                                          return;
-                                        }
-                                        handlePromptDeleteLoan(loan);
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-300 hover:bg-slate-800 flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      <span>Delete / Cancel</span>
-                                    </button>
+                                    <div className="py-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenActionMenuLoanId(null);
+                                          if (!canEdit) {
+                                            showToast('Editor access required: Please log in as an authorized director or officer.');
+                                            return;
+                                          }
+                                          handlePromptDeleteLoan(loan);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition"
+                                      >
+                                        <Trash2 className="w-4 h-4 text-rose-600" />
+                                        <span>Delete</span>
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
-
-                          {/* Mobile Three-Dot Actions Menu */}
-                          <div className="sm:hidden relative inline-block text-left">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setOpenMobileMenuLoanId(prev =>
-                                  prev === loan.id ? null : loan.id
-                                )
-                              }
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-                              aria-label="Loan Actions"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {openMobileMenuLoanId === loan.id && (
-                              <div className="origin-top-right absolute right-0 mt-1 w-44 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-50">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMobileMenuLoanId(null);
-                                    setSelectedLoanId(loan.id);
-                                    setSubView('loan-profile');
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-slate-800 flex items-center gap-2"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span>View Schedule</span>
-                                </button>
-                                {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMobileMenuLoanId(null);
-                                      if (!canEdit) {
-                                        showToast('Editor access required: Please log in as an authorized director or officer.');
-                                        return;
-                                      }
-                                      handleOpenRepaymentModal(loan);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs font-bold text-amber-300 hover:bg-slate-800 flex items-center gap-2"
-                                  >
-                                    <CreditCard className="w-3.5 h-3.5" />
-                                    <span>Record Payment</span>
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMobileMenuLoanId(null);
-                                    if (!canEdit) {
-                                      showToast('Editor access required: Please log in as an authorized director or officer.');
-                                      return;
-                                    }
-                                    handleOpenDisburseModal(loan);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-xs font-bold text-blue-300 hover:bg-slate-800 flex items-center gap-2"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                  <span>Edit Loan</span>
-                                </button>
-                                {loan.status !== 'Cancelled' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMobileMenuLoanId(null);
-                                      if (!canEdit) {
-                                        showToast('Editor access required: Please log in as an authorized director or officer.');
-                                        return;
-                                      }
-                                      handlePromptDeleteLoan(loan);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs font-bold text-rose-300 hover:bg-slate-800 flex items-center gap-2"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Delete / Cancel</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* 4. SUMMARY METRIC CARDS AT BOTTOM & PAGINATION */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            {/* Card 1: Total Loans */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+                <Coins className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Loans</p>
+                <p className="text-xl font-black text-slate-900 mt-0.5">
+                  KSh {portfolioStats.totalLoansAmount.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: Settled Loans */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+                <Check className="w-6 h-6 stroke-[3]" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Settled Loans</p>
+                <p className="text-xl font-black text-slate-900 mt-0.5">
+                  {portfolioStats.settledCount}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Active Loans */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+                <DollarSign className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Loans</p>
+                <p className="text-xl font-black text-slate-900 mt-0.5">
+                  {portfolioStats.activeCount}
+                </p>
+              </div>
+            </div>
+
+            {/* Card 4: Outstanding */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0">
+                <span className="text-xl font-black text-[#16A34A]">%</span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Outstanding</p>
+                <p className="text-xl font-black text-slate-900 mt-0.5">
+                  KSh {portfolioStats.activeOutstandingTotal.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination Controls on Bottom Right */}
+          <div className="flex items-center justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-xs font-semibold transition"
+            >
+              &lt;
+            </button>
+            <button
+              type="button"
+              className="w-8 h-8 rounded-lg bg-[#0A5C36] text-white font-bold flex items-center justify-center text-xs shadow-sm"
+            >
+              1
+            </button>
+            <button
+              type="button"
+              className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 text-xs font-semibold transition"
+            >
+              &gt;
+            </button>
           </div>
         </div>
       )}

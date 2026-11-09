@@ -435,12 +435,14 @@ async function runAuditSuite() {
     await wait(1000);
 
     const menuOpen = await page.evaluate(() => {
-      return document.body.textContent.includes('View Schedule') ||
-             document.body.textContent.includes('Record Payment') ||
-             document.body.textContent.includes('Edit Loan') ||
-             document.body.textContent.includes('Delete / Cancel');
+      const text = document.body.textContent || '';
+      const hasView = text.includes('View') || text.includes('View Schedule');
+      const hasPay = text.includes('Pay') || text.includes('Record Payment');
+      const hasEdit = text.includes('Edit') || text.includes('Edit Loan');
+      const hasDelete = text.includes('Delete') || text.includes('Delete / Cancel');
+      return hasView && hasPay && hasEdit && hasDelete;
     });
-    recordTest('3-Dot Action Menu Opens with Actions', menuOpen, 'View Schedule, Record Payment, Edit Loan, Delete / Cancel present');
+    recordTest('3-Dot Action Menu Opens with Actions', menuOpen, 'View, Pay, Edit, Delete present');
 
     // Capture screenshot of actions menu on desktop
     const actionMenuScreenshot = path.join(ARTIFACT_DIR, 'evidence_loan_actions_menu.png');
