@@ -71,15 +71,14 @@ export default function LoginScreen({
     <div className="min-h-screen w-full relative flex flex-col justify-between overflow-x-hidden bg-[#071c10] select-none font-sans">
       {/* FULL-SCREEN 3D BACKGROUND IMAGE */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
+        className="absolute inset-0 bg-cover bg-[25%_center] sm:bg-center bg-no-repeat z-0"
         style={{
-          backgroundImage: 'url(/dreamloom_login_bg.png)',
-          backgroundPosition: 'center center'
+          backgroundImage: 'url(/dreamloom_login_bg.png)'
         }}
       />
 
       {/* Subtle responsive overlay for optimal legibility across mobile & desktop */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 sm:from-black/20 z-0 pointer-events-none" />
+      <div className="absolute inset-0 bg-black/30 sm:bg-black/10 z-0 pointer-events-none" />
 
       {/* TOP HEADER: BRANDING FOR MOBILE / TABLET (On desktop the 3D logo in background is prominent) */}
       <header className="relative z-10 w-full px-5 py-4 sm:px-8 sm:py-6 flex items-center justify-between">
