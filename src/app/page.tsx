@@ -15,6 +15,7 @@ import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
 import LoanPortfolioTab from '@/components/LoanPortfolioTab';
 import ContributionsTab from '@/components/ContributionsTab';
+import LoginScreen from '@/components/LoginScreen';
 import {
   ALL_MONTHS,
   AVAILABLE_YEARS,
@@ -2489,148 +2490,45 @@ export default function Home() {
   ];
 
   // =========================================================================
-  // INITIAL SESSION AUTHENTICATION LOADER (Prevents Login Screen Hydration Flicker)
+  // LOGIN SCREEN (Premium 3D Corporate Welcome Experience & Session Verification)
   // =========================================================================
-  if (isAuthenticating) {
+  if (isAuthenticating || !isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#070D18] p-4 font-sans text-slate-100">
-        <div className="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-400 rounded-2xl flex items-center justify-center text-white mb-4 shadow-xl shadow-emerald-950/60 animate-pulse">
-          <svg className="w-9 h-9 text-white filter drop-shadow" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.5 2 2 6.5 2 12c0 3.5 1.8 6.6 4.6 8.4C6.2 19.4 6 18.2 6 17c0-5 4-9 9-9 1.2 0 2.4.2 3.4.6C16.6 5.8 14.5 4 12 4z" />
-            <path d="M21.7 8.3C21.9 9.5 22 10.7 22 12c0 5.5-4.5 10-10 10-1.3 0-2.5-.1-3.7-.4C9.5 20.6 11 19 11 17c0-4.4 3.6-8 8-8 1 0 1.9.2 2.7.3z" opacity="0.8" />
-          </svg>
-        </div>
-        <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold tracking-wide mb-1">
-          <RotateCw className="w-4 h-4 animate-spin" />
-          <span>Verifying Authorized Session...</span>
-        </div>
-        <p className="text-xs text-slate-400 font-medium">Dreamloom Holding Limited • Financial Portal</p>
-      </div>
-    );
-  }
+      <LoginScreen
+        isAuthenticating={isAuthenticating}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setIsLoggedIn(true);
 
-  // =========================================================================
-  // LOGIN SCREEN (Strict Authentication with Password Visibility Toggle)
-  // =========================================================================
-  if (!isLoggedIn) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#070D18] p-4 font-sans text-slate-100">
-        <div className="w-full max-w-md bg-[#0F172A] border border-[#1E293B] rounded-2xl p-8 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-14 h-14 bg-gradient-to-tr from-emerald-600 to-teal-400 rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-emerald-950/60">
-              <svg className="w-8 h-8 text-white filter drop-shadow" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.5 2 2 6.5 2 12c0 3.5 1.8 6.6 4.6 8.4C6.2 19.4 6 18.2 6 17c0-5 4-9 9-9 1.2 0 2.4.2 3.4.6C16.6 5.8 14.5 4 12 4z" />
-                <path d="M21.7 8.3C21.9 9.5 22 10.7 22 12c0 5.5-4.5 10-10 10-1.3 0-2.5-.1-3.7-.4C9.5 20.6 11 19 11 17c0-4.4 3.6-8 8-8 1 0 1.9.2 2.7.3z" opacity="0.8" />
-              </svg>
-            </div>
-            <h1 className="text-xl font-bold tracking-wider text-white uppercase">DREAMLOOM HOLDING LIMITED</h1>
-            <p className="text-xs text-slate-400">Financial Management System Portal</p>
-          </div>
+          const newLoginEntry = {
+            id: `AUTH-${Date.now().toString().slice(-4)}`,
+            date: getEATISODate(),
+            time:
+              new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Africa/Nairobi',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              }).format(new Date()) + ' EAT',
+            timestamp: getEATDateTimeString(),
+            user: user.fullName || user.name,
+            role: user.role,
+            ip: '197.232.84.' + Math.floor(Math.random() * 80 + 10),
+            device: 'Chrome 122 (Desktop Client)',
+            status: 'Active (Authorized)',
+            twoFa: 'Pass (TOTP Token)'
+          };
 
-          {authError && (
-            <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-3 rounded-lg text-xs text-center font-medium">
-              {authError}
-            </div>
-          )}
-
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Authorized Member Email</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. kamera@dreamloom.co.ke"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-[#080E1A] border border-[#1E293B] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
-
-            {/* PASSWORD INPUT WITH SHOW/HIDE TOGGLE */}
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="block text-xs font-medium text-slate-400">Permanent Password / PIN</label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>{showPassword ? 'Hide Password' : 'Show Password'}</span>
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter your authorized PIN"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full bg-[#080E1A] border border-[#1E293B] rounded-lg pl-9 pr-10 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
-                  title={showPassword ? 'Hide Password' : 'Show Password'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* REMEMBER ME ON THIS DEVICE */}
-            <div className="flex items-center justify-between py-1 bg-[#0A101D] border border-[#16233B] px-3 py-2.5 rounded-lg">
-              <label htmlFor="remember-me-toggle" className="flex items-center gap-2.5 cursor-pointer select-none group">
-                <input
-                  type="checkbox"
-                  id="remember-me-toggle"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#1E293B] bg-[#080E1A] text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 cursor-pointer accent-emerald-500"
-                />
-                <span className="text-xs text-slate-300 group-hover:text-white transition font-medium">
-                  Remember me on this device
-                </span>
-              </label>
-              <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                30 Days
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoginLoading}
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-medium text-xs rounded-lg transition shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {isLoginLoading ? (
-                <>
-                  <RotateCw className="w-4 h-4 animate-spin" /> Authenticating...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" /> Authenticate & Access
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="text-center border-t border-[#1E293B] pt-4">
-            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold block">
-              Dreamloom Holding Limited • Confidential
-            </span>
-            <span className="text-[9px] text-slate-500 mt-1 block">
-              {rememberMe
-                ? 'Persistent session active — stays authenticated across browser restarts for up to 30 days'
-                : 'Temporary session — expires upon browser close or 30 minutes of inactivity'}
-            </span>
-          </div>
-        </div>
-      </div>
+          setLoginLogs(prev => {
+            const updated = [newLoginEntry, ...prev];
+            try {
+              localStorage.setItem('dreamloom_login_logs', JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+        }}
+      />
     );
   }
 

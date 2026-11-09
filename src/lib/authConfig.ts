@@ -83,9 +83,14 @@ export const AUTHORIZED_USERS: AuthorizedUser[] = [
   },
 ];
 
-export function findAuthorizedUser(email: string, password?: string): AuthorizedUser | null {
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = AUTHORIZED_USERS.find(u => u.email.toLowerCase() === normalizedEmail);
+export function findAuthorizedUser(identifier: string, password?: string): AuthorizedUser | null {
+  if (!identifier) return null;
+  const norm = identifier.trim().toLowerCase();
+  const user = AUTHORIZED_USERS.find(u => {
+    const emailLower = u.email.toLowerCase();
+    const username = emailLower.split('@')[0];
+    return emailLower === norm || username === norm;
+  });
   if (!user) return null;
   if (password !== undefined && user.password !== password.trim()) {
     return null;

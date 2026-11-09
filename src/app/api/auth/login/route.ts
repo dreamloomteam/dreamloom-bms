@@ -6,16 +6,17 @@ import { createSessionToken, getCookieOptions } from '@/lib/session';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, rememberMe = true } = body;
+    const identifier = body.email || body.username || body.identifier;
+    const { password, rememberMe = true } = body;
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
-        { success: false, message: 'Email and password are required.' },
+        { success: false, message: 'Username or email and password are required.' },
         { status: 400 }
       );
     }
 
-    const user = findAuthorizedUser(email, password);
+    const user = findAuthorizedUser(identifier, password);
 
     const forwarded = request.headers.get('x-forwarded-for');
     const ipAddress = forwarded ? forwarded.split(',')[0].trim() : '197.232.84.12';
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       try {
         await prisma.loginLog.create({
           data: {
-            email: String(email).trim().toLowerCase(),
+            email: String(identifier).trim().toLowerCase(),
             success: false,
             ipAddress,
           },
