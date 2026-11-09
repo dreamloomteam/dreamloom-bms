@@ -30,6 +30,7 @@ import {
   isSameMemberName
 } from '@/lib/dateUtils';
 import { AUTHORIZED_USERS } from '@/lib/authConfig';
+import { getMemberAvatar } from '@/lib/memberAvatars';
 
 const DREAMLOOM_MEMBER_NAMES: Record<number, string> = {
   1: 'Simon Memia Wanjiru',
@@ -420,15 +421,6 @@ export default function Home() {
         .then(r => r.json())
         .then(res => {
           if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const avatarMap: Record<string, string> = {
-              'Simon': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-              'David': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-              'Elijah': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
-              'Samuel': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-              'Michael': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
-              'Daniel': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
-              'Beatrice': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
-            };
             const colorMap: Record<string, string> = {
               'Simon': 'from-emerald-400 to-teal-400',
               'David': 'from-sky-400 to-cyan-400',
@@ -458,7 +450,7 @@ export default function Home() {
                 shares: '14.28%',
                 percentage: 95,
                 status: 'Active',
-                avatar: avatarMap[firstName] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                avatar: getMemberAvatar(m.fullName || m.id || firstName),
                 color: colorMap[firstName] || 'from-emerald-400 to-teal-400',
               };
             });
@@ -621,6 +613,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<string>('Overview');
   const [editingId, setEditingId] = useState<string | number | null>(null);
+  const [selectedMemberProfile, setSelectedMemberProfile] = useState<any | null>(null);
 
   // Header & Controls States
   const [searchQuery, setSearchQuery] = useState('');
@@ -676,7 +669,7 @@ export default function Home() {
       shares: '13.80%',
       percentage: 90,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-1.jpg',
       color: 'from-emerald-400 to-teal-400'
     },
     {
@@ -693,7 +686,7 @@ export default function Home() {
       shares: '15.08%',
       percentage: 98,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-2.jpg',
       color: 'from-sky-400 to-cyan-400'
     },
     {
@@ -710,7 +703,7 @@ export default function Home() {
       shares: '13.80%',
       percentage: 90,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-3.jpg',
       color: 'from-blue-500 to-sky-400'
     },
     {
@@ -727,7 +720,7 @@ export default function Home() {
       shares: '14.74%',
       percentage: 96,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-4.jpg',
       color: 'from-indigo-400 to-blue-400'
     },
     {
@@ -744,7 +737,7 @@ export default function Home() {
       shares: '15.29%',
       percentage: 100,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-5.jpg',
       color: 'from-purple-400 to-indigo-400'
     },
     {
@@ -761,7 +754,7 @@ export default function Home() {
       shares: '13.80%',
       percentage: 90,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-6.svg',
       color: 'from-amber-400 to-yellow-400'
     },
     {
@@ -778,7 +771,7 @@ export default function Home() {
       shares: '13.49%',
       percentage: 88,
       status: 'Active',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
+      avatar: '/members/member-7.svg',
       color: 'from-teal-400 to-emerald-400'
     },
   ]);
@@ -1547,15 +1540,6 @@ export default function Home() {
     try {
       const res = await fetch('/api/members').then(r => r.json());
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        const avatarMap: Record<string, string> = {
-          'Simon': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-          'David': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-          'Elijah': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
-          'Samuel': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          'Michael': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80',
-          'Daniel': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
-          'Beatrice': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
-        };
         const colorMap: Record<string, string> = {
           'Simon': 'from-emerald-400 to-teal-400',
           'David': 'from-sky-400 to-cyan-400',
@@ -1585,7 +1569,7 @@ export default function Home() {
             shares: '14.28%',
             percentage: 95,
             status: 'Active',
-            avatar: avatarMap[firstName] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            avatar: getMemberAvatar(m.fullName || m.id || firstName),
             color: colorMap[firstName] || 'from-emerald-400 to-teal-400',
           };
         });
@@ -2833,9 +2817,9 @@ export default function Home() {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-xl hover:bg-[#10192A] transition border border-transparent hover:border-[#1E2E4E]"
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-700 ring-2 ring-emerald-500/50">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-emerald-700 ring-2 ring-emerald-500/50 shrink-0">
                   <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+                    src={getMemberAvatar(currentUser?.email || currentUser?.fullName || 'Simon')}
                     alt={currentUser?.fullName || 'Member'}
                     className="w-full h-full object-cover"
                   />
@@ -2848,11 +2832,20 @@ export default function Home() {
 
               {/* Profile Dropdown */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-[#0F172A] border border-[#1E293B] rounded-2xl p-2 shadow-2xl z-50 space-y-1">
-                  <div className="px-3 py-2 border-b border-[#1E293B]">
-                    <p className="text-xs font-bold text-white">{currentUser?.fullName}</p>
-                    <p className="text-[10px] text-emerald-400">{currentUser?.email}</p>
-                    <p className="text-[9px] text-slate-400">ID: {currentUser?.nationalId} • {currentUser?.phone}</p>
+                <div className="absolute right-0 mt-2 w-60 bg-[#0F172A] border border-[#1E293B] rounded-2xl p-2 shadow-2xl z-50 space-y-1">
+                  <div className="px-3 py-2.5 border-b border-[#1E293B] flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-emerald-500/50 shrink-0 bg-slate-800">
+                      <img
+                        src={getMemberAvatar(currentUser?.email || currentUser?.fullName || 'Simon')}
+                        alt={currentUser?.fullName || 'Member'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white truncate">{currentUser?.fullName}</p>
+                      <p className="text-[10px] text-emerald-400 truncate">{currentUser?.email}</p>
+                      <p className="text-[9px] text-slate-400">ID: {currentUser?.nationalId} • {currentUser?.phone}</p>
+                    </div>
                   </div>
                   <button
                     onClick={() => { setActiveTab('Member Directory'); setShowProfileMenu(false); }}
@@ -3534,15 +3527,29 @@ export default function Home() {
                         <th className="p-4">Phone Number</th>
                         <th className="p-4">Role / Status</th>
                         <th className="p-4">Email Address</th>
-                        {canEdit && <th className="p-4 text-center">Action</th>}
+                        <th className="p-4 text-center">Profile / Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1E293B]">
                       {filteredMembers.map((m) => (
                         <tr key={m.id} className="hover:bg-[#142036] transition">
-                          <td className="p-4 font-semibold text-white flex items-center gap-2.5">
-                            <img src={m.avatar} alt={m.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
-                            <span>{m.fullName}</span>
+                          <td className="p-4 font-semibold text-white">
+                            <div
+                              onClick={() => setSelectedMemberProfile(m)}
+                              className="flex items-center gap-3 cursor-pointer group"
+                            >
+                              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/40 bg-slate-800 shadow-md group-hover:ring-emerald-400 transition">
+                                <img
+                                  src={m.avatar || getMemberAvatar(m.fullName || m.id)}
+                                  alt={m.fullName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div>
+                                <span className="block font-bold text-white text-xs group-hover:text-emerald-400 transition">{m.fullName}</span>
+                                <span className="block text-[10px] text-slate-400 font-mono">{m.id}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="p-4 font-mono text-emerald-400 font-bold">{m.nationalId}</td>
                           <td className="p-4 font-mono text-slate-300">{m.phone}</td>
@@ -3552,17 +3559,26 @@ export default function Home() {
                             </span>
                           </td>
                           <td className="p-4 font-mono text-slate-400">{m.email}</td>
-                          {canEdit && (
-                            <td className="p-4 text-center">
+                          <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
                               <button
-                                onClick={() => handleOpenEditModal(m, 'Member Directory')}
+                                onClick={() => setSelectedMemberProfile(m)}
                                 className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                title="Edit Member Information"
+                                title="View Member Profile"
                               >
-                                <Edit3 className="w-4 h-4" />
+                                <Eye className="w-4 h-4" />
                               </button>
-                            </td>
-                          )}
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleOpenEditModal(m, 'Member Directory')}
+                                  className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
+                                  title="Edit Member Information"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -5320,6 +5336,114 @@ export default function Home() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* INDIVIDUAL MEMBER PROFILE MODAL                                      */}
+      {/* ===================================================================== */}
+      {selectedMemberProfile && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#0F172A] border border-[#1E293B] rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedMemberProfile(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-full bg-[#142036] hover:bg-[#1E2D4A] transition"
+              title="Close Profile"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="text-center pt-2 pb-6 border-b border-[#1E293B]">
+              <div className="relative inline-block mb-3">
+                <div className="w-28 h-28 rounded-full overflow-hidden ring-4 ring-emerald-500/50 shadow-2xl mx-auto bg-slate-800">
+                  <img
+                    src={selectedMemberProfile.avatar || getMemberAvatar(selectedMemberProfile.fullName || selectedMemberProfile.id)}
+                    alt={selectedMemberProfile.fullName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="absolute bottom-1 right-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 shadow-md">
+                  {selectedMemberProfile.id}
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-white">{selectedMemberProfile.fullName}</h2>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold border border-emerald-500/20">
+                  {selectedMemberProfile.role || 'Member'}
+                </span>
+                <span className="px-3 py-1 bg-slate-800 text-slate-300 rounded-full text-xs font-semibold">
+                  Status: {selectedMemberProfile.status || 'Active'}
+                </span>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="py-4 border-b border-[#1E293B] space-y-2.5 text-xs">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Official Contact Details</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px]">National ID</span>
+                  <span className="text-white font-mono font-bold text-xs">{selectedMemberProfile.nationalId}</span>
+                </div>
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px]">Phone Number</span>
+                  <span className="text-white font-mono font-bold text-xs">{selectedMemberProfile.phone}</span>
+                </div>
+              </div>
+              <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                <span className="text-slate-400 block text-[10px]">Authorized Member Email</span>
+                <span className="text-emerald-400 font-mono font-bold text-xs">{selectedMemberProfile.email}</span>
+              </div>
+            </div>
+
+            {/* Financial Overview & Equity Share */}
+            <div className="py-4 space-y-2.5 text-xs">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Financial Summary & Equity</h3>
+              <div className="grid grid-cols-2 gap-3 font-mono">
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px] font-sans">Total Contributions</span>
+                  <span className="text-emerald-400 font-bold text-sm">KES {Number(selectedMemberProfile.totalContribution || 0).toLocaleString()}</span>
+                </div>
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px] font-sans">Active Loans</span>
+                  <span className="text-amber-400 font-bold text-sm">KES {Number(selectedMemberProfile.activeLoans || 0).toLocaleString()}</span>
+                </div>
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px] font-sans">Net Balance</span>
+                  <span className="text-white font-bold text-sm">KES {Number(selectedMemberProfile.netBalance || 0).toLocaleString()}</span>
+                </div>
+                <div className="bg-[#142036] p-3 rounded-xl border border-[#1E2D4A]">
+                  <span className="text-slate-400 block text-[10px] font-sans">% Equity Share</span>
+                  <span className="text-cyan-400 font-bold text-sm">{selectedMemberProfile.shares || '14.28%'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end items-center gap-3 pt-4 border-t border-[#1E293B]">
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenEditModal(selectedMemberProfile, 'Member Directory');
+                    setSelectedMemberProfile(null);
+                  }}
+                  className="px-4 py-2 bg-[#142036] hover:bg-[#1E2D4A] text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Edit Member
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedMemberProfile(null)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-950/50"
+              >
+                Close Profile
+              </button>
+            </div>
           </div>
         </div>
       )}

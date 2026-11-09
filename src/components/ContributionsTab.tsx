@@ -28,6 +28,7 @@ import {
   normalizeMonthYear,
   getEATISODate
 } from '@/lib/dateUtils';
+import { getMemberAvatar } from '@/lib/memberAvatars';
 
 interface ContributionsTabProps {
   contributions: any[];
@@ -930,7 +931,18 @@ export default function ContributionsTab({
                     const rowMenuKey = `monthly-${row.memberId || idx}`;
                     return (
                       <tr key={row.memberId || idx} className="hover:bg-slate-800/35 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-white">{row.memberName}</td>
+                        <td className="py-3.5 px-4 font-bold text-white">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
+                              <img
+                                src={getMemberAvatar(row.memberName)}
+                                alt={row.memberName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span>{row.memberName}</span>
+                          </div>
+                        </td>
                         <td className="py-3.5 px-4 text-emerald-400 font-semibold">
                           {row.canonicalMonth}
                         </td>
@@ -1154,7 +1166,18 @@ export default function ContributionsTab({
                 {allPaymentTransactions.slice(0, 150).map((t, idx) => (
                   <tr key={`${t.id}-${idx}`} className="hover:bg-slate-800/30">
                     <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{t.paymentDate}</td>
-                    <td className="py-3 px-4 font-bold text-white">{t.memberName}</td>
+                    <td className="py-3 px-4 font-bold text-white">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
+                          <img
+                            src={getMemberAvatar(t.memberName)}
+                            alt={t.memberName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <span>{t.memberName}</span>
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-emerald-400 font-semibold whitespace-nowrap">
                       {t.month} {t.year}
                     </td>

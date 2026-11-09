@@ -38,6 +38,7 @@ import {
   AllocationPolicy
 } from '@/lib/loanCalculator';
 import { ALL_MONTHS, AVAILABLE_YEARS, getEATISODate } from '@/lib/dateUtils';
+import { getMemberAvatar } from '@/lib/memberAvatars';
 
 interface LoanPortfolioTabProps {
   loans: any[];
@@ -1216,9 +1217,16 @@ export default function LoanPortfolioTab({
                               setSelectedMemberName(loan.memberName);
                               setSubView('member-profile');
                             }}
-                            className="hover:text-emerald-400 text-left transition-colors"
+                            className="hover:text-emerald-400 text-left transition-colors flex items-center gap-2.5 group"
                           >
-                            {loan.memberName}
+                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
+                              <img
+                                src={getMemberAvatar(loan.memberName)}
+                                alt={loan.memberName}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className="group-hover:text-emerald-400 transition">{loan.memberName}</span>
                           </button>
                         </td>
                         <td className="py-3.5 px-4 text-right font-semibold text-slate-200 whitespace-nowrap">
@@ -1835,14 +1843,20 @@ export default function LoanPortfolioTab({
       {subView === 'member-profile' && (
         <div className="space-y-6">
           <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-emerald-400" />
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/50 bg-slate-800 shadow-xl">
+                <img
+                  src={getMemberAvatar(selectedMemberName)}
+                  alt={selectedMemberName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <div>
                 <h2 className="text-lg font-extrabold text-white">
-                  Individual Member Loan Profile
+                  {selectedMemberName} — Loan Profile
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Every Dreamloom member can hold multiple independent active and settled loans
+                  Official borrowing portfolio & payment history register
                 </p>
               </div>
             </div>

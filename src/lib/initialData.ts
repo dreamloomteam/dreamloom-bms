@@ -14,7 +14,7 @@ export const initialMembers = [
     "netBalance": 61750,
     "shares": "13.80%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-1.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -31,7 +31,7 @@ export const initialMembers = [
     "netBalance": 68700,
     "shares": "16.56%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-2.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -48,7 +48,7 @@ export const initialMembers = [
     "netBalance": 78050,
     "shares": "16.56%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-3.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -65,7 +65,7 @@ export const initialMembers = [
     "netBalance": 69550,
     "shares": "14.76%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-4.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -82,7 +82,7 @@ export const initialMembers = [
     "netBalance": 72050,
     "shares": "15.29%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-5.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -99,7 +99,7 @@ export const initialMembers = [
     "netBalance": 64150,
     "shares": "13.61%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-6.svg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -116,7 +116,7 @@ export const initialMembers = [
     "netBalance": 29050,
     "shares": "9.67%",
     "status": "Active",
-    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+    "avatar": "/members/member-7.svg",
     "color": "from-emerald-400 to-teal-400"
   }
 ];
