@@ -180,7 +180,12 @@ export default function LoanPortfolioTab({
           paidAmount: Number(l.paid ?? l.paidAmount) || 0,
           principalPaid: Number(l.principalPaid) || 0,
           interestPaid: Number(l.interestPaid) || 0,
-          interestRate: l.interestRate !== undefined ? Number(l.interestRate) : 10.0,
+          interestRate:
+            l.interestRate !== undefined && l.interestRate !== null && l.interestRate !== ''
+              ? Number(l.interestRate)
+              : l.interest && Number(l.principal) > 0
+              ? Math.round((Number(l.interest) / Number(l.principal)) * 100 * 100) / 100
+              : 10.0,
           interestMethod: l.interestMethod || 'Simple',
           compoundingFrequency: l.compoundingFrequency || 'Monthly',
           durationMonths: Number(l.durationMonths) || 6,
@@ -397,7 +402,7 @@ export default function LoanPortfolioTab({
         memberName: loanToEdit.memberName,
         principal: String(loanToEdit.originalPrincipal),
         issueDate: loanToEdit.issueDate,
-        interestRate: String(loanToEdit.monthlyInterestRate),
+        interestRate: String(loanToEdit.monthlyInterestRate ?? (loanToEdit as any).interestRate ?? 10),
         interestMethod: loanToEdit.interestMethod,
         compoundingFrequency: loanToEdit.compoundingFrequency || 'Monthly',
         durationMonths: String(loanToEdit.loanDuration || 6),
@@ -2632,19 +2637,66 @@ export default function LoanPortfolioTab({
                   />
                 </div>
 
-                <div>
-                  <label className="block font-bold text-slate-300 mb-1">
-                    4. Monthly Interest Rate (%) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={loanForm.interestRate}
-                    onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })}
-                    className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2.5 text-amber-400 font-bold"
-                    required
-                  />
+                <div className="col-span-1 sm:col-span-2 bg-[#090F1D]/80 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block font-bold text-slate-200 text-xs">
+                      4. Monthly Interest Rate (%) — User Controlled *
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                      Selected: {loanForm.interestRate !== '' ? `${loanForm.interestRate}% / month` : 'Not Set'}
+                    </span>
+                  </div>
+
+                  {/* Preset Selection Buttons */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+                      Presets:
+                    </span>
+                    {[
+                      { label: '0% (Interest-Free)', val: '0' },
+                      { label: '5%', val: '5' },
+                      { label: '10%', val: '10' },
+                      { label: '15%', val: '15' },
+                      { label: '20%', val: '20' }
+                    ].map(preset => {
+                      const isSelected = String(loanForm.interestRate) === preset.val;
+                      return (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setLoanForm({ ...loanForm, interestRate: preset.val })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 ring-1 ring-amber-300'
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={loanForm.interestRate}
+                        onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })}
+                        placeholder="Enter percentage (e.g. 0, 5, 10, 15, 20 or custom)"
+                        className="w-full bg-[#070D18] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-amber-400 font-bold font-mono text-sm"
+                        required
+                      />
+                      <span className="absolute right-3 top-2 text-slate-400 text-xs font-bold pointer-events-none">
+                        % / month
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Manually selected for this individual loan only. Saved directly to the database. Does not alter company defaults or other member facilities.
+                  </p>
                 </div>
 
                 <div>
@@ -2793,27 +2845,70 @@ export default function LoanPortfolioTab({
 
               {/* Live Calculation Preview */}
               {Number(loanForm.principal) > 0 && (
-                <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                      First Full Monthly Anniversary Interest ({loanForm.interestRate}%)
-                    </span>
-                    <span className="text-sm font-extrabold text-amber-400">
-                      KES{' '}
-                      {(
-                        (Number(loanForm.principal) * Number(loanForm.interestRate || 0)) /
-                        100
-                      ).toLocaleString()}{' '}
-                      / completed month
-                    </span>
+                <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Monthly Interest Accrual ({loanForm.interestRate !== '' ? `${loanForm.interestRate}%` : '0%'} per month)
+                      </span>
+                      {Number(loanForm.interestRate) === 0 ? (
+                        <span className="text-sm font-extrabold text-emerald-400">
+                          KES 0 <span className="text-xs font-normal text-slate-400">(0% Interest-Free Loan)</span>
+                        </span>
+                      ) : (
+                        <span className="text-sm font-extrabold text-amber-400">
+                          KES{' '}
+                          {(
+                            (Number(loanForm.principal) * Number(loanForm.interestRate || 0)) /
+                            100
+                          ).toLocaleString()}{' '}
+                          <span className="text-xs font-normal text-slate-400">/ completed month</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Calculation Method
+                      </span>
+                      <span className="text-xs font-bold text-emerald-400">
+                        {loanForm.interestMethod} ({loanForm.allocationPolicy})
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                      Method
-                    </span>
-                    <span className="text-xs font-bold text-emerald-400">
-                      {loanForm.interestMethod} ({loanForm.allocationPolicy})
-                    </span>
+
+                  {/* Summary Comparison */}
+                  <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-sans">Principal</span>
+                      <span className="font-bold text-white">KES {Number(loanForm.principal || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-sans">
+                        Estimated Interest ({loanForm.durationMonths || 1}m)
+                      </span>
+                      <span className="font-bold text-amber-400">
+                        KES{' '}
+                        {Number(loanForm.interestRate) === 0
+                          ? '0'
+                          : (
+                              ((Number(loanForm.principal || 0) * Number(loanForm.interestRate || 0)) / 100) *
+                              Number(loanForm.durationMonths || 1)
+                            ).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-sans">Total Estimated Loan</span>
+                      <span className="font-bold text-emerald-400">
+                        KES{' '}
+                        {Number(loanForm.interestRate) === 0
+                          ? Number(loanForm.principal || 0).toLocaleString()
+                          : (
+                              Number(loanForm.principal || 0) +
+                              ((Number(loanForm.principal || 0) * Number(loanForm.interestRate || 0)) / 100) *
+                                Number(loanForm.durationMonths || 1)
+                            ).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

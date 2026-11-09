@@ -795,7 +795,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Principal Amount must be greater than 0.' }, { status: 400 });
     }
 
-    const newRate = interestRate !== undefined ? Number(interestRate) : existing.interestRate;
+    const newRate = interestRate !== undefined && interestRate !== null && interestRate !== '' ? Number(interestRate) : existing.interestRate;
     if (isNaN(newRate) || newRate < 0) {
       return NextResponse.json({ error: 'Interest Rate cannot be negative.' }, { status: 400 });
     }

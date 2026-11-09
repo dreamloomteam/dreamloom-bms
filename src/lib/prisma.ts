@@ -259,7 +259,7 @@ export async function ensureDatabaseSchema(): Promise<void> {
             paidAmount: l.paid,
             principalPaid: isSettled ? l.principal : 0,
             interestPaid: isSettled ? l.interest : 0,
-            interestRate: rate || 10.0,
+            interestRate: rate !== undefined && rate !== null ? rate : 10.0,
             interestMethod: 'Simple',
             compoundingFrequency: 'Monthly',
             durationMonths: 6,

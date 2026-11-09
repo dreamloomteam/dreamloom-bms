@@ -403,8 +403,9 @@ export function calculateLoanProfile(
       }
     }
 
-    // Legacy historical settled loans that had an agreed flat interest amount and 1 settlement period
+    // Legacy historical settled loans that had an agreed flat interest amount and no explicit interestRate recorded
     if (
+      (loan.interestRate === undefined || loan.interestRate === null) &&
       loan.status === 'Settled' &&
       accruedPeriodCount === 1 &&
       p === 1 &&

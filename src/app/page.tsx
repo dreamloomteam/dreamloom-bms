@@ -2241,7 +2241,7 @@ export default function Home() {
       // 3. Loans
       else if (modalMode === 'Loan Portfolio' || modalMode === 'New Loan') {
         const pAmt = Number(field2) || 0;
-        const iAmt = field3 ? Number(field3) : pAmt * 0.10;
+        const iAmt = field3 !== '' && field3 !== undefined && !isNaN(Number(field3)) ? Number(field3) : pAmt * 0.10;
         const tAmt = pAmt + iAmt;
 
         const res = await fetch('/api/loans', {
