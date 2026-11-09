@@ -35,7 +35,8 @@ import {
   calculateLoanProfile,
   CalculatedLoanProfile,
   InterestMethod,
-  AllocationPolicy
+  AllocationPolicy,
+  roundCurrency
 } from '@/lib/loanCalculator';
 import { ALL_MONTHS, AVAILABLE_YEARS, getEATISODate } from '@/lib/dateUtils';
 import { getMemberAvatar } from '@/lib/memberAvatars';
@@ -202,6 +203,50 @@ export default function LoanPortfolioTab({
       )
     );
   }, [loans, reportingAsOfDate]);
+
+  // Authoritative live preview calculation for the Disburse / Edit Loan modal
+  const modalPreviewProfile: CalculatedLoanProfile | null = useMemo(() => {
+    const p = Number(loanForm.principal);
+    if (!p || p <= 0 || !loanForm.issueDate) return null;
+    const r = loanForm.interestRate !== '' ? Number(loanForm.interestRate) : 10;
+    const existingLoan = editingLoanId ? loans.find(l => l.id === editingLoanId) : null;
+    return calculateLoanProfile(
+      {
+        id: loanForm.id || 'PREVIEW',
+        memberId: 1,
+        memberName: loanForm.memberName || 'Member',
+        issueDate: loanForm.issueDate,
+        principal: p,
+        interestRate: r,
+        interestMethod: loanForm.interestMethod,
+        compoundingFrequency: loanForm.compoundingFrequency,
+        durationMonths: Number(loanForm.durationMonths) || 6,
+        repaymentTerms: loanForm.repaymentTerms,
+        allocationPolicy: loanForm.allocationPolicy,
+        purpose: loanForm.purpose,
+        remarks: loanForm.remarks,
+        status: editingLoanId ? loanForm.status : 'Active',
+        repayments: existingLoan?.repayments || []
+      },
+      reportingAsOfDate
+    );
+  }, [
+    loanForm.principal,
+    loanForm.interestRate,
+    loanForm.issueDate,
+    loanForm.interestMethod,
+    loanForm.compoundingFrequency,
+    loanForm.durationMonths,
+    loanForm.repaymentTerms,
+    loanForm.allocationPolicy,
+    loanForm.purpose,
+    loanForm.remarks,
+    loanForm.status,
+    loanForm.id,
+    editingLoanId,
+    loans,
+    reportingAsOfDate
+  ]);
 
   // Separate Active (Active / Partially Paid / Overdue) vs Settled vs Cancelled loans
   // Cancelled loans never appear as active loans or distort Dashboard totals
@@ -493,6 +538,7 @@ export default function LoanPortfolioTab({
           status: editingLoanId ? loanForm.status : undefined,
           remarks: loanForm.remarks.trim(),
           editReason: loanForm.editReason.trim() || undefined,
+          asOfDate: reportingAsOfDate,
           userEmail,
           createdBy: userEmail,
           updatedBy: userEmail
@@ -2844,23 +2890,22 @@ export default function LoanPortfolioTab({
               )}
 
               {/* Live Calculation Preview */}
-              {Number(loanForm.principal) > 0 && (
+              {Number(loanForm.principal) > 0 && modalPreviewProfile && (
                 <div className="bg-[#090F1D] border border-slate-800 rounded-xl p-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        Monthly Interest Accrual ({loanForm.interestRate !== '' ? `${loanForm.interestRate}%` : '0%'} per month)
+                        Monthly Interest Accrual ({modalPreviewProfile.monthlyInterestRate}% / month)
                       </span>
-                      {Number(loanForm.interestRate) === 0 ? (
+                      {modalPreviewProfile.monthlyInterestRate === 0 ? (
                         <span className="text-sm font-extrabold text-emerald-400">
                           KES 0 <span className="text-xs font-normal text-slate-400">(0% Interest-Free Loan)</span>
                         </span>
                       ) : (
                         <span className="text-sm font-extrabold text-amber-400">
                           KES{' '}
-                          {(
-                            (Number(loanForm.principal) * Number(loanForm.interestRate || 0)) /
-                            100
+                          {roundCurrency(
+                            (Number(loanForm.principal) * modalPreviewProfile.monthlyInterestRate) / 100
                           ).toLocaleString()}{' '}
                           <span className="text-xs font-normal text-slate-400">/ completed month</span>
                         </span>
@@ -2868,47 +2913,72 @@ export default function LoanPortfolioTab({
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        Calculation Method
+                        Valuation / As-Of Date
                       </span>
                       <span className="text-xs font-bold text-emerald-400">
-                        {loanForm.interestMethod} ({loanForm.allocationPolicy})
+                        {reportingAsOfDate} ({modalPreviewProfile.completedPeriods} Completed Month{modalPreviewProfile.completedPeriods === 1 ? '' : 's'})
                       </span>
                     </div>
                   </div>
 
-                  {/* Summary Comparison */}
+                  {/* Authoritative Calculated Figures (Exact Match to Register & DB) */}
                   <div className="grid grid-cols-3 gap-2 text-xs font-mono">
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <span className="text-[10px] text-slate-400 block font-sans">Principal</span>
-                      <span className="font-bold text-white">KES {Number(loanForm.principal || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <span className="text-[10px] text-slate-400 block font-sans">
-                        Estimated Interest ({loanForm.durationMonths || 1}m)
+                    <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-sans font-bold">1. Principal</span>
+                      <span className="font-extrabold text-white text-sm">
+                        KES {Number(loanForm.principal || 0).toLocaleString()}
                       </span>
-                      <span className="font-bold text-amber-400">
-                        KES{' '}
-                        {Number(loanForm.interestRate) === 0
-                          ? '0'
-                          : (
-                              ((Number(loanForm.principal || 0) * Number(loanForm.interestRate || 0)) / 100) *
+                    </div>
+                    <div className="bg-slate-900/60 p-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                      <span className="text-[10px] text-amber-300 block font-sans font-bold">
+                        2. Accrued Interest ({modalPreviewProfile.completedPeriods}m)
+                      </span>
+                      <span className="font-extrabold text-amber-400 text-sm">
+                        KES {modalPreviewProfile.totalInterestAccrued.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block font-sans mt-0.5">
+                        {modalPreviewProfile.completedPeriods === 0
+                          ? '0 completed months (new loan)'
+                          : `${modalPreviewProfile.completedPeriods} × KES ${roundCurrency(
+                              (Number(loanForm.principal) * modalPreviewProfile.monthlyInterestRate) / 100
+                            ).toLocaleString()}`}
+                      </span>
+                    </div>
+                    <div className="bg-slate-900/60 p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+                      <span className="text-[10px] text-emerald-300 block font-sans font-bold">
+                        3. Total Loan Payable
+                      </span>
+                      <span className="font-extrabold text-emerald-400 text-sm">
+                        KES {modalPreviewProfile.totalLoanAmount.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block font-sans mt-0.5">
+                        Principal + Accrued
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Supplementary Full-Term Forecast */}
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+                    <span className="font-medium">
+                      Full-Term Estimate ({loanForm.durationMonths || 1} months at {modalPreviewProfile.monthlyInterestRate}% {loanForm.interestMethod}):
+                    </span>
+                    <span className="font-mono font-semibold text-slate-300">
+                      Projected Interest: KES{' '}
+                      {modalPreviewProfile.monthlyInterestRate === 0
+                        ? '0'
+                        : roundCurrency(
+                            ((Number(loanForm.principal || 0) * modalPreviewProfile.monthlyInterestRate) / 100) *
                               Number(loanForm.durationMonths || 1)
-                            ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <span className="text-[10px] text-slate-400 block font-sans">Total Estimated Loan</span>
-                      <span className="font-bold text-emerald-400">
-                        KES{' '}
-                        {Number(loanForm.interestRate) === 0
-                          ? Number(loanForm.principal || 0).toLocaleString()
-                          : (
-                              Number(loanForm.principal || 0) +
-                              ((Number(loanForm.principal || 0) * Number(loanForm.interestRate || 0)) / 100) *
+                          ).toLocaleString()}{' '}
+                      | Projected Maturity Total: KES{' '}
+                      {modalPreviewProfile.monthlyInterestRate === 0
+                        ? Number(loanForm.principal || 0).toLocaleString()
+                        : roundCurrency(
+                            Number(loanForm.principal || 0) +
+                              ((Number(loanForm.principal || 0) * modalPreviewProfile.monthlyInterestRate) / 100) *
                                 Number(loanForm.durationMonths || 1)
-                            ).toLocaleString()}
-                      </span>
-                    </div>
+                          ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               )}

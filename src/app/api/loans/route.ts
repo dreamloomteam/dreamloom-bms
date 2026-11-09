@@ -371,8 +371,11 @@ export async function POST(request: Request) {
       paid,
       status,
       clearedDate,
-      createdBy
+      createdBy,
+      asOfDate
     } = body;
+
+    const evalDate = asOfDate ? toUTCMidnight(asOfDate) : toUTCMidnight(new Date());
 
     const principalNum = Number(principal);
     if (principal === undefined || principal === null || principal === '' || isNaN(principalNum) || principalNum <= 0) {
@@ -499,7 +502,7 @@ export async function POST(request: Request) {
       paidAmount: initialPaid,
       status: status || 'Active',
       clearedDate: clearedDate && clearedDate !== '-' ? toUTCMidnight(clearedDate) : null
-    });
+    }, evalDate);
 
     const newLoan = await prisma.loan.create({
       data: {
@@ -569,11 +572,11 @@ export async function POST(request: Request) {
       userName: resolveEditorName(authUser),
       member: memberObj.fullName,
       oldValues: {},
-      newValues: buildLoanAuditSnapshot(refreshedLoan),
+      newValues: buildLoanAuditSnapshot(refreshedLoan, evalDate),
       remarks: `Disbursed new loan ${newLoan.id} for ${memberObj.fullName} (Principal: KES ${principalNum.toLocaleString()}, ${rateNum}%/mo ${tempProfile.interestMethod})`
     });
 
-    const enrichedRefreshed = enrichLoanForResponse(refreshedLoan);
+    const enrichedRefreshed = enrichLoanForResponse(refreshedLoan, evalDate);
     return NextResponse.json({ ...enrichedRefreshed, success: true, data: enrichedRefreshed }, { status: 201 });
   } catch (error: any) {
     console.error('Failed to create loan or repayment:', error);
@@ -768,7 +771,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    const evalDate = asOfDate ? toUTCMidnight(asOfDate) : null;
+    const evalDate = asOfDate ? toUTCMidnight(asOfDate) : toUTCMidnight(new Date());
     const oldSnapshot = buildLoanAuditSnapshot(existing, evalDate);
 
     const members = await prisma.member.findMany();

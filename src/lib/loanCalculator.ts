@@ -218,7 +218,7 @@ export function getCompletedMonthlyPeriods(
   return k - 1;
 }
 
-function roundCurrency(val: number): number {
+export function roundCurrency(val: number): number {
   return Math.round((val + Number.EPSILON) * 100) / 100;
 }
 

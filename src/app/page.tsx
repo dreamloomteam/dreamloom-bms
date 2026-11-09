@@ -147,7 +147,7 @@ export default function Home() {
         .catch(err => console.warn('Could not fetch server contributions:', err));
 
       // 2. Loans from PostgreSQL
-      fetch('/api/loans')
+      fetch(`/api/loans?asOfDate=${encodeURIComponent(getEATISODate())}`)
         .then(r => r.json())
         .then(res => {
           const list = Array.isArray(res) ? res : (res?.data || []);
@@ -1625,7 +1625,8 @@ export default function Home() {
 
   const refreshLoans = async (asOfDate?: string) => {
     try {
-      const url = asOfDate ? `/api/loans?asOfDate=${encodeURIComponent(asOfDate)}` : '/api/loans';
+      const effectiveDate = asOfDate || getEATISODate();
+      const url = `/api/loans?asOfDate=${encodeURIComponent(effectiveDate)}`;
       const res = await fetch(url).then(r => r.json());
       const list = Array.isArray(res) ? res : (res?.data || []);
       if (Array.isArray(list) && list.length > 0) {
@@ -2257,7 +2258,8 @@ export default function Home() {
             issueDate: field4 || getEATISODate(),
             clearedDate: field5 && field5 !== '-' ? field5 : null,
             status: field6 || 'Active',
-            paidAmount: field6 === 'Settled' ? tAmt : (tAmt - (field7 ? Number(field7) : tAmt))
+            paidAmount: field6 === 'Settled' ? tAmt : (tAmt - (field7 ? Number(field7) : tAmt)),
+            asOfDate: getEATISODate()
           })
         }).then(r => r.json());
 
