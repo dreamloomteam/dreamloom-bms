@@ -1306,23 +1306,21 @@ export default function LoanPortfolioTab({
                                     </button>
 
                                     {/* 2. Pay */}
-                                    {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setOpenActionMenuLoanId(null);
-                                          if (!canEdit) {
-                                            showToast('Editor access required: Please log in as an authorized director or officer.');
-                                            return;
-                                          }
-                                          handleOpenRepaymentModal(loan);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition"
-                                      >
-                                        <CreditCard className="w-4 h-4 text-slate-700" />
-                                        <span>Pay</span>
-                                      </button>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenActionMenuLoanId(null);
+                                        if (!canEdit) {
+                                          showToast('Editor access required: Please log in as an authorized director or officer.');
+                                          return;
+                                        }
+                                        handleOpenRepaymentModal(loan);
+                                      }}
+                                      className="w-full text-left px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 transition"
+                                    >
+                                      <CreditCard className="w-4 h-4 text-slate-700" />
+                                      <span>Pay</span>
+                                    </button>
 
                                     {/* 3. Edit */}
                                     <button

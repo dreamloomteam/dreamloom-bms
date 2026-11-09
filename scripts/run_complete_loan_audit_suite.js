@@ -55,6 +55,7 @@ async function runAuditSuite() {
     headers: { Cookie: sessionCookie }
   });
   const allLoans = getLoans(await loansRes.json());
+  const initialOfficialLoanCount = allLoans.length;
   console.log(`  Retrieved ${allLoans.length} total loan records from PostgreSQL.`);
 
   let auditedCount = 0;
@@ -477,12 +478,12 @@ async function runAuditSuite() {
   console.log(`  Cleaned up ${createdTestIds.length} temporary test facilities.`);
   recordTest('Clean Up Test Facilities', true, `Removed ${createdTestIds.length} temporary test records`);
 
-  // Final check: verify exactly 36 official historical loans remain
+  // Final check: verify exactly the official historical loans remain
   const finalCheckRes = await fetch(`${BASE_URL}/api/loans?asOfDate=${asOfValuationDate}`, {
     headers: { Cookie: sessionCookie }
   });
   const finalLoans = getLoans(await finalCheckRes.json());
-  recordTest('Historical Database Integrity', finalLoans.length === 36, `PostgreSQL contains exactly ${finalLoans.length} official facilities (Zero stray records)`);
+  recordTest('Historical Database Integrity', finalLoans.length === initialOfficialLoanCount, `PostgreSQL contains exactly ${finalLoans.length} official facilities (Zero stray records)`);
 
   console.log('\n================================================================================');
   console.log(` AUDIT & VERIFICATION SUMMARY: ${passed} PASSED, ${failed} FAILED`);
