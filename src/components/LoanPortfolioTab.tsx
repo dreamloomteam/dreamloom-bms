@@ -1372,6 +1372,88 @@ export default function LoanPortfolioTab({
                                 <span>Delete</span>
                               </button>
                             )}
+
+                            {/* Desktop 3-dot dropdown for complete action menu */}
+                            <div className="relative inline-block text-left">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOpenMobileMenuLoanId(prev =>
+                                    prev === loan.id ? null : loan.id
+                                  )
+                                }
+                                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                                title="Actions"
+                                aria-label="Loan Actions"
+                              >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </button>
+                              {openMobileMenuLoanId === loan.id && (
+                                <div className="origin-top-right absolute right-0 mt-1 w-44 rounded-xl shadow-2xl bg-[#090F1D] border border-slate-700 divide-y divide-slate-800 z-50 text-left">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenMobileMenuLoanId(null);
+                                      setSelectedLoanId(loan.id);
+                                      setSubView('loan-profile');
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-emerald-400 hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>View Schedule</span>
+                                  </button>
+                                  {loan.status !== 'Settled' && loan.status !== 'Cancelled' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMobileMenuLoanId(null);
+                                        if (!canEdit) {
+                                          showToast('Editor access required: Please log in as an authorized director or officer.');
+                                          return;
+                                        }
+                                        handleOpenRepaymentModal(loan);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-xs font-bold text-amber-300 hover:bg-slate-800 flex items-center gap-2"
+                                    >
+                                      <CreditCard className="w-3.5 h-3.5" />
+                                      <span>Record Payment</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenMobileMenuLoanId(null);
+                                      if (!canEdit) {
+                                        showToast('Editor access required: Please log in as an authorized director or officer.');
+                                        return;
+                                      }
+                                      handleOpenDisburseModal(loan);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs font-bold text-blue-300 hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                    <span>Edit Loan</span>
+                                  </button>
+                                  {loan.status !== 'Cancelled' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMobileMenuLoanId(null);
+                                        if (!canEdit) {
+                                          showToast('Editor access required: Please log in as an authorized director or officer.');
+                                          return;
+                                        }
+                                        handlePromptDeleteLoan(loan);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-300 hover:bg-slate-800 flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Delete / Cancel</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Mobile Three-Dot Actions Menu */}
