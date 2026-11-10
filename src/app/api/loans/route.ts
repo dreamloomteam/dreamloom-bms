@@ -112,6 +112,28 @@ export async function GET(request: Request) {
     const asOfDate = resolveAsOfDateFromParams(searchParams);
     const filterMemberId = searchParams.get('memberId');
 
+    if (searchParams.get('debug') === 'repayments') {
+      const reps = await prisma.loanRepayment.findMany({
+        where: {
+          OR: [
+            { loanId: { contains: '1067' } },
+            { loanId: { contains: '1070' } },
+            { id: { gte: 65 } }
+          ]
+        }
+      });
+      const rawLoans = await prisma.loan.findMany({
+        where: {
+          OR: [
+            { id: { contains: '1067' } },
+            { id: { contains: '1070' } }
+          ]
+        },
+        include: { repayments: true, member: true }
+      });
+      return NextResponse.json({ reps, rawLoans });
+    }
+
     const loans = await prisma.loan.findMany({
       include: {
         member: true,
