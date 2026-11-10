@@ -1155,11 +1155,11 @@ export default function LoanPortfolioTab({
           </div>
 
           {/* 3. LIGHT MINT LOAN REGISTER TABLE CONTAINER */}
-          <div className="bg-[#EBF3EC] rounded-2xl p-4 shadow-sm border border-emerald-900/10 overflow-hidden">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs text-slate-800 min-w-[960px]">
                 <thead>
-                  <tr className="border-b border-emerald-900/10 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                     <th className="py-3.5 px-3 w-10">#</th>
                     <th className="py-3.5 px-4">Member Name</th>
                     <th className="py-3.5 px-4">Loan Ref</th>
@@ -1186,7 +1186,7 @@ export default function LoanPortfolioTab({
                       return (
                         <tr
                           key={loan.id}
-                          className="hover:bg-emerald-100/50 transition-colors"
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}
                         >
                           {/* # Index */}
                           <td className="py-3.5 px-3 font-semibold text-slate-700">
@@ -1461,17 +1461,17 @@ export default function LoanPortfolioTab({
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSubView('register')}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold"
+                className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-sm transition"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back to Register</span>
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Select Loan:</span>
+                <span className="text-xs text-slate-600 font-medium">Select Loan:</span>
                 <select
                   value={activeSelectedLoan.id}
                   onChange={e => setSelectedLoanId(e.target.value)}
-                  className="bg-[#0F172A] border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-emerald-400"
+                  className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-sm"
                 >
                   {calculatedLoans.map(l => (
                     <option key={l.id} value={l.id}>
@@ -1486,7 +1486,7 @@ export default function LoanPortfolioTab({
               {canEdit && activeSelectedLoan.status !== 'Settled' && activeSelectedLoan.status !== 'Cancelled' && (
                 <button
                   onClick={() => handleOpenRepaymentModal(activeSelectedLoan)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#0A5C36] hover:bg-[#08482A] text-white rounded-xl text-xs font-bold shadow-sm transition"
                 >
                   <CreditCard className="w-3.5 h-3.5" />
                   <span>Record Repayment</span>
@@ -1495,7 +1495,7 @@ export default function LoanPortfolioTab({
               {canEdit && (
                 <button
                   onClick={() => handleOpenDisburseModal(activeSelectedLoan)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Edit Loan</span>
@@ -1504,7 +1504,7 @@ export default function LoanPortfolioTab({
               {canEdit && activeSelectedLoan.status !== 'Cancelled' && (
                 <button
                   onClick={() => handlePromptDeleteLoan(activeSelectedLoan)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Delete / Cancel Loan</span>
@@ -1512,7 +1512,7 @@ export default function LoanPortfolioTab({
               )}
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-sm transition"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print / Save PDF</span>
@@ -1521,34 +1521,34 @@ export default function LoanPortfolioTab({
           </div>
 
           {/* 15-Field Individual Loan Summary Card (Section 2.6) */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-6 shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-800">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-200">
               <div>
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl font-black text-emerald-400">
+                  <span className="text-2xl font-black text-[#0A5C36] font-mono">
                     {activeSelectedLoan.id}
                   </span>
                   {renderStatusBadge(activeSelectedLoan.status)}
                 </div>
-                <h2 className="text-xl font-bold text-white mt-1">
+                <h2 className="text-xl font-bold text-slate-900 mt-1">
                   {activeSelectedLoan.memberName}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Purpose: {activeSelectedLoan.purpose} • Approval Ref:{' '}
-                  <span className="text-slate-300 font-semibold">
+                  <span className="text-slate-800 font-semibold font-mono">
                     {activeSelectedLoan.approvalRef}
                   </span>
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[11px] uppercase font-bold tracking-wider text-slate-400">
+                <p className="text-[11px] uppercase font-bold tracking-wider text-slate-500">
                   Total Outstanding Balance
                 </p>
-                <p className="text-3xl font-black text-amber-400">
+                <p className="text-3xl font-black text-amber-600 font-mono">
                   KES {activeSelectedLoan.totalOutstandingBalance.toLocaleString()}
                 </p>
                 {activeSelectedLoan.status === 'Settled' && (
-                  <p className="text-xs text-emerald-400 font-semibold mt-0.5">
+                  <p className="text-xs text-emerald-700 font-semibold mt-0.5">
                     Settled on {activeSelectedLoan.settlementDate}
                   </p>
                 )}
@@ -1556,123 +1556,123 @@ export default function LoanPortfolioTab({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   1. Member Name
                 </span>
-                <span className="text-white font-bold mt-1 block">
+                <span className="text-slate-900 font-bold mt-1 block">
                   {activeSelectedLoan.memberName}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   2. Loan ID
                 </span>
-                <span className="text-emerald-400 font-extrabold mt-1 block">
+                <span className="text-[#0A5C36] font-extrabold mt-1 block font-mono">
                   {activeSelectedLoan.id}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   3. Original Principal
                 </span>
-                <span className="text-white font-bold mt-1 block">
+                <span className="text-slate-900 font-bold mt-1 block font-mono">
                   KES {activeSelectedLoan.originalPrincipal.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   4. Disbursement Date
                 </span>
-                <span className="text-white font-bold mt-1 block">
+                <span className="text-slate-900 font-bold mt-1 block">
                   {activeSelectedLoan.issueDateFormatted} ({activeSelectedLoan.issueDate})
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   5. Monthly Interest Rate
                 </span>
-                <span className="text-amber-400 font-bold mt-1 block">
+                <span className="text-amber-700 font-bold mt-1 block font-mono">
                   {activeSelectedLoan.monthlyInterestRate}% / month
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   6. Interest Method
                 </span>
-                <span className="text-emerald-400 font-bold mt-1 block">
+                <span className="text-[#0A5C36] font-bold mt-1 block">
                   {activeSelectedLoan.interestMethod}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   7. Loan Duration
                 </span>
-                <span className="text-white font-bold mt-1 block">
+                <span className="text-slate-900 font-bold mt-1 block">
                   {activeSelectedLoan.loanDuration} Months
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   8. Completed Interest Periods
                 </span>
-                <span className="text-blue-400 font-extrabold mt-1 block">
+                <span className="text-sky-700 font-extrabold mt-1 block">
                   {activeSelectedLoan.completedPeriods} Completed Period(s)
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   9. Total Interest Accrued
                 </span>
-                <span className="text-amber-400 font-extrabold mt-1 block">
+                <span className="text-amber-700 font-extrabold mt-1 block font-mono">
                   KES {activeSelectedLoan.totalInterestAccrued.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   10. Interest Paid
                 </span>
-                <span className="text-emerald-400 font-bold mt-1 block">
+                <span className="text-[#0A5C36] font-bold mt-1 block font-mono">
                   KES {activeSelectedLoan.interestPaid.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   11. Unpaid Interest
                 </span>
-                <span className="text-amber-400 font-bold mt-1 block">
+                <span className="text-amber-700 font-bold mt-1 block font-mono">
                   KES {activeSelectedLoan.unpaidInterest.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   12. Principal Repaid
                 </span>
-                <span className="text-emerald-400 font-bold mt-1 block">
+                <span className="text-[#0A5C36] font-bold mt-1 block font-mono">
                   KES {activeSelectedLoan.principalRepaid.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   13. Remaining Principal
                 </span>
-                <span className="text-white font-bold mt-1 block">
+                <span className="text-slate-900 font-bold mt-1 block font-mono">
                   KES {activeSelectedLoan.remainingPrincipal.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-slate-800/80 p-3.5 rounded-xl">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">
+              <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">
+                <span className="text-slate-600 block text-[10px] uppercase font-bold">
                   14. Total Amount Paid
                 </span>
-                <span className="text-emerald-400 font-extrabold mt-1 block">
+                <span className="text-[#0A5C36] font-extrabold mt-1 block font-mono">
                   KES {activeSelectedLoan.totalAmountPaid.toLocaleString()}
                 </span>
               </div>
-              <div className="bg-[#090F1D] border border-amber-500/30 p-3.5 rounded-xl">
-                <span className="text-amber-300 block text-[10px] uppercase font-bold">
+              <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-xl">
+                <span className="text-amber-800 block text-[10px] uppercase font-bold">
                   15. Total Outstanding Balance
                 </span>
-                <span className="text-amber-400 font-black mt-1 block">
+                <span className="text-amber-700 font-black mt-1 block font-mono">
                   KES {activeSelectedLoan.totalOutstandingBalance.toLocaleString()}
                 </span>
               </div>
@@ -1680,24 +1680,24 @@ export default function LoanPortfolioTab({
           </div>
 
           {/* 11-Column Detailed Monthly Anniversary Schedule Table (Section 2.6) */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
-            <div className="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-base font-bold text-white">
+                <h3 className="text-base font-bold text-slate-900">
                   Monthly Anniversary Interest & Repayment Schedule
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Calculated from actual disbursement date ({activeSelectedLoan.issueDateFormatted})
-                  using <span className="text-emerald-400 font-semibold">{activeSelectedLoan.interestMethod}</span>{' '}
-                  method & <span className="text-amber-400 font-semibold">{activeSelectedLoan.allocationPolicy}</span>{' '}
+                  using <span className="text-[#0A5C36] font-semibold">{activeSelectedLoan.interestMethod}</span>{' '}
+                  method & <span className="text-amber-700 font-semibold">{activeSelectedLoan.allocationPolicy}</span>{' '}
                   allocation. Incomplete periods are excluded from accrued balance.
                 </p>
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse text-xs text-slate-800">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase tracking-wider text-slate-700">
                     <th className="py-3 px-3">Month #</th>
                     <th className="py-3 px-3">Interest Period</th>
                     <th className="py-3 px-3 text-right">Opening Principal</th>
@@ -1711,56 +1711,56 @@ export default function LoanPortfolioTab({
                     <th className="py-3 px-3 text-center">Payment Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
-                  {activeSelectedLoan.schedule.map(row => (
+                <tbody className="divide-y divide-emerald-900/5 text-xs font-mono">
+                  {activeSelectedLoan.schedule.map((row, idx) => (
                     <tr
                       key={row.monthNumber}
                       className={
                         row.isCompleted
-                          ? 'hover:bg-slate-800/35'
-                          : 'bg-slate-900/40 text-slate-500 italic'
+                          ? `${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`
+                          : 'bg-slate-50 text-slate-500 italic'
                       }
                     >
-                      <td className="py-3 px-3 font-bold text-emerald-400">
+                      <td className="py-3 px-3 font-bold text-[#0A5C36]">
                         Month {row.monthNumber}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-200">
+                      <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-800 font-sans">
                         {row.interestPeriod}
                       </td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3 px-3 text-right font-medium text-slate-900">
                         KES {row.openingPrincipal.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right font-semibold text-amber-400">
+                      <td className="py-3 px-3 text-right font-bold text-amber-700">
                         KES {row.interestCharged.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right font-semibold text-emerald-400">
+                      <td className="py-3 px-3 text-right font-bold text-[#0A5C36]">
                         KES {row.paymentReceived.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right text-emerald-300">
+                      <td className="py-3 px-3 text-right font-bold text-[#0A5C36]">
                         KES {row.interestPaid.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right text-teal-300">
+                      <td className="py-3 px-3 text-right font-bold text-teal-800">
                         KES {row.principalPaid.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right font-semibold text-slate-200">
+                      <td className="py-3 px-3 text-right font-bold text-slate-900">
                         KES {row.closingPrincipal.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right text-amber-300">
+                      <td className="py-3 px-3 text-right font-bold text-amber-700">
                         KES {row.outstandingInterest.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-right font-bold text-white">
+                      <td className="py-3 px-3 text-right font-black text-slate-900">
                         KES {row.totalOutstandingBalance.toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3 px-3 text-center font-sans">
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             row.paymentStatus === 'Settled' || row.paymentStatus === 'Paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               : row.paymentStatus === 'Partially Paid'
-                              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
                               : row.paymentStatus === 'Unpaid'
-                              ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                              : 'bg-slate-800 text-slate-400'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                              : 'bg-slate-100 text-slate-600'
                           }`}
                         >
                           {row.paymentStatus}
@@ -1774,17 +1774,17 @@ export default function LoanPortfolioTab({
           </div>
 
           {/* Individual Loan Repayment History */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">
                 Recorded Repayment Transactions for Loan {activeSelectedLoan.id} (
                 {activeSelectedLoan.repayments.length})
               </h3>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs text-slate-800">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                     <th className="py-3 px-4">Payment Date</th>
                     <th className="py-3 px-4 text-right">Amount Paid</th>
                     <th className="py-3 px-4 text-right">Interest Allocated</th>
@@ -1793,48 +1793,51 @@ export default function LoanPortfolioTab({
                     <th className="py-3 px-4">Method & Reference</th>
                     <th className="py-3 px-4">Remarks</th>
                     {canEdit && (
-                      <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                      <th className="py-3 px-4 text-center sticky right-0 bg-[#E6F4EA] border-l border-emerald-900/10">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-emerald-900/5 font-mono">
                   {activeSelectedLoan.repayments.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-slate-500">
+                      <td colSpan={8} className="py-6 text-center text-slate-500 font-sans font-medium">
                         No repayments recorded yet for this loan.
                       </td>
                     </tr>
                   ) : (
                     activeSelectedLoan.repayments.map((rep, idx) => (
-                      <tr key={rep.id || idx} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4 font-semibold text-white">
+                      <tr
+                        key={rep.id || idx}
+                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}
+                      >
+                        <td className="py-3 px-4 font-semibold text-slate-900">
                           {rep.paymentDateStr || String(rep.paymentDate).slice(0, 10)}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-400">
+                        <td className="py-3 px-4 text-right font-black text-slate-900">
                           KES {rep.amount.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right text-amber-300">
+                        <td className="py-3 px-4 text-right font-bold text-amber-700">
                           KES {rep.computedInterestAllocated.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right text-teal-300">
+                        <td className="py-3 px-4 text-right font-bold text-teal-800">
                           KES {rep.computedPrincipalAllocated.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-white">
+                        <td className="py-3 px-4 text-right font-black text-slate-900">
                           KES {rep.runningBalanceAfter.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="py-3 px-4 text-slate-700 font-sans">
                           {rep.paymentMethod} •{' '}
-                          <span className="text-emerald-400 font-mono">
+                          <span className="text-[#0A5C36] font-mono font-bold">
                             {rep.mpesaRef || rep.bankRef || rep.reference || '-'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-400">{rep.remarks || '-'}</td>
+                        <td className="py-3 px-4 text-slate-600 font-sans">{rep.remarks || '-'}</td>
                         {canEdit && (
-                          <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                          <td className={`py-3 px-4 text-center sticky right-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} border-l border-slate-200 whitespace-nowrap`}>
                             {Number(rep.id) > 0 && (
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="flex items-center justify-center gap-1.5 font-sans">
                                 <button
                                   onClick={() =>
                                     handleOpenEditRepayment(
@@ -1843,7 +1846,7 @@ export default function LoanPortfolioTab({
                                       activeSelectedLoan.memberName
                                     )
                                   }
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold"
                                 >
                                   <Edit2 className="w-3 h-3" />
                                   <span>Edit</span>
@@ -1856,7 +1859,7 @@ export default function LoanPortfolioTab({
                                       activeSelectedLoan.memberName
                                     )
                                   }
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                   <span>Reverse</span>
@@ -1880,9 +1883,9 @@ export default function LoanPortfolioTab({
       {/* ===================================================================== */}
       {subView === 'member-profile' && (
         <div className="space-y-6">
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/50 bg-slate-800 shadow-xl">
+              <div className="w-14 h-14 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/40 bg-slate-100 shadow-md">
                 <img
                   src={getMemberAvatar(selectedMemberName)}
                   alt={selectedMemberName}
@@ -1890,10 +1893,10 @@ export default function LoanPortfolioTab({
                 />
               </div>
               <div>
-                <h2 className="text-lg font-extrabold text-white">
+                <h2 className="text-lg font-extrabold text-slate-900">
                   {selectedMemberName} — Loan Profile
                 </h2>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Official borrowing portfolio & payment history register
                 </p>
               </div>
@@ -1902,7 +1905,7 @@ export default function LoanPortfolioTab({
               <select
                 value={selectedMemberName}
                 onChange={e => setSelectedMemberName(e.target.value)}
-                className="bg-[#070D18] border border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-emerald-400"
+                className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-sm"
               >
                 {members.map(m => (
                   <option key={m.id || m.fullName} value={m.fullName}>
@@ -1916,7 +1919,7 @@ export default function LoanPortfolioTab({
                     handleOpenDisburseModal();
                     setLoanForm(prev => ({ ...prev, memberName: selectedMemberName }));
                   }}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
+                  className="px-4 py-2 bg-[#0A5C36] hover:bg-[#08482A] text-white rounded-xl text-xs font-bold shadow-sm transition"
                 >
                   + Disburse New Loan to {selectedMemberName.split(' ')[0]}
                 </button>
@@ -1944,53 +1947,53 @@ export default function LoanPortfolioTab({
             return (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div className="bg-[#0F172A] border border-slate-800 p-4 rounded-2xl">
-                    <span className="text-[11px] text-slate-400 uppercase font-bold">
+                  <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                    <span className="text-[11px] text-slate-500 uppercase font-bold">
                       Total Facilities Held
                     </span>
-                    <p className="text-2xl font-black text-white mt-1">
+                    <p className="text-2xl font-black text-slate-900 mt-1 font-mono">
                       {memberLoans.length} Loans
                     </p>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-500">
                       {activeMemberLoans.length} Active • {settledMemberLoans.length} Settled
                     </span>
                   </div>
-                  <div className="bg-[#0F172A] border border-slate-800 p-4 rounded-2xl">
-                    <span className="text-[11px] text-slate-400 uppercase font-bold">
+                  <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                    <span className="text-[11px] text-slate-500 uppercase font-bold">
                       Cumulative Principal Borrowed
                     </span>
-                    <p className="text-2xl font-black text-white mt-1">
+                    <p className="text-2xl font-black text-slate-900 mt-1 font-mono">
                       KES {totalBorrowed.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-[#0F172A] border border-slate-800 p-4 rounded-2xl">
-                    <span className="text-[11px] text-slate-400 uppercase font-bold">
+                  <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                    <span className="text-[11px] text-slate-500 uppercase font-bold">
                       Cumulative Repaid
                     </span>
-                    <p className="text-2xl font-black text-emerald-400 mt-1">
+                    <p className="text-2xl font-black text-[#0A5C36] mt-1 font-mono">
                       KES {totalPaid.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-[#0F172A] border border-amber-500/30 p-4 rounded-2xl">
-                    <span className="text-[11px] text-amber-300 uppercase font-bold">
+                  <div className="bg-amber-50/70 border border-amber-200/80 p-4 rounded-2xl shadow-sm">
+                    <span className="text-[11px] text-amber-800 uppercase font-bold">
                       Current Active Loan Exposure
                     </span>
-                    <p className="text-2xl font-black text-amber-400 mt-1">
+                    <p className="text-2xl font-black text-amber-700 mt-1 font-mono">
                       KES {activeBalance.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-[#0F172A] border border-slate-800 rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-slate-800">
-                    <h3 className="text-sm font-bold text-white">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="p-4 border-b border-slate-200">
+                    <h3 className="text-sm font-bold text-slate-900">
                       All Independent Loans for {selectedMemberName} ({memberLoans.length})
                     </h3>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="w-full text-left border-collapse text-xs text-slate-800">
                       <thead>
-                        <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                        <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                           <th className="py-3 px-4">Loan ID</th>
                           <th className="py-3 px-4">Disbursement Date</th>
                           <th className="py-3 px-4">Method & Rate</th>
@@ -1999,41 +2002,44 @@ export default function LoanPortfolioTab({
                           <th className="py-3 px-4 text-right">Total Paid</th>
                           <th className="py-3 px-4 text-right">Outstanding Balance</th>
                           <th className="py-3 px-4 text-center">Status</th>
-                          <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                          <th className="py-3 px-4 text-center sticky right-0 bg-[#E6F4EA] border-l border-emerald-900/10">
                             Actions
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/60">
+                      <tbody className="divide-y divide-emerald-900/5 font-mono">
                         {memberLoans.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="py-8 text-center text-slate-500">
+                            <td colSpan={9} className="py-8 text-center text-slate-500 font-sans font-medium">
                               No loans recorded for {selectedMemberName}.
                             </td>
                           </tr>
                         ) : (
-                          memberLoans.map(l => (
-                            <tr key={l.id} className="hover:bg-slate-800/30">
-                              <td className="py-3 px-4 font-bold text-emerald-400">{l.id}</td>
-                              <td className="py-3 px-4 text-slate-300">{l.issueDate}</td>
-                              <td className="py-3 px-4 text-slate-300">
+                          memberLoans.map((l, idx) => (
+                            <tr
+                              key={l.id}
+                              className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}
+                            >
+                              <td className="py-3 px-4 font-bold text-[#0A5C36]">{l.id}</td>
+                              <td className="py-3 px-4 text-slate-700 font-sans">{l.issueDate}</td>
+                              <td className="py-3 px-4 text-slate-700 font-sans">
                                 {l.interestMethod} ({l.monthlyInterestRate}% / mo)
                               </td>
-                              <td className="py-3 px-4 text-right font-semibold">
+                              <td className="py-3 px-4 text-right font-black text-slate-900">
                                 KES {l.originalPrincipal.toLocaleString()}
                               </td>
-                              <td className="py-3 px-4 text-right text-amber-400 font-semibold">
+                              <td className="py-3 px-4 text-right text-amber-700 font-bold">
                                 KES {l.totalInterestAccrued.toLocaleString()}
                               </td>
-                              <td className="py-3 px-4 text-right text-emerald-400 font-semibold">
+                              <td className="py-3 px-4 text-right text-[#0A5C36] font-bold">
                                 KES {l.totalAmountPaid.toLocaleString()}
                               </td>
-                              <td className="py-3 px-4 text-right font-bold text-amber-400">
+                              <td className="py-3 px-4 text-right font-black text-slate-900">
                                 KES {l.totalOutstandingBalance.toLocaleString()}
                               </td>
-                              <td className="py-3 px-4 text-center">{renderStatusBadge(l.status)}</td>
-                              <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-1.5">
+                              <td className="py-3 px-4 text-center font-sans">{renderStatusBadge(l.status)}</td>
+                              <td className={`py-3 px-4 text-center sticky right-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} border-l border-slate-200 whitespace-nowrap`}>
+                                <div className="flex items-center justify-center gap-1.5 font-sans">
                                   <button
                                     onClick={() => {
                                       setSelectedLoanId(l.id);
@@ -2081,12 +2087,12 @@ export default function LoanPortfolioTab({
       {/* ===================================================================== */}
       {subView === 'repayments' && (
         <div className="space-y-6">
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-lg font-extrabold text-slate-900">
                 Loan Repayments & Allocation Register
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 Auditable transaction ledger showing Interest-First / Configured allocation across
                 all member loans
               </p>
@@ -2094,7 +2100,7 @@ export default function LoanPortfolioTab({
             {canEdit && (
               <button
                 onClick={() => handleOpenRepaymentModal()}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
+                className="flex items-center gap-2 px-4 py-2 bg-[#0A5C36] hover:bg-[#08482A] text-white rounded-xl text-xs font-bold shadow-sm transition"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>RECORD LOAN REPAYMENT</span>
@@ -2102,11 +2108,11 @@ export default function LoanPortfolioTab({
             )}
           </div>
 
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-xs text-slate-800">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                     <th className="py-3.5 px-4">Loan ID</th>
                     <th className="py-3.5 px-4">Member Name</th>
                     <th className="py-3.5 px-4">Payment Date</th>
@@ -2118,64 +2124,67 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4">M-Pesa / Bank Ref</th>
                     <th className="py-3.5 px-4">Remarks</th>
                     {canEdit && (
-                      <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80">
+                      <th className="py-3.5 px-4 text-center sticky right-0 bg-[#E6F4EA] border-l border-emerald-900/10">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-emerald-900/5 font-mono">
                   {allRepaymentsList.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center text-slate-500">
+                      <td colSpan={11} className="py-10 text-center text-slate-500 font-sans font-medium">
                         No repayment transactions recorded.
                       </td>
                     </tr>
                   ) : (
                     allRepaymentsList.map((r, i) => (
-                      <tr key={`${r.id}-${i}`} className="hover:bg-slate-800/30">
-                        <td className="py-3 px-4 font-bold text-emerald-400">
+                      <tr
+                        key={`${r.id}-${i}`}
+                        className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}
+                      >
+                        <td className="py-3 px-4 font-bold text-[#0A5C36]">
                           <button
                             onClick={() => {
                               setSelectedLoanId(r.loanId);
                               setSubView('loan-profile');
                             }}
-                            className="hover:underline"
+                            className="hover:underline font-mono"
                           >
                             {r.loanId}
                           </button>
                         </td>
-                        <td className="py-3 px-4 font-semibold text-white">{r.memberName}</td>
-                        <td className="py-3 px-4 text-slate-300">{r.paymentDate}</td>
-                        <td className="py-3 px-4 text-right font-extrabold text-emerald-400">
+                        <td className="py-3 px-4 font-semibold text-slate-900 font-sans">{r.memberName}</td>
+                        <td className="py-3 px-4 text-slate-700 font-sans">{r.paymentDate}</td>
+                        <td className="py-3 px-4 text-right font-black text-slate-900">
                           KES {r.amount.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right text-amber-300">
+                        <td className="py-3 px-4 text-right font-bold text-amber-700">
                           KES {r.interestAllocated.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right text-teal-300">
+                        <td className="py-3 px-4 text-right font-bold text-teal-800">
                           KES {r.principalAllocated.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-white">
+                        <td className="py-3 px-4 text-right font-black text-slate-900">
                           KES {r.runningBalanceAfter.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4 text-slate-300">{r.paymentMethod}</td>
-                        <td className="py-3 px-4 font-mono text-emerald-400">{r.reference}</td>
-                        <td className="py-3 px-4 text-slate-400">{r.remarks}</td>
+                        <td className="py-3 px-4 text-slate-700 font-sans">{r.paymentMethod}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-[#0A5C36]">{r.reference}</td>
+                        <td className="py-3 px-4 text-slate-600 font-sans">{r.remarks}</td>
                         {canEdit && (
-                          <td className="py-3 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap">
+                          <td className={`py-3 px-4 text-center sticky right-0 ${i % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} border-l border-slate-200 whitespace-nowrap`}>
                             {Number(r.id) > 0 && (
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="flex items-center justify-center gap-1.5 font-sans">
                                 <button
                                   onClick={() => handleOpenEditRepayment(r)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-bold"
                                 >
                                   <Edit2 className="w-3 h-3" />
                                   <span>Edit</span>
                                 </button>
                                 <button
                                   onClick={() => handlePromptReverseRepayment(r)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                   <span>Reverse</span>
@@ -2199,12 +2208,12 @@ export default function LoanPortfolioTab({
       {/* ===================================================================== */}
       {subView === 'settled-history' && (
         <div className="space-y-6">
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-lg font-extrabold text-slate-900">
                 Settled Loans History ({settledHistoryLoans.length})
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600">
                 Fully repaid facilities archived from active exposure while preserving full
                 repayment schedules
               </p>
@@ -2213,18 +2222,18 @@ export default function LoanPortfolioTab({
               onClick={() =>
                 handleExportLoansCSV(settledHistoryLoans, 'dreamloom_settled_loans_history.csv')
               }
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-[#0A5C36] border border-emerald-200 rounded-xl text-xs font-bold transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export Settled CSV</span>
             </button>
           </div>
 
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs min-w-[960px]">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                     <th className="py-3.5 px-4">Loan ID</th>
                     <th className="py-3.5 px-4">Issue Date</th>
                     <th className="py-3.5 px-4">Member Name</th>
@@ -2233,54 +2242,54 @@ export default function LoanPortfolioTab({
                     <th className="py-3.5 px-4 text-right">Total Paid (KES)</th>
                     <th className="py-3.5 px-4">Settlement Date</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] border-l border-slate-800/80 min-w-[200px]">
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#E6F4EA] border-l border-emerald-900/10 min-w-[200px]">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-200/70">
                   {settledHistoryLoans.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-10 text-center text-slate-500">
+                      <td colSpan={9} className="py-10 text-center text-slate-500 font-medium">
                         No settled loans found.
                       </td>
                     </tr>
                   ) : (
-                    settledHistoryLoans.map(loan => (
-                      <tr key={loan.id} className="hover:bg-slate-800/30">
-                        <td className="py-3.5 px-4 font-bold text-emerald-400">{loan.id}</td>
-                        <td className="py-3.5 px-4 text-slate-300">{loan.issueDate}</td>
-                        <td className="py-3.5 px-4 font-bold text-white">{loan.memberName}</td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                    settledHistoryLoans.map((loan, idx) => (
+                      <tr key={loan.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                        <td className="py-3.5 px-4 font-mono font-bold text-[#0A5C36]">{loan.id}</td>
+                        <td className="py-3.5 px-4 text-slate-700 font-medium">{loan.issueDate}</td>
+                        <td className="py-3.5 px-4 font-bold text-slate-900">{loan.memberName}</td>
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
                           KES {loan.principalRepaid.toLocaleString()}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-amber-400">
+                        <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-700">
                           KES {loan.interestPaid.toLocaleString()}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
+                        <td className="py-3.5 px-4 text-right font-mono font-extrabold text-[#0A5C36]">
                           KES {loan.totalAmountPaid.toLocaleString()}
                         </td>
-                        <td className="py-3.5 px-4 text-emerald-300 font-semibold">
+                        <td className="py-3.5 px-4 text-emerald-800 font-bold">
                           {loan.settlementDate}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           {renderStatusBadge('Settled')}
                         </td>
-                        <td className="py-3.5 px-4 text-center sticky right-0 bg-[#0F172A] border-l border-slate-800/80 whitespace-nowrap min-w-[200px]">
+                        <td className={`py-3.5 px-4 text-center sticky right-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} border-l border-slate-200/80 whitespace-nowrap min-w-[200px]`}>
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {
                                 setSelectedLoanId(loan.id);
                                 setSubView('loan-profile');
                               }}
-                              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-lg text-[11px] font-bold"
+                              className="px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-[#0A5C36] border border-emerald-200 rounded-lg text-[11px] font-bold"
                             >
                               View Schedule
                             </button>
                             {canEdit && (
                               <button
                                 onClick={() => handleOpenDisburseModal(loan)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 rounded-lg text-[11px] font-bold"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold"
                               >
                                 <Edit2 className="w-3 h-3" />
                                 <span>Edit</span>
@@ -2289,7 +2298,7 @@ export default function LoanPortfolioTab({
                             {canEdit && (
                               <button
                                 onClick={() => handlePromptDeleteLoan(loan)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold"
                               >
                                 <Trash2 className="w-3 h-3" />
                                 <span>Delete</span>
@@ -2312,7 +2321,7 @@ export default function LoanPortfolioTab({
       {/* ===================================================================== */}
       {subView === 'reports' && (
         <div className="space-y-6">
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               {[
                 { id: 'active-loans', label: 'Active Loan Report' },
@@ -2326,8 +2335,8 @@ export default function LoanPortfolioTab({
                   onClick={() => setReportType(rt.id as any)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                     reportType === rt.id
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-[#070D18] text-slate-300 hover:bg-slate-800'
+                      ? 'bg-[#0A5C36] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
                   {rt.label}
@@ -2340,7 +2349,7 @@ export default function LoanPortfolioTab({
                 <select
                   value={reportMemberFilter}
                   onChange={e => setReportMemberFilter(e.target.value)}
-                  className="bg-[#070D18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                  className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="All">All Members</option>
                   {members.map(m => (
@@ -2362,14 +2371,14 @@ export default function LoanPortfolioTab({
                       : nonCancelledLoans;
                   handleExportLoansCSV(targetRows, `dreamloom_${reportType}_${reportingAsOfDate}.csv`);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export CSV</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-[#0A5C36] border border-emerald-200 rounded-xl text-xs font-bold transition-all"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print / Save PDF</span>
@@ -2377,17 +2386,17 @@ export default function LoanPortfolioTab({
             </div>
           </div>
 
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-6 shadow-xl">
-            <div className="border-b border-slate-800 pb-4 mb-4 flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+            <div className="border-b border-slate-200 pb-4 mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-extrabold text-white uppercase tracking-wide">
+                <h3 className="text-base font-extrabold text-slate-900 uppercase tracking-wide">
                   DREAMLOOM HOLDING LIMITED — OFFICIAL {reportType.replace('-', ' ').toUpperCase()}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500">
                   Generated from authoritative PostgreSQL records as of {reportingAsOfDate}
                 </p>
               </div>
-              <div className="text-right text-xs text-slate-400">
+              <div className="text-right text-xs text-slate-500 font-medium">
                 <span>Account: 1760287177880</span>
               </div>
             </div>
@@ -2396,7 +2405,7 @@ export default function LoanPortfolioTab({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                    <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                       <th className="py-3 px-4">Payment Date</th>
                       <th className="py-3 px-4">Loan ID</th>
                       <th className="py-3 px-4">Member Name</th>
@@ -2406,22 +2415,22 @@ export default function LoanPortfolioTab({
                       <th className="py-3 px-4">Reference</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200/70">
                     {allRepaymentsList.map((r, idx) => (
-                      <tr key={idx}>
-                        <td className="py-2.5 px-4">{r.paymentDate}</td>
-                        <td className="py-2.5 px-4 font-bold text-emerald-400">{r.loanId}</td>
-                        <td className="py-2.5 px-4 text-white">{r.memberName}</td>
-                        <td className="py-2.5 px-4 text-right font-bold text-emerald-400">
+                      <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                        <td className="py-2.5 px-4 text-slate-700 font-medium">{r.paymentDate}</td>
+                        <td className="py-2.5 px-4 font-mono font-bold text-[#0A5C36]">{r.loanId}</td>
+                        <td className="py-2.5 px-4 font-bold text-slate-900">{r.memberName}</td>
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-[#0A5C36]">
                           KES {r.amount.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-right text-amber-300">
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-amber-700">
                           KES {r.interestAllocated.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-right text-teal-300">
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-teal-800">
                           KES {r.principalAllocated.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 font-mono">{r.reference}</td>
+                        <td className="py-2.5 px-4 font-mono text-slate-600">{r.reference}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2431,7 +2440,7 @@ export default function LoanPortfolioTab({
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                    <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                       <th className="py-3 px-4">Loan ID</th>
                       <th className="py-3 px-4">Issue Date</th>
                       <th className="py-3 px-4">Member Name</th>
@@ -2444,7 +2453,7 @@ export default function LoanPortfolioTab({
                       <th className="py-3 px-4 text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200/70">
                     {(reportType === 'active-loans'
                       ? activePortfolioLoans
                       : reportType === 'settled-loans'
@@ -2452,28 +2461,28 @@ export default function LoanPortfolioTab({
                       : reportMemberFilter !== 'All'
                       ? nonCancelledLoans.filter(l => l.memberName === reportMemberFilter)
                       : nonCancelledLoans
-                    ).map(l => (
-                      <tr key={l.id}>
-                        <td className="py-2.5 px-4 font-bold text-emerald-400">{l.id}</td>
-                        <td className="py-2.5 px-4">{l.issueDate}</td>
-                        <td className="py-2.5 px-4 font-bold text-white">{l.memberName}</td>
-                        <td className="py-2.5 px-4">
+                    ).map((l, idx) => (
+                      <tr key={l.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                        <td className="py-2.5 px-4 font-mono font-bold text-[#0A5C36]">{l.id}</td>
+                        <td className="py-2.5 px-4 text-slate-700 font-medium">{l.issueDate}</td>
+                        <td className="py-2.5 px-4 font-bold text-slate-900">{l.memberName}</td>
+                        <td className="py-2.5 px-4 text-slate-700">
                           {l.interestMethod} ({l.monthlyInterestRate}%)
                         </td>
-                        <td className="py-2.5 px-4 text-center">{l.completedPeriods}</td>
-                        <td className="py-2.5 px-4 text-right">
+                        <td className="py-2.5 px-4 text-center font-bold text-slate-800">{l.completedPeriods}</td>
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
                           KES {l.originalPrincipal.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-right text-amber-400 font-bold">
+                        <td className="py-2.5 px-4 text-right text-amber-700 font-mono font-bold">
                           KES {l.totalInterestAccrued.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-right text-emerald-400 font-bold">
+                        <td className="py-2.5 px-4 text-right text-[#0A5C36] font-mono font-bold">
                           KES {l.totalAmountPaid.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-right text-amber-400 font-extrabold">
+                        <td className="py-2.5 px-4 text-right text-rose-700 font-mono font-extrabold">
                           KES {l.totalOutstandingBalance.toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-4 text-center">{l.status}</td>
+                        <td className="py-2.5 px-4 text-center">{renderStatusBadge(l.status)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2488,22 +2497,22 @@ export default function LoanPortfolioTab({
       {/* SUBVIEW 7: CALCULATION SETTINGS (Section 2.4 & Section 8)             */}
       {/* ===================================================================== */}
       {subView === 'settings' && (
-        <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-6 max-w-3xl space-y-6 shadow-xl">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 max-w-3xl space-y-6 shadow-sm">
           <div>
-            <h2 className="text-lg font-extrabold text-white">
+            <h2 className="text-lg font-extrabold text-slate-900">
               Loan Portfolio Calculation Settings
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Configure default parameters for newly disbursed loans. Per Dreamloom financial
               policy, changing default settings here will{' '}
-              <span className="text-emerald-400 font-bold">never alter</span> an existing loan&apos;s
+              <span className="text-[#0A5C36] font-bold">never alter</span> an existing loan&apos;s
               agreed interest method or rate.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 Default Monthly Interest Rate (%)
               </label>
               <input
@@ -2512,18 +2521,18 @@ export default function LoanPortfolioTab({
                 min="0"
                 value={defaultInterestRate}
                 onChange={e => setDefaultInterestRate(Number(e.target.value))}
-                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold focus:border-[#0A5C36] focus:ring-1 focus:ring-[#0A5C36]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 Default Interest Calculation Method
               </label>
               <select
                 value={defaultInterestMethod}
                 onChange={e => setDefaultInterestMethod(e.target.value as InterestMethod)}
-                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold focus:border-[#0A5C36] focus:ring-1 focus:ring-[#0A5C36]"
               >
                 <option value="Simple">
                   Simple Interest (Original Principal × Monthly Rate)
@@ -2538,13 +2547,13 @@ export default function LoanPortfolioTab({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 Default Repayment Allocation Policy
               </label>
               <select
                 value={defaultAllocationPolicy}
                 onChange={e => setDefaultAllocationPolicy(e.target.value as AllocationPolicy)}
-                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold focus:border-[#0A5C36] focus:ring-1 focus:ring-[#0A5C36]"
               >
                 <option value="Interest First">Interest First, then Principal (Recommended)</option>
                 <option value="Principal First">Principal First, then Interest</option>
@@ -2553,7 +2562,7 @@ export default function LoanPortfolioTab({
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1.5">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 Default Loan Duration (Months)
               </label>
               <input
@@ -2562,12 +2571,12 @@ export default function LoanPortfolioTab({
                 max="60"
                 value={defaultDurationMonths}
                 onChange={e => setDefaultDurationMonths(Number(e.target.value))}
-                className="w-full bg-[#070D18] border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-bold"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold focus:border-[#0A5C36] focus:ring-1 focus:ring-[#0A5C36]"
               />
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
             <strong>Anniversary Accrual Engine Active:</strong> Monthly interest periods are
             computed strictly from each loan&apos;s individual disbursement date (handling 28/29/30/31
             month lengths and leap years) and exclude incomplete periods.

@@ -14,6 +14,7 @@ import {
 } from '../src/app/api/loans/route';
 import { GET as getMembers } from '../src/app/api/members/route';
 import { GET as getAuditLogs } from '../src/app/api/audit-logs/route';
+import { createSessionToken } from '../src/lib/session';
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,19 @@ function makeReq(url: string, method: string, body?: any): NextRequest {
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   });
+}
+
+function makeAdminReq(url: string, method: string = 'GET', body?: any): NextRequest {
+  const req = makeReq(url, method, body);
+  req.cookies.set('dreamloom_session', createSessionToken({
+    email: 'kamera@dreamloom.co.ke',
+    name: 'Simon',
+    fullName: 'Simon Memia Wanjiru',
+    nationalId: '22114455',
+    phone: '+254700000000',
+    role: 'Super Administrator'
+  }).token);
+  return req;
 }
 
 async function runTests() {
@@ -478,7 +492,7 @@ async function runTests() {
   // =========================================================================
   console.log('\n--- 4. Forensic Audit Log Verification ---');
   {
-    const auditRes = await getAuditLogs();
+    const auditRes = await getAuditLogs(makeAdminReq('http://localhost:3000/api/audit-logs'));
     const auditJson = await auditRes.json();
     const logs = auditJson.data || [];
     assert(logs.length >= 5, `Audit log API returned ${logs.length} forensic entries`);

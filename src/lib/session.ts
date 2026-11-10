@@ -16,6 +16,21 @@ export const SESSION_COOKIE_NAME = 'dreamloom_session';
 export const REMEMBER_ME_DURATION = 30 * 24 * 60 * 60; // 30 days in seconds
 export const STANDARD_DURATION = 24 * 60 * 60; // 24 hours in seconds
 
+export function isUserAdmin(user: { role?: string; email?: string } | null | undefined): boolean {
+  if (!user) return false;
+  const role = (user.role || '').toLowerCase();
+  const email = (user.email || '').toLowerCase().trim();
+  if (
+    role === 'administrator' ||
+    role === 'admin' ||
+    role.includes('admin') ||
+    email === 'kamera@dreamloom.co.ke'
+  ) {
+    return true;
+  }
+  return false;
+}
+
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dreamloom-bms-secure-production-secret-token-2026';
 
 function base64UrlEncode(str: string): string {

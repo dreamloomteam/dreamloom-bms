@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin } from '@/lib/session';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const payload = verifySessionToken(token);
+
+    if (!payload || !isUserAdmin(payload)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Administrator role required to access Login Log.' },
+        { status: 403 }
+      );
+    }
+
     const totalCount = await prisma.loginLog.count();
     const logs = await prisma.loginLog.findMany({
       include: {

@@ -32,6 +32,7 @@ import {
   isSameMemberName
 } from '@/lib/dateUtils';
 import { AUTHORIZED_USERS } from '@/lib/authConfig';
+import { isUserAdmin } from '@/lib/session';
 import { getMemberAvatar } from '@/lib/memberAvatars';
 
 const DREAMLOOM_MEMBER_NAMES: Record<number, string> = {
@@ -69,6 +70,7 @@ export default function Home() {
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const isAdmin = useMemo(() => isUserAdmin(currentUser), [currentUser]);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -235,154 +237,9 @@ export default function Home() {
         })
         .catch(err => console.warn('Could not fetch server deposits:', err));
 
-      // 5. Login Logs & Audit Logs Persistence
-      const savedLoginLogs = localStorage.getItem('dreamloom_login_logs');
-      if (savedLoginLogs) {
-        try {
-          const parsed = JSON.parse(savedLoginLogs);
-          if (Array.isArray(parsed) && parsed.length > 0) setLoginLogs(parsed);
-        } catch (e) { console.warn('Saved login logs parse failed:', e); }
-      }
-      fetch('/api/login-logs')
-        .then(r => r.json())
-        .then(res => {
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((l: any, idx: number) => ({
-              id: `AUTH-${String(100 + idx + 1)}`,
-              date: l.createdAt ? String(l.createdAt).slice(0, 10) : '2026-11-02',
-              time: l.createdAt ? String(l.createdAt).slice(11, 19) + ' EAT' : '10:00:00 EAT',
-              user: l.user?.fullName || l.email?.split('@')[0] || 'Simon Memia',
-              role: l.user?.role || 'Director / Member',
-              ip: l.ipAddress || '197.232.84.12',
-              device: 'Safari 17.4 (macOS Sonoma 14.3)',
-              status: l.success ? 'Active (Authorized)' : 'Failed (Denied)',
-              twoFa: l.success ? 'Pass (TOTP Token)' : 'Rejected'
-            }));
-            setLoginLogs(prev => [...mapped, ...prev.slice(mapped.length)]);
-            localStorage.setItem('dreamloom_login_logs', JSON.stringify(mapped));
-          }
-        })
-        .catch(err => console.warn('Could not fetch server login logs:', err));
+      // 5. Login Logs & Audit Logs are handled in an admin-protected effect
 
-      const savedEditLogs = localStorage.getItem('dreamloom_edit_logs');
-      if (savedEditLogs) {
-        try {
-          const parsed = JSON.parse(savedEditLogs);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setEditLogs(parsed);
-            setSelectedEditLog(parsed[0]);
-          }
-        } catch (e) { console.warn('Saved edit logs parse failed:', e); }
-      }
-      fetch('/api/audit-logs')
-        .then(r => r.json())
-        .then(res => {
-          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-            const mapped = res.data.map((el: any, idx: number) => {
-              let p: any = {};
-              try {
-                p = typeof el.changes === 'string' ? JSON.parse(el.changes) : (el.changes || {});
-              } catch (e) {
-                p = {};
-              }
 
-              const createdDate = el.createdAt ? new Date(el.createdAt) : new Date();
-              const dateStr = getEATISODate(createdDate);
-              const formattedTimestamp = getEATDateTimeString(createdDate);
-
-              const user = p.user || el.user?.fullName || (p.userEmail ? p.userEmail.split('@')[0].replace('.', ' ') : (p.updatedBy ? p.updatedBy.split('@')[0].replace('.', ' ') : 'Simon Memia'));
-
-              let moduleName = p.module || el.model || 'Contributions';
-              if (moduleName === 'Contribution') moduleName = 'Contributions';
-              if (moduleName === 'Loan') moduleName = 'Loans';
-              if (moduleName === 'Penalty') moduleName = 'Fines & Penalties';
-              if (moduleName === 'Member') moduleName = 'Members';
-              if (moduleName === 'Expense') moduleName = 'Expenses';
-
-              let act = p.action || el.action || 'Updated';
-              if (act.toLowerCase() === 'update' || act.toLowerCase() === 'updated') act = 'Updated';
-              else if (act.toLowerCase() === 'create' || act.toLowerCase() === 'added' || act.toLowerCase() === 'add') act = 'Added';
-              else if (act.toLowerCase() === 'delete' || act.toLowerCase() === 'deleted') act = 'Deleted';
-
-              const member = p.member || p.memberName || p.borrower || p.paidTo || (p.notes && p.notes.includes('Member: ') ? p.notes.split('Member: ')[1].replace(')', '').trim() : 'Mary Wanjiru');
-
-              let oldValues = p.oldValues;
-              let newValues = p.newValues;
-
-              if (!oldValues && !newValues) {
-                if (act === 'Added') {
-                  oldValues = { 'Record Status': 'None (New Entry)' };
-                  newValues = {};
-                  if (p.amount !== undefined) newValues['Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
-                  if (p.month) newValues['Period'] = p.month;
-                  if (p.principal !== undefined) newValues['Principal'] = `KSh ${Number(p.principal).toLocaleString()}`;
-                  if (Object.keys(newValues).length === 0) newValues['Status'] = 'Record Created';
-                } else if (act === 'Deleted') {
-                  oldValues = {};
-                  if (p.amount !== undefined) oldValues['Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
-                  if (p.month) oldValues['Period'] = p.month;
-                  if (Object.keys(oldValues).length === 0) oldValues['Status'] = 'Active';
-                  newValues = { 'Record Status': 'Record Deleted from System' };
-                } else {
-                  oldValues = {};
-                  newValues = {};
-                  if (p.amount !== undefined) {
-                    oldValues['Contribution Amount'] = 'KSh 0';
-                    newValues['Contribution Amount'] = `KSh ${Number(p.amount).toLocaleString()}`;
-                  }
-                  if (p.unsettled !== undefined) {
-                    oldValues['Unsettled Dues'] = `KSh ${Number(p.unsettled).toLocaleString()}`;
-                    newValues['Unsettled Dues'] = 'KSh 0';
-                  }
-                  if (p.principal !== undefined) {
-                    oldValues['Loan Amount'] = 'KSh 15,000';
-                    newValues['Loan Amount'] = `KSh ${Number(p.principal).toLocaleString()}`;
-                  }
-                  if (Object.keys(oldValues).length === 0) {
-                    oldValues['Status'] = 'Previous State';
-                    newValues['Status'] = 'Updated';
-                  }
-                }
-              }
-
-              // Compute changed fields if not explicitly stored
-              let changedFields = p.changedFields;
-              if ((!changedFields || Object.keys(changedFields).length === 0) && act === 'Updated' && oldValues && newValues) {
-                changedFields = {};
-                const allKeys = Array.from(new Set([...Object.keys(oldValues), ...Object.keys(newValues)]));
-                for (const k of allKeys) {
-                  const ov = oldValues[k] !== undefined ? String(oldValues[k]).trim() : '';
-                  const nv = newValues[k] !== undefined ? String(newValues[k]).trim() : '';
-                  if (ov && nv && ov !== nv) {
-                    changedFields[k] = { from: oldValues[k], to: newValues[k] };
-                  }
-                }
-              }
-
-              const remarks = p.remarks || p.notes || `${act} ${moduleName} record for ${member}`;
-
-              return {
-                id: el.id ? `LOG-${el.id}` : `LOG-${idx + 1}`,
-                dbId: el.id,
-                timestamp: formattedTimestamp,
-                rawDate: dateStr,
-                user,
-                module: moduleName,
-                action: act,
-                member,
-                oldValues: oldValues || { 'Status': 'Active' },
-                newValues: newValues || { 'Status': 'Updated' },
-                changedFields: changedFields || {},
-                remarks
-              };
-            });
-
-            setEditLogs(mapped);
-            if (mapped.length > 0) setSelectedEditLog(mapped[0]);
-            localStorage.setItem('dreamloom_edit_logs', JSON.stringify(mapped));
-          }
-        })
-        .catch(err => console.warn('Could not fetch server audit logs:', err));
 
       // 4. Expenses
       const savedExpenses = localStorage.getItem('dreamloom_expenses');
@@ -553,6 +410,88 @@ export default function Home() {
       role.includes('admin')
     );
   }, [currentUser]);
+
+  // Fetch sensitive audit logs strictly for authenticated Administrators
+  useEffect(() => {
+    if (!isAdmin) {
+      setLoginLogs([]);
+      setEditLogs([]);
+      return;
+    }
+
+    fetch('/api/login-logs')
+      .then(r => r.json())
+      .then(res => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((l: any, idx: number) => ({
+            id: `AUTH-${String(100 + idx + 1)}`,
+            date: l.createdAt ? String(l.createdAt).slice(0, 10) : '2026-11-02',
+            time: l.createdAt ? String(l.createdAt).slice(11, 19) + ' EAT' : '10:00:00 EAT',
+            user: l.user?.fullName || l.email?.split('@')[0] || 'Simon Memia',
+            role: l.user?.role || 'Director / Member',
+            ip: l.ipAddress || '197.232.84.12',
+            device: 'Safari 17.4 (macOS Sonoma 14.3)',
+            status: l.success ? 'Active (Authorized)' : 'Failed (Denied)',
+            twoFa: l.success ? 'Pass (TOTP Token)' : 'Rejected'
+          }));
+          setLoginLogs(mapped);
+        }
+      })
+      .catch(err => console.warn('Could not fetch admin login logs:', err));
+
+    fetch('/api/audit-logs')
+      .then(r => r.json())
+      .then(res => {
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((el: any, idx: number) => {
+            let p: any = {};
+            try {
+              p = typeof el.changes === 'string' ? JSON.parse(el.changes) : (el.changes || {});
+            } catch (e) {
+              p = {};
+            }
+
+            const createdDate = el.createdAt ? new Date(el.createdAt) : new Date();
+            const dateStr = getEATISODate(createdDate);
+            const formattedTimestamp = getEATDateTimeString(createdDate);
+            const user = p.user || el.user?.fullName || (p.userEmail ? p.userEmail.split('@')[0].replace('.', ' ') : (p.updatedBy ? p.updatedBy.split('@')[0].replace('.', ' ') : 'Simon Memia'));
+
+            let moduleName = p.module || el.model || 'Contributions';
+            if (moduleName === 'Contribution') moduleName = 'Contributions';
+            if (moduleName === 'Loan') moduleName = 'Loans';
+            if (moduleName === 'Penalty') moduleName = 'Fines & Penalties';
+            if (moduleName === 'Member') moduleName = 'Members';
+            if (moduleName === 'Expense') moduleName = 'Expenses';
+
+            let act = p.action || el.action || 'Updated';
+            if (act.toLowerCase() === 'update' || act.toLowerCase() === 'updated') act = 'Updated';
+            else if (act.toLowerCase() === 'create' || act.toLowerCase() === 'added' || act.toLowerCase() === 'add') act = 'Added';
+            else if (act.toLowerCase() === 'delete' || act.toLowerCase() === 'deleted') act = 'Deleted';
+
+            const member = p.member || p.memberName || p.borrower || p.paidTo || (p.notes && p.notes.includes('Member: ') ? p.notes.split('Member: ')[1].replace(')', '').trim() : 'Mary Wanjiru');
+
+            return {
+              id: el.id ? `LOG-${el.id}` : `LOG-${idx + 1}`,
+              dbId: el.id,
+              timestamp: formattedTimestamp,
+              rawDate: dateStr,
+              user,
+              module: moduleName,
+              action: act,
+              member,
+              oldValues: p.oldValues || { 'Status': 'Active' },
+              newValues: p.newValues || { 'Status': 'Updated' },
+              changedFields: p.changedFields || {},
+              remarks: p.remarks || p.notes || `${act} ${moduleName} record for ${member}`
+            };
+          });
+
+          setEditLogs(mapped);
+          if (mapped.length > 0) setSelectedEditLog(mapped[0]);
+        }
+      })
+      .catch(err => console.warn('Could not fetch admin audit logs:', err));
+  }, [isAdmin]);
 
   // Inactivity Auto-Logout Timer (Only for non-persistent sessions)
   useEffect(() => {
@@ -1774,6 +1713,7 @@ export default function Home() {
   };
 
   const refreshAuditLogs = async () => {
+    if (!isAdmin) return;
     try {
       const res = await fetch('/api/audit-logs').then(r => r.json());
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
@@ -2482,8 +2422,10 @@ export default function Home() {
     {
       group: 'ADMINISTRATION & SYSTEM',
       items: [
-        { name: 'Login Log', icon: LogIn },
-        { name: 'Edit Log', icon: History },
+        ...(isAdmin ? [
+          { name: 'Login Log', icon: LogIn },
+          { name: 'Edit Log', icon: History },
+        ] : []),
         { name: 'Reports', icon: BarChart3 },
         { name: 'Settings', icon: Settings },
       ]
@@ -3406,6 +3348,37 @@ export default function Home() {
           {/* ===================================================================== */}
           {activeTab === 'Member Directory' && (
             <div className="space-y-6">
+              {/* 0. HERO GREEN WAVE BANNER */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+                <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-400/15 blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                      <Users className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Member Directory</h1>
+                      <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Authoritative membership directory, national identification, and equity holdings</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenQuickModal('Member Directory')}
+                        className="bg-white hover:bg-slate-50 text-[#064E3B] font-extrabold text-sm px-5 py-2.5 rounded-2xl shadow-md hover:shadow-lg flex items-center gap-2 transition active:scale-95"
+                      >
+                        <Plus className="w-4 h-4 text-[#064E3B] stroke-[3]" />
+                        <span>Add Member</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
@@ -3434,8 +3407,8 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredMembers.map((m) => (
-                        <tr key={m.id} className="hover:bg-emerald-50/20 transition">
+                      {filteredMembers.map((m, idx) => (
+                        <tr key={m.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                           <td className="p-4 font-semibold text-slate-900">
                             <div
                               onClick={() => setSelectedMemberProfile(m)}
@@ -3508,11 +3481,11 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-mono">
-                      {automatedMembers.map((m) => {
+                      {automatedMembers.map((m, idx) => {
                         const memberUnsettled = memberOutstandingContribs[m.fullName] || 0;
                         const memberPenalty = memberUnpaidPenalties[m.fullName] || 0;
                         return (
-                          <tr key={m.id} className="hover:bg-emerald-50/20 transition">
+                          <tr key={m.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                             <td className="p-4 font-sans font-semibold text-slate-900">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/30 bg-slate-100 shadow-sm">
@@ -3610,6 +3583,37 @@ export default function Home() {
 
             return (
               <div className="space-y-6">
+                {/* 0. HERO GREEN WAVE BANNER */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+                  <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                  <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-400/15 blur-3xl pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                        <AlertTriangle className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Fines & Penalties</h1>
+                        <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Late contribution penalties, settlement status, and member compliance tracking</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQuickModal('Fines & Penalties')}
+                          className="bg-white hover:bg-slate-50 text-[#064E3B] font-extrabold text-sm px-5 py-2.5 rounded-2xl shadow-md hover:shadow-lg flex items-center gap-2 transition active:scale-95"
+                        >
+                          <Plus className="w-4 h-4 text-[#064E3B] stroke-[3]" />
+                          <span>Levy Penalty</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1. AUTOMATIC PENALTY SUMMARY CARDS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Card 1: Total Fines Recorded */}
@@ -3773,13 +3777,13 @@ export default function Home() {
                             </td>
                           </tr>
                         ) : (
-                          filteredFines.map((f) => {
+                          filteredFines.map((f, idx) => {
                             const isPaid = f.status === 'Paid';
                             const displayMonth = f.monthYear || f.date;
                             const memberName = resolvePenaltyMemberName(f);
 
                             return (
-                              <tr key={f.id} className="hover:bg-slate-50 transition">
+                              <tr key={f.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                                 <td className="p-4 font-sans text-slate-900 font-semibold">{memberName}</td>
                                 <td className="p-4 text-slate-700 font-sans font-medium">
                                   <span className="text-slate-900 block font-mono font-semibold">{displayMonth}</span>
@@ -3874,115 +3878,148 @@ export default function Home() {
           {/* OPERATIONAL EXPENSES & PAYOUTS LOG (PDF Page 6) */}
           {/* ===================================================================== */}
           {activeTab === 'Expenses' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h2 className="font-bold text-white text-base">Operational Expenses & Payouts Log</h2>
-                  <p className="text-xs text-slate-400">Total Expenses: KES {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Page 8 of 17)</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-400">Month:</label>
-                    <select
-                      value={selectedExpenseMonth}
-                      onChange={(e) => setSelectedExpenseMonth(e.target.value)}
-                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
-                    >
-                      <option value="All">All Months</option>
-                      {ALL_MONTHS.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+            <div className="space-y-6">
+              {/* 0. HERO GREEN WAVE BANNER */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+                <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+                <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-400/15 blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                      <Receipt className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Expenses & Operating Outflow</h1>
+                      <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Authoritative operational disbursements, vendor payments, and expense reconciliation</p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs font-semibold text-slate-400">Year:</label>
-                    <select
-                      value={selectedExpenseYear}
-                      onChange={(e) => setSelectedExpenseYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-                      className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
-                    >
-                      <option value="All">All Years</option>
-                      {AVAILABLE_YEARS.map(y => (
-                        <option key={y} value={y}>{y}</option>
-                      ))}
-                    </select>
+                  <div className="flex items-center gap-3">
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenQuickModal('Expenses')}
+                        className="bg-white hover:bg-slate-50 text-[#064E3B] font-extrabold text-sm px-5 py-2.5 rounded-2xl shadow-md hover:shadow-lg flex items-center gap-2 transition active:scale-95"
+                      >
+                        <Plus className="w-4 h-4 text-[#064E3B] stroke-[3]" />
+                        <span>Record Expense</span>
+                      </button>
+                    )}
                   </div>
-
-                  {canEdit && (
-                    <button
-                      onClick={() => handleOpenQuickModal('Expenses')}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Record Expense
-                    </button>
-                  )}
                 </div>
               </div>
-              <div className="overflow-x-auto max-h-[650px]">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold sticky top-0 z-10">
-                    <tr>
-                      <th className="p-4">Date</th>
-                      <th className="p-4">Description / Category</th>
-                      <th className="p-4 text-right">Amount (KES)</th>
-                      <th className="p-4">Expense Type</th>
-                      <th className="p-4">Reference / Details</th>
-                      {canEdit && <th className="p-4 text-center">Action</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1E293B] font-mono">
-                    {filteredExpenses.map((exp) => (
-                      <tr key={exp.id} className="hover:bg-[#142036] transition">
-                        <td className="p-4 text-slate-400">{exp.date}</td>
-                        <td className="p-4 font-sans text-white font-medium">{exp.description}</td>
-                        <td className="p-4 text-right text-rose-400 font-bold">
-                          {exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="p-4 font-sans text-slate-300">{exp.category}</td>
-                        <td className="p-4 font-sans text-slate-400">{exp.paidTo}</td>
-                        {canEdit && (
-                          <td className="p-4 text-center font-sans whitespace-nowrap">
-                            <ActionsDropdown
-                              items={[
-                                {
-                                  id: 'edit',
-                                  label: 'Edit',
-                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
-                                  onClick: () => handleOpenEditModal(exp, 'Expenses')
-                                },
-                                {
-                                  id: 'delete',
-                                  label: 'Delete',
-                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
-                                  danger: true,
-                                  onClick: async () => {
-                                    const confirmDel = window.confirm(`Delete expense record "${exp.description}"?`);
-                                    if (!confirmDel) return;
-                                    try {
-                                      const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(exp.id))}&userEmail=${encodeURIComponent(currentUser?.email || 'simon@dreamloom.co.ke')}`, {
-                                        method: 'DELETE'
-                                      });
-                                      if (res.ok) {
-                                        setExpenses(prev => prev.filter(item => item.id !== exp.id));
-                                        setToastMessage('Expense deleted.');
-                                      }
-                                    } catch (e) {}
-                                  }
-                                }
-                              ]}
-                            />
-                          </td>
-                        )}
+
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="font-extrabold text-slate-900 text-base">Operational Expenses & Payouts Log</h2>
+                    <p className="text-xs text-slate-500">Total Expenses: KES {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Page 8 of 17)</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-600">Month:</label>
+                      <select
+                        value={selectedExpenseMonth}
+                        onChange={(e) => setSelectedExpenseMonth(e.target.value)}
+                        className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                      >
+                        <option value="All">All Months</option>
+                        {ALL_MONTHS.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-600">Year:</label>
+                      <select
+                        value={selectedExpenseYear}
+                        onChange={(e) => setSelectedExpenseYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
+                        className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                      >
+                        <option value="All">All Years</option>
+                        {AVAILABLE_YEARS.map(y => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {canEdit && (
+                      <button
+                        onClick={() => handleOpenQuickModal('Expenses')}
+                        className="px-3.5 py-1.5 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Record Expense
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="overflow-x-auto max-h-[650px]">
+                  <table className="w-full text-left text-xs text-slate-800">
+                    <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold sticky top-0 z-10">
+                      <tr>
+                        <th className="p-4">Date</th>
+                        <th className="p-4">Description / Category</th>
+                        <th className="p-4 text-right">Amount (KES)</th>
+                        <th className="p-4">Expense Type</th>
+                        <th className="p-4">Reference / Details</th>
+                        {canEdit && <th className="p-4 text-center">Action</th>}
                       </tr>
-                    ))}
-                    <tr className="bg-[#121B2F] font-bold text-white text-xs sticky bottom-0">
-                      <td className="p-4 uppercase font-sans" colSpan={2}>TOTAL EXPENSES</td>
-                      <td className="p-4 text-right text-rose-400 font-black">{totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td colSpan={canEdit ? 3 : 2} className="p-4 font-sans">Reconciliation matches official ledger</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {filteredExpenses.map((exp, idx) => (
+                        <tr key={exp.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                          <td className="p-4 text-slate-600 font-medium">{exp.date}</td>
+                          <td className="p-4 font-sans text-slate-900 font-bold">{exp.description}</td>
+                          <td className="p-4 text-right text-rose-700 font-bold">
+                            {exp.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-4 font-sans text-slate-700">{exp.category}</td>
+                          <td className="p-4 font-sans text-slate-600">{exp.paidTo}</td>
+                          {canEdit && (
+                            <td className="p-4 text-center font-sans whitespace-nowrap">
+                              <ActionsDropdown
+                                items={[
+                                  {
+                                    id: 'edit',
+                                    label: 'Edit',
+                                    icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                    onClick: () => handleOpenEditModal(exp, 'Expenses')
+                                  },
+                                  {
+                                    id: 'delete',
+                                    label: 'Delete',
+                                    icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                    danger: true,
+                                    onClick: async () => {
+                                      const confirmDel = window.confirm(`Delete expense record "${exp.description}"?`);
+                                      if (!confirmDel) return;
+                                      try {
+                                        const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(exp.id))}&userEmail=${encodeURIComponent(currentUser?.email || 'simon@dreamloom.co.ke')}`, {
+                                          method: 'DELETE'
+                                        });
+                                        if (res.ok) {
+                                          setExpenses(prev => prev.filter(item => item.id !== exp.id));
+                                          setToastMessage('Expense deleted.');
+                                        }
+                                      } catch (e) {}
+                                    }
+                                  }
+                                ]}
+                              />
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                      <tr className="bg-slate-100 border-t-2 border-slate-200 font-bold text-slate-900 text-xs sticky bottom-0">
+                        <td className="p-4 uppercase font-sans font-black" colSpan={2}>TOTAL EXPENSES</td>
+                        <td className="p-4 text-right text-rose-700 font-black">{totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td colSpan={canEdit ? 3 : 2} className="p-4 font-sans text-slate-600">Reconciliation matches official ledger</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -3991,21 +4028,21 @@ export default function Home() {
           {/* INVESTMENTS, PROJECTS, SUPPLIERS, DOCUMENTS (WITH EDIT AVAILABILITY) */}
           {/* ===================================================================== */}
           {activeTab === 'Investments' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-white text-base">Group Strategic Assets & Investments</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h2 className="font-extrabold text-slate-900 text-base">Group Strategic Assets & Investments</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {investments.map(inv => (
-                  <div key={inv.id} className="p-5 bg-[#142036] border border-[#1E2D4A] rounded-xl flex justify-between items-center">
+                  <div key={inv.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
                     <div>
-                      <p className="text-sm font-bold text-white">{inv.asset}</p>
-                      <p className="text-xs text-slate-400 mt-1">{inv.type} • Expected Return: <span className="text-emerald-400 font-bold">{inv.expectedReturn}</span></p>
+                      <p className="text-sm font-bold text-slate-900">{inv.asset}</p>
+                      <p className="text-xs text-slate-600 mt-1">{inv.type} • Expected Return: <span className="text-[#0A5C36] font-bold">{inv.expectedReturn}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-emerald-400 font-mono">{selectedCurrency} {inv.capital.toLocaleString()}</span>
+                      <span className="text-base font-bold text-[#0A5C36] font-mono">{selectedCurrency} {inv.capital.toLocaleString()}</span>
                       {canEdit && (
-                        <button onClick={() => handleOpenEditModal(inv, 'Investments')} className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg">
+                        <button onClick={() => handleOpenEditModal(inv, 'Investments')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
                           <Edit3 className="w-4 h-4" />
                         </button>
                       )}
@@ -4017,21 +4054,21 @@ export default function Home() {
           )}
 
           {activeTab === 'Projects' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-white text-base">Operations & Legal Projects</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h2 className="font-extrabold text-slate-900 text-base">Operations & Legal Projects</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {projects.map(p => (
-                  <div key={p.id} className="p-5 bg-[#142036] border border-[#1E2D4A] rounded-xl flex justify-between items-center">
+                  <div key={p.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
                     <div>
-                      <p className="text-sm font-bold text-white">{p.name}</p>
-                      <p className="text-xs text-slate-400 mt-1">Lead: {p.manager} • Status: <span className="text-sky-400 font-bold">{p.status}</span></p>
+                      <p className="text-sm font-bold text-slate-900">{p.name}</p>
+                      <p className="text-xs text-slate-600 mt-1">Lead: {p.manager} • Status: <span className="text-sky-700 font-bold">{p.status}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-amber-400 font-mono">{selectedCurrency} {p.budget.toLocaleString()}</span>
+                      <span className="text-base font-bold text-amber-800 font-mono">{selectedCurrency} {p.budget.toLocaleString()}</span>
                       {canEdit && (
-                        <button onClick={() => handleOpenEditModal(p, 'Projects')} className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg">
+                        <button onClick={() => handleOpenEditModal(p, 'Projects')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
                           <Edit3 className="w-4 h-4" />
                         </button>
                       )}
@@ -4043,21 +4080,21 @@ export default function Home() {
           )}
 
           {activeTab === 'Suppliers' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-white text-base">Key Operational Partners & Suppliers</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h2 className="font-extrabold text-slate-900 text-base">Key Operational Partners & Suppliers</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {suppliers.map(s => (
-                  <div key={s.id} className="p-5 bg-[#142036] border border-[#1E2D4A] rounded-xl flex justify-between items-center">
+                  <div key={s.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
                     <div>
-                      <p className="text-sm font-bold text-white">{s.name}</p>
-                      <p className="text-xs text-slate-400 mt-1">{s.category}</p>
+                      <p className="text-sm font-bold text-slate-900">{s.name}</p>
+                      <p className="text-xs text-slate-600 mt-1">{s.category}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-emerald-400">{s.contact}</span>
+                      <span className="text-xs font-mono font-bold text-[#0A5C36]">{s.contact}</span>
                       {canEdit && (
-                        <button onClick={() => handleOpenEditModal(s, 'Suppliers')} className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg">
+                        <button onClick={() => handleOpenEditModal(s, 'Suppliers')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
                           <Edit3 className="w-4 h-4" />
                         </button>
                       )}
@@ -4069,26 +4106,26 @@ export default function Home() {
           )}
 
           {activeTab === 'Documents' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="font-bold text-white text-base">Corporate & Legal Documents Directory</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h2 className="font-extrabold text-slate-900 text-base">Corporate & Legal Documents Directory</h2>
               </div>
               <div className="space-y-3">
                 {documents.map(d => (
-                  <div key={d.id} className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl flex justify-between items-center">
+                  <div key={d.id} className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
                     <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-emerald-400" />
+                      <FileText className="w-5 h-5 text-[#0A5C36]" />
                       <div>
-                        <p className="text-xs font-bold text-white">{d.name}</p>
-                        <p className="text-[10px] text-slate-400">{d.category}</p>
+                        <p className="text-xs font-bold text-slate-900">{d.name}</p>
+                        <p className="text-[10px] text-slate-500">{d.category}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-bold">
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold">
                         {d.status}
                       </span>
                       {canEdit && (
-                        <button onClick={() => handleOpenEditModal(d, 'Documents')} className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 rounded-lg">
+                        <button onClick={() => handleOpenEditModal(d, 'Documents')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
                           <Edit3 className="w-4 h-4" />
                         </button>
                       )}
@@ -4103,48 +4140,48 @@ export default function Home() {
           {/* REPORTS, SETTINGS, ADMINISTRATION */}
           {/* ===================================================================== */}
           {activeTab === 'Reports' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-6 shadow-xl space-y-6">
-              <div className="flex justify-between items-center">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-white">Audited Financial Reports & Summaries</h2>
-                  <p className="text-xs text-slate-400">Official figures from Dreamloom Holding Limited 2026 Register</p>
+                  <h2 className="text-lg font-extrabold text-slate-900">Audited Financial Reports & Summaries</h2>
+                  <p className="text-xs text-slate-500">Official figures from Dreamloom Holding Limited 2026 Register</p>
                 </div>
-                <button onClick={handleExportReport} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-2">
+                <button onClick={handleExportReport} className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition">
                   <Download className="w-4 h-4" /> Export Complete Dossier
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl">
-                  <p className="text-xs text-slate-400 font-medium">Total Group Contributions</p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">KES {grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl">
+                  <p className="text-xs text-slate-600 font-semibold">Total Group Contributions</p>
+                  <p className="text-xl font-bold text-slate-900 mt-1 font-mono">KES {grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl">
-                  <p className="text-xs text-slate-400 font-medium">Bank Account Balances</p>
-                  <p className="text-xl font-bold text-emerald-400 mt-1 font-mono">KES {bankAccountBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl">
+                  <p className="text-xs text-slate-600 font-semibold">Bank Account Balances</p>
+                  <p className="text-xl font-bold text-[#0A5C36] mt-1 font-mono">KES {bankAccountBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl">
-                  <p className="text-xs text-slate-400 font-medium">Total Operational Expenses</p>
-                  <p className="text-xl font-bold text-rose-400 mt-1 font-mono">KES {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl">
+                  <p className="text-xs text-slate-600 font-semibold">Total Operational Expenses</p>
+                  <p className="text-xl font-bold text-rose-700 mt-1 font-mono">KES {totalExpensesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl">
-                  <p className="text-xs text-slate-400 font-medium">Active Loans Outstanding</p>
-                  <p className="text-xl font-bold text-sky-400 mt-1 font-mono">KES {totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl">
+                  <p className="text-xs text-slate-600 font-semibold">Active Loans Outstanding</p>
+                  <p className="text-xl font-bold text-sky-800 mt-1 font-mono">KES {totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'Settings' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-6 shadow-xl space-y-6 max-w-2xl">
-              <h2 className="text-lg font-bold text-white">System Settings & Preferences</h2>
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-6 max-w-2xl">
+              <h2 className="text-lg font-extrabold text-slate-900">System Settings & Preferences</h2>
               <div className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-slate-400 font-medium mb-1">Default Display Currency</label>
+                  <label className="block text-slate-700 font-bold mb-1">Default Display Currency</label>
                   <select
                     value={selectedCurrency}
                     onChange={(e) => setSelectedCurrency(e.target.value)}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl p-2.5 text-white"
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-bold focus:border-[#0A5C36] focus:ring-1 focus:ring-[#0A5C36]"
                   >
                     <option value="KES">KES - Kenyan Shilling</option>
                     <option value="USD">USD - US Dollar</option>
@@ -4152,43 +4189,43 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 font-medium mb-1">Security Session Policy</label>
-                  <input type="text" readOnly value="Auto-logout after 10 minutes of inactivity • Immediate re-auth on page refresh" className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl p-2.5 text-white" />
+                  <label className="block text-slate-700 font-bold mb-1">Security Session Policy</label>
+                  <input type="text" readOnly value="Auto-logout after 10 minutes of inactivity • Immediate re-auth on page refresh" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 font-medium" />
                 </div>
                 <div>
-                  <label className="block text-slate-400 font-medium mb-1">Authorized Data Editors</label>
-                  <input type="text" readOnly value="Simon Memia Wanjiru (kamera@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl p-2.5 text-white" />
+                  <label className="block text-slate-700 font-bold mb-1">Authorized Data Editors</label>
+                  <input type="text" readOnly value="Simon Memia Wanjiru (kamera@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 font-medium" />
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'Administration' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-6 shadow-xl space-y-6 max-w-3xl">
-              <div className="flex items-center gap-3 border-b border-[#1E293B] pb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-6 max-w-3xl">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#0A5C36] border border-emerald-200 flex items-center justify-center">
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">System Administration & Corporate Controls</h2>
-                  <p className="text-xs text-slate-400">Core banking accounts, corporate mandates, and permissions</p>
+                  <h2 className="text-lg font-extrabold text-slate-900">System Administration & Corporate Controls</h2>
+                  <p className="text-xs text-slate-500">Core banking accounts, corporate mandates, and permissions</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl space-y-2">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Primary Corporate Bank Account</p>
-                  <p className="text-sm font-semibold text-white">Equity Bank Kenya</p>
-                  <p className="text-xs font-mono font-bold text-emerald-400">Account No: 1760287177880</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl space-y-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Corporate Bank Account</p>
+                  <p className="text-sm font-bold text-slate-900">Equity Bank Kenya</p>
+                  <p className="text-xs font-mono font-bold text-[#0A5C36]">Account No: 1760287177880</p>
                 </div>
-                <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl space-y-2">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Super Administrator</p>
-                  <p className="text-sm font-semibold text-white">Simon Memia Wanjiru (Director)</p>
-                  <p className="text-xs font-mono text-slate-400">kamera@dreamloom.co.ke</p>
+                <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl space-y-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Super Administrator</p>
+                  <p className="text-sm font-bold text-slate-900">Simon Memia Wanjiru (Director)</p>
+                  <p className="text-xs font-mono text-slate-600">kamera@dreamloom.co.ke</p>
                 </div>
               </div>
 
-              <div className="p-4 bg-[#142036] border border-[#1E2D4A] rounded-xl text-xs space-y-1.5 text-slate-400 font-mono">
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs space-y-1.5 text-emerald-900 font-mono">
                 <p>System Version: 2.1 Reconciled Multi-Role High-Performance Dashboard</p>
                 <p>Company: Dreamloom Holding Limited</p>
                 <p>Permissions: Data modification restricted strictly to Simon Memia (kamera@dreamloom.co.ke) &amp; Elijah Waitara</p>
@@ -4197,42 +4234,101 @@ export default function Home() {
           )}
 
           {activeTab === 'Login Log' && (
-            <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-5 border-b border-[#1E293B]">
-                <h2 className="font-bold text-white text-base">Authentication & Login Activity</h2>
+            !isAdmin ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm max-w-xl mx-auto my-12 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900">403 — Access Forbidden</h2>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Authentication and security audit logs are strictly restricted to system administrators.
+                  Your account does not possess the requisite administrative privileges to view this register.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('Overview')}
+                  className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-bold transition shadow-sm"
+                >
+                  Return to Dashboard
+                </button>
               </div>
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                  <tr>
-                    <th className="p-4">Session ID</th>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Role</th>
-                    <th className="p-4">IP Address</th>
-                    <th className="p-4">Timestamp</th>
-                    <th className="p-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1E293B] font-mono">
-                  {loginLogs.map(log => (
-                    <tr key={log.id} className="hover:bg-[#142036]">
-                      <td className="p-4 text-emerald-400 font-bold">{log.id}</td>
-                      <td className="p-4 font-sans text-white font-medium">{log.user}</td>
-                      <td className="p-4 font-sans">{log.role}</td>
-                      <td className="p-4">{log.ip}</td>
-                      <td className="p-4 text-slate-400">{log.timestamp}</td>
-                      <td className="p-4 text-center">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded text-[10px]">
-                          {log.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            ) : (
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-extrabold text-slate-900 text-base">Authentication & Login Activity</h2>
+                    <p className="text-xs text-slate-500">Official security log of user sign-in sessions and two-factor verifications</p>
+                  </div>
+                  <span className="px-3 py-1 bg-emerald-50 text-[#0A5C36] border border-emerald-200 rounded-full text-xs font-bold font-mono">
+                    {loginLogs.length} Sessions Logged
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-800">
+                    <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
+                      <tr>
+                        <th className="p-4">Session ID</th>
+                        <th className="p-4">User</th>
+                        <th className="p-4">Role</th>
+                        <th className="p-4">IP Address</th>
+                        <th className="p-4">Timestamp</th>
+                        <th className="p-4 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {loginLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-slate-400 font-sans font-medium">
+                            No login session records currently available.
+                          </td>
+                        </tr>
+                      ) : (
+                        loginLogs.map((log, idx) => (
+                          <tr key={log.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                            <td className="p-4 text-[#0A5C36] font-bold">{log.id}</td>
+                            <td className="p-4 font-sans text-slate-900 font-bold">{log.user}</td>
+                            <td className="p-4 font-sans text-slate-700 font-medium">{log.role}</td>
+                            <td className="p-4 text-slate-600">{log.ip}</td>
+                            <td className="p-4 text-slate-600 font-medium">{log.timestamp}</td>
+                            <td className="p-4 text-center font-sans">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                log.status.includes('Active') || log.status.includes('Authorized')
+                                  ? 'bg-emerald-50 text-[#0A5C36] border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {log.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
           )}
 
           {activeTab === 'Edit Log' && (
+            !isAdmin ? (
+              <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm max-w-xl mx-auto my-12 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900">403 — Access Forbidden</h2>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  System edit and mutation audit logs are strictly restricted to system administrators.
+                  Your account does not possess the requisite administrative privileges to view this register.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('Overview')}
+                  className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-bold transition shadow-sm"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            ) : (
             <div className="space-y-4 font-sans text-slate-800">
               {/* 1. Header Banner */}
               <div className="bg-[#064E3B] border border-[#053f30] rounded-2xl p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -4375,7 +4471,7 @@ export default function Home() {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-[#064E3B] text-white font-bold uppercase text-[11px] tracking-wider">
+                    <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
                       <tr>
                         <th className="py-3 px-4 w-12 text-center">#</th>
                         <th className="py-3 px-4">
@@ -4426,7 +4522,13 @@ export default function Home() {
                             <tr
                               key={log.id}
                               onClick={() => setSelectedEditLog(log)}
-                              className={`cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : 'hover:bg-slate-50'}`}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-emerald-100/80 border-l-4 border-[#0A5C36]'
+                                  : index % 2 === 0
+                                  ? 'bg-white'
+                                  : 'bg-[#F2F9F5]'
+                              } hover:bg-emerald-50/70`}
                             >
                               <td className="py-3 px-4 text-center font-bold text-slate-700">{rowNum}</td>
                               <td className="py-3 px-4 font-medium text-slate-800">{log.timestamp}</td>
@@ -4687,6 +4789,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            )
           )}
         </main>
       </div>

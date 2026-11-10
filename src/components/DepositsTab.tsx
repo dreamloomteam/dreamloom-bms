@@ -519,6 +519,39 @@ export default function DepositsTab({
   return (
     <div className="space-y-6">
       {/* --------------------------------------------------------------------- */}
+      {/* 0. HERO GREEN WAVE BANNER                                             */}
+      {/* --------------------------------------------------------------------- */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+        <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-28 bg-emerald-400/15 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+              <Landmark className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Deposits & Treasury Inflow</h1>
+              <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Official treasury register of all capital, project funds, and financial deposits</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="bg-white hover:bg-slate-50 text-[#064E3B] font-extrabold text-sm px-5 py-2.5 rounded-2xl shadow-md hover:shadow-lg flex items-center gap-2 transition active:scale-95"
+              >
+                <Plus className="w-4 h-4 text-[#064E3B] stroke-[3]" />
+                <span>Record Deposit</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* --------------------------------------------------------------------- */}
       {/* 1. TOP AUTOMATIC DEPOSIT SUMMARY CARDS */}
       {/* --------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -774,16 +807,16 @@ export default function DepositsTab({
                   </td>
                 </tr>
               ) : (
-                filteredDeposits.map((dep) => {
+                filteredDeposits.map((dep, idx) => {
                   const isRev = dep.isReversed;
                   const dateStr = dep.date ? new Date(dep.date).toISOString().slice(0, 10) : '-';
 
                   return (
                     <tr
                       key={dep.id}
-                      className={`hover:bg-slate-50 transition ${
-                        isRev ? 'opacity-60 bg-rose-50/40' : ''
-                      }`}
+                      className={`${
+                        isRev ? 'opacity-60 bg-rose-50/40' : idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'
+                      } hover:bg-emerald-50/70 transition-colors`}
                     >
                       {/* Date */}
                       <td className="p-4 whitespace-nowrap text-slate-800 font-mono font-semibold">

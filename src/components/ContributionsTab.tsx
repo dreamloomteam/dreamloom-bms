@@ -975,7 +975,7 @@ export default function ContributionsTab({
                     const hasDbRecord = Boolean(row.dbId || row.customId || row.id || (row.amount && row.amount > 0));
                     const rowMenuKey = `monthly-${row.memberId || idx}`;
                     return (
-                      <tr key={row.memberId || idx} className="hover:bg-emerald-50/20 transition-colors">
+                      <tr key={row.memberId || idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                         <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
@@ -1106,16 +1106,16 @@ export default function ContributionsTab({
                   <th className="py-3.5 px-4">Reference</th>
                   <th className="py-3.5 px-4">Remarks</th>
                   {canEdit && (
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
+                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#E6F4EA] z-10 border-l border-emerald-900/10">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200/70">
                 {allPaymentTransactions.slice(0, 150).map((t, idx) => (
-                  <tr key={`${t.id}-${idx}`} className="hover:bg-emerald-50/20 transition-colors">
-                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{t.paymentDate}</td>
+                  <tr key={`${t.id}-${idx}`} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                    <td className="py-3 px-4 text-slate-700 whitespace-nowrap font-medium">{t.paymentDate}</td>
                     <td className="py-3 px-4 font-bold text-slate-900">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
@@ -1128,17 +1128,17 @@ export default function ContributionsTab({
                         <span>{t.memberName}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-emerald-700 font-semibold whitespace-nowrap">
+                    <td className="py-3 px-4 text-emerald-800 font-semibold whitespace-nowrap">
                       {t.month} {t.year}
                     </td>
-                    <td className="py-3 px-4 text-right font-extrabold text-emerald-700 whitespace-nowrap">
+                    <td className="py-3 px-4 text-right font-mono font-extrabold text-[#0A5C36] whitespace-nowrap">
                       KES {t.amount.toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{t.paymentMethod}</td>
+                    <td className="py-3 px-4 text-slate-700">{t.paymentMethod}</td>
                     <td className="py-3 px-4 font-mono text-slate-600">{t.reference}</td>
-                    <td className="py-3 px-4 text-slate-500">{t.remarks}</td>
+                    <td className="py-3 px-4 text-slate-600">{t.remarks}</td>
                     {canEdit && (
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <td className={`py-3 px-4 text-center whitespace-nowrap sticky right-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} border-l border-slate-200/80`}>
                         <ActionsDropdown
                           items={[
                             {
@@ -1182,7 +1182,7 @@ export default function ContributionsTab({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                   <th className="py-3.5 px-4">Member Name</th>
                   <th className="py-3.5 px-4 text-right">Total Paid Contributions (KES)</th>
                   <th className="py-3.5 px-4 text-right">Total Unsettled Dues (KES)</th>
@@ -1191,8 +1191,8 @@ export default function ContributionsTab({
                   <th className="py-3.5 px-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {members.map(m => {
+              <tbody className="divide-y divide-slate-200/70">
+                {members.map((m, idx) => {
                   const mRows = normalizedContributions.filter(
                     c =>
                       !c.payout &&
@@ -1206,7 +1206,7 @@ export default function ContributionsTab({
                   const totalCredit = mRows.reduce((s, r) => s + (Number(r.creditBalance) || 0), 0);
 
                   return (
-                    <tr key={m.id || m.fullName} className="hover:bg-emerald-50/20 transition-colors">
+                    <tr key={m.id || m.fullName} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                       <td className="py-3.5 px-4 font-bold text-slate-900">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
@@ -1219,25 +1219,25 @@ export default function ContributionsTab({
                           <span>{m.fullName}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-[#0A5C36]">
                         KES {totalPaid.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold text-amber-400">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-700">
                         KES {m.unsettledContributions?.toLocaleString() || totalUnsettled.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-blue-400">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-blue-700">
                         KES {totalCredit.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-slate-200">
+                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-700">
                         {m.shares}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         {(m.unsettledContributions || 0) === 0 ? (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                             Up to Date
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                             Has Arrears
                           </span>
                         )}
@@ -1306,8 +1306,8 @@ export default function ContributionsTab({
                       (c.status || '').toLowerCase().includes(q)
                     );
                   })
-                  .map(c => (
-                    <tr key={c.id} className="hover:bg-emerald-50/20 transition-colors">
+                  .map((c, idx) => (
+                    <tr key={c.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                       <td className="py-2.5 px-4 font-mono text-slate-500 font-semibold">{c.id}</td>
                       <td className="py-2.5 px-4 text-emerald-700 font-semibold whitespace-nowrap">
                         {c.canonicalMonth} {c.canonicalYear}

@@ -61,7 +61,7 @@ export const AUTHORIZED_USERS: AuthorizedUser[] = [
     fullName: 'Michael Kiarie Wanjiru',
     nationalId: '38927071',
     phone: '0748036136',
-    role: 'Member',
+    role: 'Treasurer',
   },
   {
     email: 'daniel@dreamloom.co.ke',
