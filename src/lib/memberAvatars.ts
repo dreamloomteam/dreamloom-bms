@@ -41,20 +41,20 @@ export const MEMBER_AVATARS: Record<string, string> = {
   'michael@dreamloom.co.ke': '/members/member-5.jpg',
 
   // Member 6: Daniel Kamau Njiriri
-  'MEM-006': '/members/member-6.svg',
-  '6': '/members/member-6.svg',
-  'daniel': '/members/member-6.svg',
-  'daniel kamau': '/members/member-6.svg',
-  'daniel kamau njiriri': '/members/member-6.svg',
-  'daniel@dreamloom.co.ke': '/members/member-6.svg',
+  'MEM-006': '/members/member-6.jpg',
+  '6': '/members/member-6.jpg',
+  'daniel': '/members/member-6.jpg',
+  'daniel kamau': '/members/member-6.jpg',
+  'daniel kamau njiriri': '/members/member-6.jpg',
+  'daniel@dreamloom.co.ke': '/members/member-6.jpg',
 
   // Member 7: Beatrice Njoki Muthoni
-  'MEM-007': '/members/member-7.svg',
-  '7': '/members/member-7.svg',
-  'beatrice': '/members/member-7.svg',
-  'beatrice njoki': '/members/member-7.svg',
-  'beatrice njoki muthoni': '/members/member-7.svg',
-  'beatrice@dreamloom.co.ke': '/members/member-7.svg',
+  'MEM-007': '/members/member-7.jpg',
+  '7': '/members/member-7.jpg',
+  'beatrice': '/members/member-7.jpg',
+  'beatrice njoki': '/members/member-7.jpg',
+  'beatrice njoki muthoni': '/members/member-7.jpg',
+  'beatrice@dreamloom.co.ke': '/members/member-7.jpg',
 };
 
 export function getMemberAvatar(identifier?: string | number | null): string {

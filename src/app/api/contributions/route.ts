@@ -161,6 +161,32 @@ export async function GET(request: Request) {
       }
     }
 
+    const MONTH_ORDER: Record<string, number> = {
+      january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+      july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
+    };
+
+    const parseCId = (cid?: string | null): number => {
+      if (!cid) return 999999;
+      const m = String(cid).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 999999;
+    };
+
+    formatted.sort((a, b) => {
+      const yearDiff = (Number(a.year) || 0) - (Number(b.year) || 0);
+      if (yearDiff !== 0) return yearDiff;
+      const ma = MONTH_ORDER[String(a.month).toLowerCase()] || 0;
+      const mb = MONTH_ORDER[String(b.month).toLowerCase()] || 0;
+      if (ma !== mb) return ma - mb;
+      const aPay = (Number(a.payout) || 0) > 0 ? 1 : 0;
+      const bPay = (Number(b.payout) || 0) > 0 ? 1 : 0;
+      if (aPay !== bPay) return aPay - bPay;
+      const numA = parseCId(a.customId);
+      const numB = parseCId(b.customId);
+      if (numA !== numB) return numA - numB;
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+
     return NextResponse.json(formatted);
   } catch (error) {
     console.error('Failed to fetch contributions:', error);

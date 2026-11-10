@@ -14,6 +14,7 @@ import {
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
 import LoanPortfolioTab from '@/components/LoanPortfolioTab';
+import ActionsDropdown from '@/components/ActionsDropdown';
 import ContributionsTab from '@/components/ContributionsTab';
 import LoginScreen from '@/components/LoginScreen';
 import {
@@ -755,7 +756,7 @@ export default function Home() {
       shares: '13.80%',
       percentage: 90,
       status: 'Active',
-      avatar: '/members/member-6.svg',
+      avatar: '/members/member-6.jpg',
       color: 'from-amber-400 to-yellow-400'
     },
     {
@@ -772,7 +773,7 @@ export default function Home() {
       shares: '13.49%',
       percentage: 88,
       status: 'Active',
-      avatar: '/members/member-7.svg',
+      avatar: '/members/member-7.jpg',
       color: 'from-teal-400 to-emerald-400'
     },
   ]);
@@ -2533,11 +2534,11 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-[#070D18] text-slate-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#F4F6F8] text-slate-800 overflow-hidden font-sans">
       {/* ========================================================================= */}
       {/* 1. LEFT SIDEBAR NAVIGATION */}
       {/* ========================================================================= */}
-      <aside className="w-64 bg-[#0A101D] border-r border-[#152136] flex flex-col p-4 overflow-y-auto shrink-0 select-none">
+      <aside className="w-64 bg-[#064E3B] border-r border-emerald-950 flex flex-col p-4 overflow-y-auto shrink-0 select-none text-white">
         {/* Brand Header */}
         <div className="mb-5 pb-4 border-b border-[#16243D]">
           <div className="flex items-center gap-3 mb-3">
@@ -2620,7 +2621,7 @@ export default function Home() {
       {/* ========================================================================= */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* TOP APP HEADER */}
-        <header className="h-16 bg-[#0A101D] border-b border-[#152136] px-8 flex items-center justify-between shrink-0 select-none">
+        <header className="h-16 bg-white border-b border-slate-200 px-6 md:px-8 flex items-center justify-between shrink-0 select-none shadow-sm">
           {/* Search Box */}
           <div className="relative w-72 md:w-96">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -2629,7 +2630,7 @@ export default function Home() {
               placeholder="Search members, amounts, IDs, notes, or logs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#10192A] border border-[#1E2E4E] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition shadow-inner"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition shadow-inner"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-white">
@@ -2641,7 +2642,7 @@ export default function Home() {
           {/* Right Header Controls & User Profile */}
           <div className="flex items-center gap-4">
             {/* Dynamic Nairobi Header Date Badge (Africa/Nairobi UTC+3) */}
-            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10192A] border border-[#1E2E4E] text-slate-200 text-xs font-semibold shadow-inner">
+            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold shadow-inner">
               <Calendar className="w-3.5 h-3.5 text-emerald-400" />
               <span>{currentHeaderDate}</span>
             </div>
@@ -2661,7 +2662,7 @@ export default function Home() {
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="w-9 h-9 rounded-xl bg-[#10192A] border border-[#1E2E4E] flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-600 transition"
+                className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
                 title="Notifications"
               >
                 <Bell className="w-4 h-4" />
@@ -2696,7 +2697,7 @@ export default function Home() {
             {/* Fullscreen Toggle */}
             <button
               onClick={toggleFullscreen}
-              className="w-9 h-9 rounded-xl bg-[#10192A] border border-[#1E2E4E] flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-600 transition"
+              className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
               title="Toggle Fullscreen"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -2705,7 +2706,7 @@ export default function Home() {
             {/* Quick Settings Icon */}
             <button
               onClick={() => setActiveTab('Settings')}
-              className="w-9 h-9 rounded-xl bg-[#10192A] border border-[#1E2E4E] flex items-center justify-center text-slate-300 hover:text-white hover:border-slate-600 transition"
+              className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
               title="System Settings"
             >
               <Settings className="w-4 h-4" />
@@ -2725,7 +2726,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-xs font-bold text-white leading-tight">{currentUser?.name || 'Authorized Member'}</p>
+                  <p className="text-xs font-bold text-slate-900 leading-tight">{currentUser?.name || 'Authorized Member'}</p>
                   <p className="text-[10px] text-slate-400 leading-tight">{canEdit ? 'Editor / Admin' : 'View Only'}</p>
                 </div>
               </button>
@@ -2784,13 +2785,13 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* 3. MAIN DASHBOARD CONTENT */}
         {/* ========================================================================= */}
-        <main className={`flex-1 p-4 md:p-8 overflow-y-auto ${activeTab === 'Loan Portfolio' ? 'bg-[#F2F7F4]' : ''}`} id="dashboard-content-area">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]" id="dashboard-content-area">
           {/* Top Title Bar with Month / Currency / Export Button */}
           {activeTab !== 'Loan Portfolio' && (
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div>
-                <h1 className="text-2xl font-extrabold text-white tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
-                <p className="text-xs text-slate-400 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
+                <p className="text-xs text-slate-500 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
               </div>
 
             <div className="flex items-center gap-2.5">
@@ -2799,7 +2800,7 @@ export default function Home() {
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-medium"
+                  className="bg-white border border-slate-200 hover:border-slate-400 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-medium shadow-sm"
                   title="Select Month"
                 >
                   <option value="All">All Months</option>
@@ -2815,7 +2816,7 @@ export default function Home() {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-bold"
+                  className="bg-white border border-slate-200 hover:border-slate-400 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-bold shadow-sm"
                   title="Select Year"
                 >
                   <option value="All">All Years</option>
@@ -2831,7 +2832,7 @@ export default function Home() {
                 <select
                   value={selectedCurrency}
                   onChange={(e) => setSelectedCurrency(e.target.value)}
-                  className="bg-[#10192A] border border-[#1E2E4E] hover:border-slate-500 text-slate-200 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-semibold"
+                  className="bg-white border border-slate-200 hover:border-slate-400 text-slate-800 text-xs px-3 py-2 rounded-xl focus:outline-none cursor-pointer pr-7 appearance-none transition font-semibold shadow-sm"
                 >
                   <option value="KES">KES</option>
                   <option value="USD">USD</option>
@@ -2843,7 +2844,7 @@ export default function Home() {
               {/* Export Report Button */}
               <button
                 onClick={handleExportReport}
-                className="bg-[#10192A] border border-[#1E2E4E] hover:bg-[#15233B] text-slate-200 text-xs font-medium px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition"
+                className="bg-[#0A5C36] hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Export Report</span>
@@ -3405,24 +3406,24 @@ export default function Home() {
           {/* ===================================================================== */}
           {activeTab === 'Member Directory' && (
             <div className="space-y-6">
-              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                <div className="p-5 border-b border-[#1E293B] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                   <div>
-                    <h2 className="font-bold text-white text-base">Membership Directory & Contact Register</h2>
-                    <p className="text-xs text-slate-400">Official Register from Dreamloom Holding Limited (Page 3 of 17)</p>
+                    <h2 className="font-extrabold text-slate-900 text-base">Membership Directory & Contact Register</h2>
+                    <p className="text-xs text-slate-500">Official Register from Dreamloom Holding Limited (Page 3 of 17)</p>
                   </div>
                   {canEdit && (
                     <button
                       onClick={() => handleOpenQuickModal('Member Directory')}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                      className="px-3.5 py-1.5 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add Member Record
                     </button>
                   )}
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
+                  <table className="w-full text-left text-xs text-slate-800">
+                    <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
                       <tr>
                         <th className="p-4">Member Name</th>
                         <th className="p-4">National ID</th>
@@ -3432,15 +3433,15 @@ export default function Home() {
                         <th className="p-4 text-center">Profile / Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#1E293B]">
+                    <tbody className="divide-y divide-slate-100">
                       {filteredMembers.map((m) => (
-                        <tr key={m.id} className="hover:bg-[#142036] transition">
-                          <td className="p-4 font-semibold text-white">
+                        <tr key={m.id} className="hover:bg-emerald-50/20 transition">
+                          <td className="p-4 font-semibold text-slate-900">
                             <div
                               onClick={() => setSelectedMemberProfile(m)}
                               className="flex items-center gap-3 cursor-pointer group"
                             >
-                              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/40 bg-slate-800 shadow-md group-hover:ring-emerald-400 transition">
+                              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 ring-2 ring-emerald-500/40 bg-slate-100 shadow-sm group-hover:ring-emerald-600 transition">
                                 <img
                                   src={m.avatar || getMemberAvatar(m.fullName || m.id)}
                                   alt={m.fullName}
@@ -3448,38 +3449,37 @@ export default function Home() {
                                 />
                               </div>
                               <div>
-                                <span className="block font-bold text-white text-xs group-hover:text-emerald-400 transition">{m.fullName}</span>
-                                <span className="block text-[10px] text-slate-400 font-mono">{m.id}</span>
+                                <span className="block font-bold text-slate-900 text-xs group-hover:text-emerald-700 transition">{m.fullName}</span>
+                                <span className="block text-[10px] text-slate-500 font-mono">{m.id}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 font-mono text-emerald-400 font-bold">{m.nationalId}</td>
-                          <td className="p-4 font-mono text-slate-300">{m.phone}</td>
+                          <td className="p-4 font-mono text-emerald-700 font-bold">{m.nationalId}</td>
+                          <td className="p-4 font-mono text-slate-600">{m.phone}</td>
                           <td className="p-4">
-                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-bold">
+                            <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[10px] font-bold">
                               {m.role}
                             </span>
                           </td>
-                          <td className="p-4 font-mono text-slate-400">{m.email}</td>
-                          <td className="p-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => setSelectedMemberProfile(m)}
-                                className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                title="View Member Profile"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              {canEdit && (
-                                <button
-                                  onClick={() => handleOpenEditModal(m, 'Member Directory')}
-                                  className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                                  title="Edit Member Information"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
+                          <td className="p-4 font-mono text-slate-600">{m.email}</td>
+                          <td className="p-4 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Profile',
+                                  icon: <Eye className="w-4 h-4 text-slate-700" />,
+                                  onClick: () => setSelectedMemberProfile(m)
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Info',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  hidden: !canEdit,
+                                  onClick: () => handleOpenEditModal(m, 'Member Directory')
+                                }
+                              ]}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -3487,70 +3487,9 @@ export default function Home() {
                   </table>
                 </div>
               </div>
-
-              {/* AUTOMATIC SUMMARY CARD WITH SEPARATED OBLIGATIONS (PDF Page 10) */}
-              <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                <div className="p-5 border-b border-[#1E293B]">
-                  <h2 className="font-bold text-white text-base">Member Balances, Unsettled Dues & Shares — Automatic Summary</h2>
-                  <p className="text-xs text-slate-400">Total Contribution vs Unsettled Contributions, Unpaid Penalties, Active Loans, and Net Balance (Page 14 of 17)</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
-                      <tr>
-                        <th className="p-4">Member Name</th>
-                        <th className="p-4 text-right">Total Contribution (KES)</th>
-                        <th className="p-4 text-right text-amber-300">Unsettled Contributions (KES)</th>
-                        <th className="p-4 text-right text-rose-300">Unpaid Penalties (KES)</th>
-                        <th className="p-4 text-right">Active Loans (KES)</th>
-                        <th className="p-4 text-right">Net Balance (KES)</th>
-                        <th className="p-4 text-right">% Share Holding</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1E293B] font-mono">
-                      {automatedMembers.map((m) => {
-                        const memberUnsettled = memberOutstandingContribs[m.fullName] || 0;
-                        const memberPenalty = memberUnpaidPenalties[m.fullName] || 0;
-                        return (
-                          <tr key={m.id} className="hover:bg-[#142036] transition">
-                            <td className="p-4 font-sans text-white font-medium">{m.fullName}</td>
-                            <td className="p-4 text-right font-bold text-white">{m.totalContribution.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right font-bold text-amber-400">{memberUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right font-bold text-rose-400">{memberPenalty.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right text-slate-300">{m.activeLoans.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right font-bold text-emerald-400">{m.netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td className="p-4 text-right font-bold text-sky-400">{m.shares}</td>
-                          </tr>
-                        );
-                      })}
-                      <tr className="bg-[#121B2F] font-bold text-white">
-                        <td className="p-4 uppercase">GRAND TOTALS</td>
-                        <td className="p-4 text-right text-emerald-400 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-amber-400 font-black">{grandTotalOutstandingContribs.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-rose-400 font-black">{grandTotalUnpaidPenalties.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-slate-300 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-emerald-400 font-black">{(grandTotalContributions - totalActiveLoansAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-4 text-right text-sky-400 font-black">100.00%</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
 
-          {toastMessage && (
-            <div className="fixed bottom-6 right-6 z-50 bg-emerald-950/95 border border-emerald-500/50 text-emerald-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{toastMessage}</span>
-              <button onClick={() => setToastMessage(null)} className="text-emerald-300 hover:text-white ml-2">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* ===================================================================== */}
-          {/* CONTRIBUTIONS MODULE: COMPLETE PROFESSIONAL UPGRADE                   */}
           {/* ===================================================================== */}
           {activeTab === 'Contributions' && (
             <ContributionsTab
@@ -3683,11 +3622,11 @@ export default function Home() {
                 </div>
 
                 {/* 2. PENALTIES REGISTER TABLE */}
-                <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-5 border-b border-[#1E293B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="p-5 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                      <h2 className="font-bold text-white text-base">Fines & Late Payment Penalties Register</h2>
-                      <p className="text-xs text-slate-400">Exclusively tracking the KSh 500 late-payment fines for monthly contributions</p>
+                      <h2 className="font-extrabold text-slate-900 text-base">Fines & Late Payment Penalties Register</h2>
+                      <p className="text-xs text-slate-500">Exclusively tracking the KSh 500 late-payment fines for monthly contributions</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
@@ -3766,7 +3705,7 @@ export default function Home() {
                           {canEdit && <th className="p-4 text-center">Actions</th>}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#1E293B] font-mono">
+                      <tbody className="divide-y divide-slate-100 font-mono text-slate-800">
                         {filteredFines.length === 0 ? (
                           <tr>
                             <td colSpan={canEdit ? 5 : 4} className="p-8 text-center text-slate-400 font-sans">
@@ -3801,60 +3740,49 @@ export default function Home() {
                                   </span>
                                 </td>
                                 {canEdit && (
-                                  <td className="p-4 text-center font-sans">
-                                    <div className="flex items-center justify-center gap-2">
-                                      <button
-                                        onClick={() => handleToggleFineStatus(f.id)}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition border flex items-center gap-1 ${
-                                          isPaid
-                                            ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                            : 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-600 hover:text-white'
-                                        }`}
-                                        title={isPaid ? 'Click to mark as Unpaid' : 'Click to mark as Paid'}
-                                      >
-                                        {isPaid ? (
-                                          <>
-                                            <RotateCw className="w-3 h-3" /> Mark Unpaid
-                                          </>
-                                        ) : (
-                                          <>
-                                            <CheckCircle className="w-3 h-3" /> Mark Paid
-                                          </>
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => handleOpenEditModal(f, 'Fines & Penalties')}
-                                        className="p-1.5 hover:text-white text-slate-400 hover:bg-slate-700/50 rounded-lg transition"
-                                        title="Edit Penalty Record"
-                                      >
-                                        <Edit3 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        onClick={async () => {
-                                          const confirmDel = window.confirm(`Permanently delete penalty record for ${memberName} (${displayMonth})?`);
-                                          if (!confirmDel) return;
-                                          try {
-                                            const targetDbId = f.dbId || f.id;
-                                            const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
-                                            const res = await fetch(`/api/penalties?id=${encodeURIComponent(String(targetDbId))}&userEmail=${encodeURIComponent(userEmail)}`, {
-                                              method: 'DELETE'
-                                            }).then(r => r.json());
-                                            if (res.success) {
-                                              await refreshPenalties();
-                                              await refreshAuditLogs();
-                                            } else {
-                                              alert('Delete failed: ' + (res.error || 'Server error'));
+                                  <td className="p-4 text-center font-sans whitespace-nowrap">
+                                    <ActionsDropdown
+                                      items={[
+                                        {
+                                          id: 'settle',
+                                          label: isPaid ? 'Mark Unpaid' : 'Mark Paid',
+                                          icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
+                                          onClick: () => handleToggleFineStatus(f.id)
+                                        },
+                                        {
+                                          id: 'edit',
+                                          label: 'Edit',
+                                          icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                          onClick: () => handleOpenEditModal(f, 'Fines & Penalties')
+                                        },
+                                        {
+                                          id: 'delete',
+                                          label: 'Delete',
+                                          icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                          danger: true,
+                                          onClick: async () => {
+                                            const confirmDel = window.confirm(`Permanently delete penalty record for ${memberName} (${displayMonth})?`);
+                                            if (!confirmDel) return;
+                                            try {
+                                              const targetDbId = f.dbId || f.id;
+                                              const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+                                              const res = await fetch(`/api/penalties?id=${encodeURIComponent(String(targetDbId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+                                                method: 'DELETE'
+                                              });
+                                              if (res.ok) {
+                                                setFines(prev => prev.filter(item => item.id !== f.id));
+                                                await refreshPenalties();
+                                                setToastMessage('Penalty record deleted successfully.');
+                                              } else {
+                                                setToastMessage('Failed to delete penalty record.');
+                                              }
+                                            } catch (e) {
+                                              setToastMessage('Error deleting penalty.');
                                             }
-                                          } catch (e: any) {
-                                            alert('Error deleting penalty: ' + e.message);
                                           }
-                                        }}
-                                        className="p-1.5 hover:text-rose-400 text-slate-400 hover:bg-rose-500/10 rounded-lg transition"
-                                        title="Delete Penalty Record"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
+                                        }
+                                      ]}
+                                    />
                                   </td>
                                 )}
                               </tr>
@@ -3933,7 +3861,7 @@ export default function Home() {
               </div>
               <div className="overflow-x-auto max-h-[650px]">
                 <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold sticky top-0 z-10">
+                  <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold sticky top-0 z-10">
                     <tr>
                       <th className="p-4">Date</th>
                       <th className="p-4">Description / Category</th>
@@ -3954,14 +3882,36 @@ export default function Home() {
                         <td className="p-4 font-sans text-slate-300">{exp.category}</td>
                         <td className="p-4 font-sans text-slate-400">{exp.paidTo}</td>
                         {canEdit && (
-                          <td className="p-4 text-center font-sans">
-                            <button
-                              onClick={() => handleOpenEditModal(exp, 'Expenses')}
-                              className="p-1.5 hover:text-white text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition"
-                              title="Edit Expense Record"
-                            >
-                              <Edit3 className="w-4 h-4" />
-                            </button>
+                          <td className="p-4 text-center font-sans whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'edit',
+                                  label: 'Edit',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  onClick: () => handleOpenEditModal(exp, 'Expenses')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  onClick: async () => {
+                                    const confirmDel = window.confirm(`Delete expense record "${exp.description}"?`);
+                                    if (!confirmDel) return;
+                                    try {
+                                      const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(exp.id))}&userEmail=${encodeURIComponent(currentUser?.email || 'simon@dreamloom.co.ke')}`, {
+                                        method: 'DELETE'
+                                      });
+                                      if (res.ok) {
+                                        setExpenses(prev => prev.filter(item => item.id !== exp.id));
+                                        setToastMessage('Expense deleted.');
+                                      }
+                                    } catch (e) {}
+                                  }
+                                }
+                              ]}
+                            />
                           </td>
                         )}
                       </tr>
@@ -5247,7 +5197,7 @@ export default function Home() {
       {/* ===================================================================== */}
       {selectedMemberProfile && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F172A] border border-[#1E293B] rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200 text-slate-800">
             {/* Close Button */}
             <button
               onClick={() => setSelectedMemberProfile(null)}

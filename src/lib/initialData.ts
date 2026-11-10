@@ -99,7 +99,7 @@ export const initialMembers = [
     "netBalance": 64150,
     "shares": "13.61%",
     "status": "Active",
-    "avatar": "/members/member-6.svg",
+    "avatar": "/members/member-6.jpg",
     "color": "from-emerald-400 to-teal-400"
   },
   {
@@ -116,7 +116,7 @@ export const initialMembers = [
     "netBalance": 29050,
     "shares": "9.67%",
     "status": "Active",
-    "avatar": "/members/member-7.svg",
+    "avatar": "/members/member-7.jpg",
     "color": "from-emerald-400 to-teal-400"
   }
 ];

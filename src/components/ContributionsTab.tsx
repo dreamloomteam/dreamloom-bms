@@ -29,6 +29,8 @@ import {
   getEATISODate
 } from '@/lib/dateUtils';
 import { getMemberAvatar } from '@/lib/memberAvatars';
+import ActionsDropdown from '@/components/ActionsDropdown';
+import { Eye } from 'lucide-react';
 
 interface ContributionsTabProps {
   contributions: any[];
@@ -130,7 +132,7 @@ export default function ContributionsTab({
 
   // Normalize all contribution records from props
   const normalizedContributions = useMemo(() => {
-    return contributions.map(c => {
+    const list = contributions.map(c => {
       const norm = normalizeMonthYear(c.monthName || c.month, c.year, c.monthYear || c.month);
       const isPayout = (Number(c.payout) || 0) > 0;
       const paidAmt = Number(c.amount) || 0;
@@ -156,8 +158,28 @@ export default function ContributionsTab({
         ? 'Partially Paid'
         : 'Unpaid';
 
+      let memberName = c.member || c.memberName || '';
+      if (
+        !memberName &&
+        (c.customId === 'CNT-016' ||
+          c.id === 'CNT-016' ||
+          c.dbId === 520 ||
+          c.id === 520 ||
+          c.id === 359 ||
+          (c.memberId === 1 && norm.monthName === 'December' && norm.year === 2025))
+      ) {
+        memberName = 'Simon Memia Wanjiru';
+      }
+
+      const assignedCustomId =
+        c.customId || (typeof c.id === 'string' && c.id.startsWith('CNT-') ? c.id : undefined);
+
       return {
         ...c,
+        id: assignedCustomId || c.id || ('CNT-' + (c.dbId || c.id)),
+        customId: assignedCustomId || (c.customId === 'CNT-016' ? 'CNT-016' : undefined),
+        member: memberName,
+        memberName: memberName,
         canonicalMonth: norm.monthName,
         canonicalYear: norm.year,
         monthYearShort: norm.monthYearShort,
@@ -170,9 +192,34 @@ export default function ContributionsTab({
         paymentDate: c.paymentDate || (paidAmt > 0 ? norm.defaultDateStr : '-'),
         paymentMethod: c.paymentMethod || 'M-Pesa',
         paymentReference:
-          c.paymentReference || c.mpesaRef || c.bankRef || (paidAmt > 0 ? `REF-${c.id}` : '-'),
+          c.paymentReference || c.mpesaRef || c.bankRef || (paidAmt > 0 ? `REF-${assignedCustomId || c.id}` : '-'),
         payments: Array.isArray(c.payments) ? c.payments : []
       };
+    });
+
+    const MONTH_ORDER: Record<string, number> = {
+      january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+      july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
+    };
+
+    function parseCId(cid?: string | null): number {
+      if (!cid) return 999999;
+      const m = String(cid).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 999999;
+    }
+
+    return list.sort((a, b) => {
+      if (a.canonicalYear !== b.canonicalYear) return a.canonicalYear - b.canonicalYear;
+      const ma = MONTH_ORDER[a.canonicalMonth.toLowerCase()] || 0;
+      const mb = MONTH_ORDER[b.canonicalMonth.toLowerCase()] || 0;
+      if (ma !== mb) return ma - mb;
+      const aPay = (a.payout || 0) > 0 ? 1 : 0;
+      const bPay = (b.payout || 0) > 0 ? 1 : 0;
+      if (aPay !== bPay) return aPay - bPay;
+      const numA = parseCId(a.customId || a.id);
+      const numB = parseCId(b.customId || b.id);
+      if (numA !== numB) return numA - numB;
+      return (Number(a.dbId || a.id) || 0) - (Number(b.dbId || b.id) || 0);
     });
   }, [contributions]);
 
@@ -193,7 +240,7 @@ export default function ContributionsTab({
             c.member?.toLowerCase().trim() === m.fullName.toLowerCase().trim() ||
             c.member?.toLowerCase().includes(m.fullName.toLowerCase().trim()) ||
             m.fullName.toLowerCase().includes((c.member || '').toLowerCase().trim()) ||
-            (m.fullName.toLowerCase().includes('simon') && (c.customId === 'CNT-016' || c.id === 359)))
+            (m.fullName.toLowerCase().includes('simon') && (c.customId === 'CNT-016' || c.id === 'CNT-016' || c.id === 359 || c.dbId === 520 || c.id === 520)))
       );
 
       if (match) {
@@ -709,32 +756,32 @@ export default function ContributionsTab({
   const renderContribStatusBadge = (status: string) => {
     if (status === 'Fully Paid') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Fully Paid
         </span>
       );
     }
     if (status === 'Partially Paid') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           Partially Paid
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-rose-500/15 text-rose-400 border border-rose-500/30">
-        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase bg-rose-50 text-rose-700 border border-rose-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
         Unpaid
       </span>
     );
   };
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="space-y-6 text-slate-800 w-full">
       {/* Top Month & Year Navigation Bar + Sub-Navigation (Section 3.2 & Section 8) */}
-      <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           {[
             { id: 'monthly-register', label: 'Monthly Contributions Register', icon: Calendar },
@@ -750,8 +797,8 @@ export default function ContributionsTab({
                 onClick={() => setSubView(tab.id as ContribSubView)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                   active
-                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                    ? 'bg-[#0A5C36] text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -763,7 +810,7 @@ export default function ContributionsTab({
 
         {/* Authoritative Month & Year Selectors (Section 3.2) */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2 bg-[#070D18] border border-slate-700 rounded-xl px-3 py-1.5">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
             <Calendar className="w-4 h-4 text-emerald-400" />
             <span className="text-xs text-slate-400 font-semibold">Period:</span>
             <select
@@ -810,7 +857,7 @@ export default function ContributionsTab({
           {canEdit && (
             <button
               onClick={() => handleOpenAddModal()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold tracking-wide shadow-lg shadow-emerald-500/20 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold tracking-wide shadow-sm transition-all"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>ADD CONTRIBUTION</span>
@@ -826,11 +873,11 @@ export default function ContributionsTab({
         <div className="space-y-6">
           {/* Monthly KPI Summary Strip */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#0F172A] border border-slate-800 rounded-2xl p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Selected Period Expected ({activeMonth} {activeYear})
               </span>
-              <p className="text-xl font-black text-white mt-1">
+              <p className="text-xl font-black text-slate-900 mt-1">
                 KES {monthlySummary.totalExpected.toLocaleString()}
               </p>
               <span className="text-[11px] text-slate-500">
@@ -838,35 +885,35 @@ export default function ContributionsTab({
               </span>
             </div>
 
-            <div className="bg-[#0F172A] border border-slate-800 rounded-2xl p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Total Collected ({activeMonth} {activeYear})
               </span>
-              <p className="text-xl font-black text-emerald-400 mt-1">
+              <p className="text-xl font-black text-emerald-700 mt-1">
                 KES {monthlySummary.totalPaid.toLocaleString()}
               </p>
-              <span className="text-[11px] text-emerald-500/80">
+              <span className="text-[11px] text-emerald-600 font-medium">
                 {monthlySummary.fullyPaidCount} Fully Paid • {monthlySummary.partialCount} Partial
               </span>
             </div>
 
-            <div className="bg-[#0F172A] border border-amber-500/30 rounded-2xl p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">
                 Outstanding Contribution ({activeMonth} {activeYear})
               </span>
-              <p className="text-xl font-black text-amber-400 mt-1">
+              <p className="text-xl font-black text-amber-600 mt-1">
                 KES {monthlySummary.totalOutstanding.toLocaleString()}
               </p>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 {monthlySummary.unpaidCount} Unpaid • {monthlySummary.partialCount} Partially Paid
               </span>
             </div>
 
-            <div className="bg-[#0F172A] border border-slate-800 rounded-2xl p-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Excess / Advance Credit ({activeMonth} {activeYear})
               </span>
-              <p className="text-xl font-black text-blue-400 mt-1">
+              <p className="text-xl font-black text-blue-600 mt-1">
                 KES {monthlySummary.totalCredit.toLocaleString()}
               </p>
               <span className="text-[11px] text-slate-500">
@@ -925,15 +972,15 @@ export default function ContributionsTab({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100">
                   {monthlyMemberRows.map((row, idx) => {
                     const hasDbRecord = Boolean(row.dbId || row.customId || row.id || (row.amount && row.amount > 0));
                     const rowMenuKey = `monthly-${row.memberId || idx}`;
                     return (
-                      <tr key={row.memberId || idx} className="hover:bg-slate-800/35 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-white">
+                      <tr key={row.memberId || idx} className="hover:bg-emerald-50/20 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-slate-900">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
+                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
                               <img
                                 src={getMemberAvatar(row.memberName)}
                                 alt={row.memberName}
@@ -943,16 +990,16 @@ export default function ContributionsTab({
                             <span>{row.memberName}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-emerald-400 font-semibold">
+                        <td className="py-3.5 px-4 text-emerald-700 font-semibold">
                           {row.canonicalMonth}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-300 font-semibold">
+                        <td className="py-3.5 px-4 text-slate-600 font-semibold">
                           {row.canonicalYear}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
                           {row.expectedAmount.toLocaleString()}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
+                        <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700">
                           {row.amount.toLocaleString()}
                           {row.payments && row.payments.length > 1 && (
                             <span className="block text-[10px] text-teal-300 font-normal">
@@ -961,163 +1008,68 @@ export default function ContributionsTab({
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right font-extrabold">
-                          <span className={row.unsettled > 0 ? 'text-amber-400' : 'text-slate-500'}>
+                          <span className={row.unsettled > 0 ? 'text-amber-600' : 'text-slate-400'}>
                             {row.unsettled.toLocaleString()}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                           {row.paymentDate || '-'}
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-emerald-400">
+                        <td className="py-3.5 px-4 font-mono text-slate-600">
                           {row.paymentReference || '-'}
                         </td>
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           {renderContribStatusBadge(row.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80 min-w-[220px]">
-                          {/* Desktop Actions */}
-                          <div className="hidden sm:flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => {
-                                if (!canEdit) {
-                                  showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
-                                  return;
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <ActionsDropdown
+                            items={[
+                              {
+                                id: 'view',
+                                label: 'View',
+                                icon: <Eye className="w-4 h-4 text-slate-700" />,
+                                onClick: () => setHistoryModalTarget(row)
+                              },
+                              {
+                                id: 'pay',
+                                label: 'Pay',
+                                icon: <CreditCard className="w-4 h-4 text-slate-700" />,
+                                onClick: () => {
+                                  if (!canEdit) {
+                                    showToast('Editor access required: Please log in as an authorized director or officer to record payments.');
+                                    return;
+                                  }
+                                  handleOpenInstalmentModal(row);
                                 }
-                                handleOpenAddModal(row);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
-                              title="Edit Contribution"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (!canEdit) {
-                                  showToast('Editor access required: Please log in as an authorized director or officer to record payments.');
-                                  return;
+                              },
+                              {
+                                id: 'edit',
+                                label: 'Edit',
+                                icon: <Edit2 className="w-4 h-4 text-slate-700" />,
+                                onClick: () => {
+                                  if (!canEdit) {
+                                    showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
+                                    return;
+                                  }
+                                  handleOpenAddModal(row);
                                 }
-                                handleOpenInstalmentModal(row);
-                              }}
-                              className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[11px] font-bold"
-                              title="Record Additional Instalment Payment"
-                            >
-                              + Pay
-                            </button>
-                            <button
-                              onClick={() => setHistoryModalTarget(row)}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold"
-                              title="View Payment Instalment History"
-                            >
-                              History
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (!canEdit) {
-                                  showToast('Editor access required: Please log in as an authorized director or officer to delete or reverse records.');
-                                  return;
+                              },
+                              {
+                                id: 'delete',
+                                label: 'Delete',
+                                icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                danger: true,
+                                disabled: !hasDbRecord && row.amount === 0 && !row.customId,
+                                onClick: () => {
+                                  if (!canEdit) {
+                                    showToast('Editor access required: Please log in as an authorized director or officer to delete or reverse records.');
+                                    return;
+                                  }
+                                  handleOpenDeleteModal(row);
                                 }
-                                handleOpenDeleteModal(row);
-                              }}
-                              disabled={!hasDbRecord && row.amount === 0 && !row.customId}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                                hasDbRecord || row.amount > 0 || row.customId
-                                  ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border-rose-500/30'
-                                  : 'bg-slate-900/50 text-slate-600 border-slate-800 cursor-not-allowed'
-                              }`}
-                              title={
-                                hasDbRecord || row.amount > 0 || row.customId
-                                  ? 'Delete or Reverse Contribution'
-                                  : 'No saved contribution record to delete'
                               }
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-
-                          {/* Mobile Three-Dot Menu + Quick Buttons */}
-                          <div className="flex sm:hidden items-center justify-center gap-1 relative">
-                            <button
-                              onClick={() => {
-                                if (!canEdit) {
-                                  showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
-                                  return;
-                                }
-                                handleOpenAddModal(row);
-                              }}
-                              className="px-2 py-1 bg-slate-800 text-emerald-400 rounded text-[11px] font-bold"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                setOpenMobileMenuKey(
-                                  openMobileMenuKey === rowMenuKey ? null : rowMenuKey
-                                )
-                              }
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
-                              aria-label="More actions"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {openMobileMenuKey === rowMenuKey && (
-                              <div className="absolute right-0 top-8 z-50 w-44 bg-[#090F1D] border border-slate-700 rounded-xl shadow-2xl py-1 text-left">
-                                <button
-                                  onClick={() => {
-                                    setOpenMobileMenuKey(null);
-                                    if (!canEdit) {
-                                      showToast('Editor access required: Please log in as an authorized director or officer.');
-                                      return;
-                                    }
-                                    handleOpenAddModal(row);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs text-emerald-400 hover:bg-slate-800 flex items-center gap-2 font-bold"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                  <span>Edit Contribution</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setOpenMobileMenuKey(null);
-                                    if (!canEdit) {
-                                      showToast('Editor access required: Please log in as an authorized director or officer.');
-                                      return;
-                                    }
-                                    handleOpenInstalmentModal(row);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs text-teal-300 hover:bg-slate-800 flex items-center gap-2 font-bold"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>Add Instalment (+Pay)</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setOpenMobileMenuKey(null);
-                                    setHistoryModalTarget(row);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 flex items-center gap-2"
-                                >
-                                  <History className="w-3.5 h-3.5" />
-                                  <span>Payment History</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setOpenMobileMenuKey(null);
-                                    if (!canEdit) {
-                                      showToast('Editor access required: Please log in as an authorized director or officer.');
-                                      return;
-                                    }
-                                    handleOpenDeleteModal(row);
-                                  }}
-                                  className="w-full px-3 py-2 text-xs text-rose-400 hover:bg-slate-800 flex items-center gap-2 font-bold border-t border-slate-800"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Delete / Reverse</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                            ]}
+                          />
                         </td>
                       </tr>
                     );
@@ -1133,10 +1085,10 @@ export default function ContributionsTab({
       {/* SUBVIEW 2: PAYMENT HISTORY / INSTALMENTS LEDGER (Section 3.7 & 8)     */}
       {/* ===================================================================== */}
       {subView === 'payment-history' && (
-        <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-base font-extrabold text-slate-900">
                 Contribution Payment & Instalment History ({allPaymentTransactions.length})
               </h2>
               <p className="text-xs text-slate-400">
@@ -1147,7 +1099,7 @@ export default function ContributionsTab({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+                <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                   <th className="py-3.5 px-4">Actual Payment Date</th>
                   <th className="py-3.5 px-4">Member Name</th>
                   <th className="py-3.5 px-4">Contribution Period</th>
@@ -1164,9 +1116,9 @@ export default function ContributionsTab({
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {allPaymentTransactions.slice(0, 150).map((t, idx) => (
-                  <tr key={`${t.id}-${idx}`} className="hover:bg-slate-800/30">
-                    <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{t.paymentDate}</td>
-                    <td className="py-3 px-4 font-bold text-white">
+                  <tr key={`${t.id}-${idx}`} className="hover:bg-emerald-50/20 transition-colors">
+                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{t.paymentDate}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900">
                       <div className="flex items-center gap-2.5">
                         <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
                           <img
@@ -1221,9 +1173,9 @@ export default function ContributionsTab({
       {/* SUBVIEW 3: MEMBER CONTRIBUTION SUMMARY (Section 8)                    */}
       {/* ===================================================================== */}
       {subView === 'member-summary' && (
-        <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800">
-            <h2 className="text-lg font-extrabold text-white">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-slate-200">
+            <h2 className="text-base font-extrabold text-slate-900">
               Cumulative Member Contribution Summary
             </h2>
             <p className="text-xs text-slate-400">
@@ -1257,8 +1209,19 @@ export default function ContributionsTab({
                   const totalCredit = mRows.reduce((s, r) => s + (Number(r.creditBalance) || 0), 0);
 
                   return (
-                    <tr key={m.id || m.fullName} className="hover:bg-slate-800/30">
-                      <td className="py-3.5 px-4 font-bold text-white">{m.fullName}</td>
+                    <tr key={m.id || m.fullName} className="hover:bg-emerald-50/20 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
+                            <img
+                              src={getMemberAvatar(m.fullName)}
+                              alt={m.fullName}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span>{m.fullName}</span>
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4 text-right font-extrabold text-emerald-400">
                         KES {totalPaid.toLocaleString()}
                       </td>
@@ -1295,28 +1258,31 @@ export default function ContributionsTab({
       {/* SUBVIEW 4: ALL CYCLES HISTORICAL LEDGER                               */}
       {/* ===================================================================== */}
       {subView === 'all-cycles' && (
-        <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-lg font-extrabold text-white">
+              <h2 className="text-base font-extrabold text-slate-900">
                 Complete Historical Contributions & Payouts Ledger ({normalizedContributions.length})
               </h2>
+              <p className="text-xs text-slate-500">
+                Chronological ledger of all historical member obligations, instalments, and payouts
+              </p>
             </div>
             <div className="relative w-64">
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search member, month, year..."
+                placeholder="Search member, month, year, ID..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-[#070D18] border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600"
               />
             </div>
           </div>
           <div className="overflow-x-auto max-h-[600px]">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="sticky top-0 bg-[#090F1D] z-20">
-                <tr className="border-b border-slate-800 text-[11px] font-bold uppercase text-slate-400">
+              <thead className="sticky top-0 bg-[#E6F4EA] z-20 shadow-sm">
+                <tr className="border-b border-emerald-900/10 text-[11px] font-bold uppercase text-slate-700">
                   <th className="py-3 px-4">ID</th>
                   <th className="py-3 px-4">Month & Year</th>
                   <th className="py-3 px-4">Member / Description</th>
@@ -1325,79 +1291,106 @@ export default function ContributionsTab({
                   <th className="py-3 px-4 text-right">Unsettled</th>
                   <th className="py-3 px-4 text-right">Payout</th>
                   <th className="py-3 px-4 text-center">Status</th>
-                  {canEdit && (
-                    <th className="py-3 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80">
-                      Actions
-                    </th>
-                  )}
+                  <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {normalizedContributions
                   .filter(c => {
                     if (!searchQuery.trim()) return true;
                     const q = searchQuery.toLowerCase();
                     return (
                       (c.member || '').toLowerCase().includes(q) ||
+                      (c.memberName || '').toLowerCase().includes(q) ||
                       c.canonicalMonth.toLowerCase().includes(q) ||
                       String(c.canonicalYear).includes(q) ||
-                      (c.id || '').toLowerCase().includes(q)
+                      (c.customId || '').toLowerCase().includes(q) ||
+                      (c.id || '').toLowerCase().includes(q) ||
+                      (c.status || '').toLowerCase().includes(q)
                     );
                   })
                   .map(c => (
-                    <tr key={c.id} className="hover:bg-slate-800/30">
-                      <td className="py-2.5 px-4 font-mono text-slate-400">{c.id}</td>
-                      <td className="py-2.5 px-4 text-emerald-400 font-semibold whitespace-nowrap">
+                    <tr key={c.id} className="hover:bg-emerald-50/20 transition-colors">
+                      <td className="py-2.5 px-4 font-mono text-slate-500 font-semibold">{c.id}</td>
+                      <td className="py-2.5 px-4 text-emerald-700 font-semibold whitespace-nowrap">
                         {c.canonicalMonth} {c.canonicalYear}
                       </td>
-                      <td className="py-2.5 px-4 font-bold text-white">{c.member}</td>
-                      <td className="py-2.5 px-4 text-right">
+                      <td className="py-2.5 px-4 font-bold text-slate-900">
+                        <div className="flex items-center gap-2">
+                          {c.payout === 0 && (
+                            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/30 bg-slate-100">
+                              <img
+                                src={getMemberAvatar(c.member || c.memberName)}
+                                alt={c.member}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <span>{c.member}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-slate-700">
                         {c.expectedAmount.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-4 text-right font-bold text-emerald-400">
+                      <td className="py-2.5 px-4 text-right font-bold text-emerald-700">
                         {c.amount.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-4 text-right font-bold text-amber-400">
+                      <td className="py-2.5 px-4 text-right font-bold text-amber-600">
                         {c.unsettled.toLocaleString()}
                       </td>
-                      <td className="py-2.5 px-4 text-right text-blue-400">
+                      <td className="py-2.5 px-4 text-right text-blue-600 font-bold">
                         {(c.payout || 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-4 text-center">
                         {c.payout > 0 ? (
-                          <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
                             Payout
                           </span>
                         ) : (
                           renderContribStatusBadge(c.status)
                         )}
                       </td>
-                      {canEdit && (
-                        <td className="py-2.5 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
-                          {c.payout > 0 ? (
-                            <span className="text-[10px] text-slate-500 font-semibold">Protected Payout</span>
-                          ) : (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => handleOpenAddModal({ ...c, memberName: c.member })}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
-                                title="Edit Contribution"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                                <span>Edit</span>
-                              </button>
-                              <button
-                                onClick={() => handleOpenDeleteModal({ ...c, memberName: c.member })}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg text-[11px] font-bold"
-                                title="Delete or Reverse Contribution"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      )}
+                      <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                        {c.payout > 0 ? (
+                          <span className="text-[10px] text-slate-400 font-semibold">Protected</span>
+                        ) : (
+                          <ActionsDropdown
+                            items={[
+                              {
+                                id: 'view',
+                                label: 'View',
+                                icon: <Eye className="w-4 h-4 text-slate-700" />,
+                                onClick: () => setHistoryModalTarget({ ...c, memberName: c.member })
+                              },
+                              {
+                                id: 'edit',
+                                label: 'Edit',
+                                icon: <Edit2 className="w-4 h-4 text-slate-700" />,
+                                onClick: () => {
+                                  if (!canEdit) {
+                                    showToast('Editor access required: Please log in as an authorized director or officer to edit records.');
+                                    return;
+                                  }
+                                  handleOpenAddModal({ ...c, memberName: c.member });
+                                }
+                              },
+                              {
+                                id: 'delete',
+                                label: 'Delete',
+                                icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                danger: true,
+                                onClick: () => {
+                                  if (!canEdit) {
+                                    showToast('Editor access required: Please log in as an authorized director or officer to delete records.');
+                                    return;
+                                  }
+                                  handleOpenDeleteModal({ ...c, memberName: c.member });
+                                }
+                              }
+                            ]}
+                          />
+                        )}
+                      </td>
                     </tr>
                   ))}
               </tbody>

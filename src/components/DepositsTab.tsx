@@ -8,6 +8,7 @@ import {
   Landmark, CreditCard, Building2, User, Calendar, Coins, ArrowUpRight
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
+import ActionsDropdown from '@/components/ActionsDropdown';
 import {
   ALL_MONTHS,
   AVAILABLE_YEARS,
@@ -653,7 +654,7 @@ export default function DepositsTab({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name, ref, ID..."
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -662,7 +663,7 @@ export default function DepositsTab({
             <select
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="All">All Months</option>
               {ALL_MONTHS.map((m) => (
@@ -676,7 +677,7 @@ export default function DepositsTab({
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
             >
               <option value="All">All Years</option>
               {AVAILABLE_YEARS.map((y) => (
@@ -690,7 +691,7 @@ export default function DepositsTab({
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="All">All Types</option>
               {TRANSACTION_TYPES.map((t) => (
@@ -704,7 +705,7 @@ export default function DepositsTab({
             <select
               value={filterAccount}
               onChange={(e) => setFilterAccount(e.target.value)}
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="All">All Receiving Accounts</option>
               {RECEIVING_ACCOUNTS.map((acc) => (
@@ -718,7 +719,7 @@ export default function DepositsTab({
             <select
               value={filterReconciliation}
               onChange={(e) => setFilterReconciliation(e.target.value)}
-              className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="All">All Reconciliation</option>
               <option value="Unreconciled">Unreconciled</option>
@@ -733,10 +734,10 @@ export default function DepositsTab({
       {/* --------------------------------------------------------------------- */}
       {/* 3. DEPOSITS REGISTER TABLE */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+            <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
               <tr>
                 <th
                   onClick={() => {
@@ -765,7 +766,7 @@ export default function DepositsTab({
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1E293B] font-mono">
+            <tbody className="divide-y divide-slate-100 font-mono text-slate-800">
               {filteredDeposits.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-8 text-center text-slate-500 font-sans">
@@ -780,7 +781,7 @@ export default function DepositsTab({
                   return (
                     <tr
                       key={dep.id}
-                      className={`hover:bg-[#142036] transition ${
+                      className={`hover:bg-emerald-50/20 transition ${
                         isRev ? 'opacity-60 bg-rose-950/10' : ''
                       }`}
                     >
@@ -888,52 +889,41 @@ export default function DepositsTab({
 
                       {/* Actions */}
                       <td className="p-4 text-center whitespace-nowrap font-sans">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* View */}
-                          <button
-                            onClick={() => {
-                              setViewingDeposit(dep);
-                              setIsDetailsModalOpen(true);
-                            }}
-                            className="p-1.5 bg-[#1A2A46] hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition"
-                            title="View complete transaction details"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-sky-400" />
-                          </button>
-
-                          {/* Reconcile */}
-                          {canEdit && !isRev && (
-                            <button
-                              onClick={() => handleOpenReconcileModal(dep)}
-                              className="p-1.5 bg-[#1A2A46] hover:bg-emerald-950 text-slate-300 rounded-lg text-xs transition border border-emerald-500/20"
-                              title="Reconcile against bank or M-Pesa statement"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            </button>
-                          )}
-
-                          {/* Edit */}
-                          {canEdit && !isRev && (
-                            <button
-                              onClick={() => handleOpenEditModal(dep)}
-                              className="p-1.5 bg-[#1A2A46] hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition"
-                              title="Edit deposit record"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                            </button>
-                          )}
-
-                          {/* Reverse */}
-                          {canEdit && !isRev && (
-                            <button
-                              onClick={() => handleOpenReverseModal(dep)}
-                              className="p-1.5 bg-[#1A2A46] hover:bg-rose-950 text-slate-300 rounded-lg text-xs transition border border-rose-500/20"
-                              title="Reverse this deposit (Preserves audit log)"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
-                            </button>
-                          )}
-                        </div>
+                        <ActionsDropdown
+                          items={[
+                            {
+                              id: 'view',
+                              label: 'View',
+                              icon: <Eye className="w-4 h-4 text-slate-700" />,
+                              onClick: () => {
+                                setViewingDeposit(dep);
+                                setIsDetailsModalOpen(true);
+                              }
+                            },
+                            {
+                              id: 'reconcile',
+                              label: 'Reconcile',
+                              icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
+                              hidden: !canEdit || isRev,
+                              onClick: () => handleOpenReconcileModal(dep)
+                            },
+                            {
+                              id: 'edit',
+                              label: 'Edit',
+                              icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                              hidden: !canEdit || isRev,
+                              onClick: () => handleOpenEditModal(dep)
+                            },
+                            {
+                              id: 'reverse',
+                              label: 'Reverse',
+                              icon: <RotateCcw className="w-4 h-4 text-rose-600" />,
+                              danger: true,
+                              hidden: !canEdit || isRev,
+                              onClick: () => handleOpenReverseModal(dep)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -1003,7 +993,7 @@ export default function DepositsTab({
                       });
                     }}
                     placeholder="Type name or search member..."
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
@@ -1016,7 +1006,7 @@ export default function DepositsTab({
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
@@ -1056,7 +1046,7 @@ export default function DepositsTab({
                   <select
                     value={formData.transactionType}
                     onChange={(e) => setFormData({ ...formData, transactionType: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     {TRANSACTION_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -1071,7 +1061,7 @@ export default function DepositsTab({
                   <select
                     value={formData.paymentMethod}
                     onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     {PAYMENT_METHODS.map((pm) => (
                       <option key={pm} value={pm}>{pm}</option>
@@ -1091,7 +1081,7 @@ export default function DepositsTab({
                     placeholder="Specify classification (e.g. Grant, Equipment Sale, Refund)..."
                     value={formData.customTransactionType}
                     onChange={(e) => setFormData({ ...formData, customTransactionType: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               )}
@@ -1104,7 +1094,7 @@ export default function DepositsTab({
                 <select
                   value={formData.receivingAccount}
                   onChange={(e) => setFormData({ ...formData, receivingAccount: e.target.value })}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   {RECEIVING_ACCOUNTS.map((acc) => (
                     <option key={acc} value={acc}>{acc}</option>
@@ -1122,7 +1112,7 @@ export default function DepositsTab({
                   placeholder="e.g. QK89123456 or EQ-TXN-9981"
                   value={formData.reference}
                   onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
                 />
                 {duplicateWarning && (
                   <div className="mt-1.5 p-2 bg-rose-950/60 border border-rose-500/40 rounded-lg text-rose-300 text-xs flex items-start gap-1.5 font-sans">
@@ -1143,7 +1133,7 @@ export default function DepositsTab({
                   placeholder="Explain the purpose of this deposit..."
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -1158,7 +1148,7 @@ export default function DepositsTab({
                     <select
                       value={formData.allocationType}
                       onChange={(e) => setFormData({ ...formData, allocationType: e.target.value, allocationRef: '' })}
-                      className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                     >
                       <option value="None">None (Unallocated Inflow)</option>
                       <option value="Contribution">Monthly Contribution</option>
@@ -1175,7 +1165,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Active Loan --</option>
                         {loans.filter((l) => l.status === 'Active').map((l) => (
@@ -1188,7 +1178,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Month / Cycle --</option>
                         {ALL_MONTHS.map((m) => (
@@ -1199,7 +1189,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Project --</option>
                         {projects.map((p) => (
@@ -1210,7 +1200,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Investment Asset --</option>
                         {investments.map((inv) => (
@@ -1223,7 +1213,7 @@ export default function DepositsTab({
                         placeholder="Optional parcel or note..."
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-[#142036] border border-[#1E2D4A] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
                       />
                     )}
                   </div>
@@ -1244,7 +1234,7 @@ export default function DepositsTab({
                     placeholder="e.g. MPesa_Confirmation_QK89123456.png or Bank_Slip_Scan.pdf"
                     value={formData.attachmentName}
                     onChange={(e) => setFormData({ ...formData, attachmentName: e.target.value })}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -1405,7 +1395,7 @@ export default function DepositsTab({
                 <select
                   value={reconcileStatusInput}
                   onChange={(e) => setReconcileStatusInput(e.target.value as any)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
                   <option value="Reconciled">Reconciled (Matched to Bank / M-Pesa Statement)</option>
                   <option value="Discrepancy">Discrepancy (Amount or Reference mismatch)</option>
@@ -1419,7 +1409,7 @@ export default function DepositsTab({
                   placeholder="e.g. Confirmed on Equity Bank Statement Page 4, line 12..."
                   value={reconcileNotesInput}
                   onChange={(e) => setReconcileNotesInput(e.target.value)}
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
@@ -1486,7 +1476,7 @@ export default function DepositsTab({
                 placeholder="State why this deposit is being reversed (e.g. Duplicate entry, bounced transfer, entered to wrong account)..."
                 value={reversalReasonInput}
                 onChange={(e) => setReversalReasonInput(e.target.value)}
-                className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
               />
             </div>
 
