@@ -923,21 +923,21 @@ export default function ContributionsTab({
           </div>
 
           {/* 10-Column Monthly Contributions Register Table (Section 3.5 & 3.6) */}
-          <div className="bg-[#0F172A] border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-extrabold text-white">
+                <h2 className="text-base font-extrabold text-slate-900">
                   {activeMonth} {activeYear} — Member Contributions Register
                 </h2>
-                <p className="text-xs text-slate-400">
-                  Authoritative monthly register supporting single payments, multiple instalments,
-                  and instant database synchronisation
+                <p className="text-xs text-slate-500">
+                  Authoritative monthly register supporting single payments, multiple instalments, and instant database synchronisation
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleExportMonthlyCSV}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200 transition"
+                  title="Export Current Month Register to CSV"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export CSV</span>
@@ -945,9 +945,9 @@ export default function ContributionsTab({
                 {canEdit && (
                   <button
                     onClick={() => handleOpenAddModal()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-sm transition"
                   >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>ADD CONTRIBUTION</span>
                   </button>
                 )}
@@ -957,7 +957,7 @@ export default function ContributionsTab({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs min-w-[980px]">
                 <thead>
-                  <tr className="bg-[#090F1D] border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <tr className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[11px] font-bold uppercase tracking-wider text-slate-700">
                     <th className="py-3.5 px-4">1. Member Name</th>
                     <th className="py-3.5 px-4">2. Contribution Month</th>
                     <th className="py-3.5 px-4">3. Contribution Year</th>
@@ -967,9 +967,7 @@ export default function ContributionsTab({
                     <th className="py-3.5 px-4">7. Payment Date</th>
                     <th className="py-3.5 px-4">8. Payment Reference</th>
                     <th className="py-3.5 px-4 text-center">9. Payment Status</th>
-                    <th className="py-3.5 px-4 text-center sticky right-0 bg-[#090F1D] z-10 border-l border-slate-800/80 min-w-[220px]">
-                      10. Actions
-                    </th>
+                    <th className="py-3.5 px-4 text-center">10. Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1120,7 +1118,7 @@ export default function ContributionsTab({
                     <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{t.paymentDate}</td>
                     <td className="py-3 px-4 font-bold text-slate-900">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-800">
+                        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/40 bg-slate-100">
                           <img
                             src={getMemberAvatar(t.memberName)}
                             alt={t.memberName}
@@ -1130,35 +1128,34 @@ export default function ContributionsTab({
                         <span>{t.memberName}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-emerald-400 font-semibold whitespace-nowrap">
+                    <td className="py-3 px-4 text-emerald-700 font-semibold whitespace-nowrap">
                       {t.month} {t.year}
                     </td>
-                    <td className="py-3 px-4 text-right font-extrabold text-emerald-400 whitespace-nowrap">
+                    <td className="py-3 px-4 text-right font-extrabold text-emerald-700 whitespace-nowrap">
                       KES {t.amount.toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">{t.paymentMethod}</td>
-                    <td className="py-3 px-4 font-mono text-emerald-400">{t.reference}</td>
-                    <td className="py-3 px-4 text-slate-400">{t.remarks}</td>
+                    <td className="py-3 px-4 text-slate-600">{t.paymentMethod}</td>
+                    <td className="py-3 px-4 font-mono text-slate-600">{t.reference}</td>
+                    <td className="py-3 px-4 text-slate-500">{t.remarks}</td>
                     {canEdit && (
-                      <td className="py-3 px-4 text-center whitespace-nowrap sticky right-0 bg-[#0F172A] z-10 border-l border-slate-800/80">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditPaymentModal(t)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[11px] font-bold"
-                            title="Edit Payment Transaction"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => handleRequestReversePayment(t)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg text-[11px] font-bold"
-                            title="Delete / Reverse Payment Transaction"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <ActionsDropdown
+                          items={[
+                            {
+                              id: 'edit',
+                              label: 'Edit',
+                              icon: <Edit2 className="w-4 h-4 text-slate-700" />,
+                              onClick: () => handleOpenEditPaymentModal(t)
+                            },
+                            {
+                              id: 'delete',
+                              label: 'Reverse',
+                              icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                              danger: true,
+                              onClick: () => handleRequestReversePayment(t)
+                            }
+                          ]}
+                        />
                       </td>
                     )}
                   </tr>
