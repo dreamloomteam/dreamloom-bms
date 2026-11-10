@@ -3487,6 +3487,66 @@ export default function Home() {
                   </table>
                 </div>
               </div>
+
+              {/* RESTORED BOTTOM SECTION: Member Balances, Unsettled Dues & Shares — Automatic Summary */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-slate-200">
+                  <h2 className="font-extrabold text-slate-900 text-base">Member Balances, Unsettled Dues & Shares — Automatic Summary</h2>
+                  <p className="text-xs text-slate-500">Total Contribution vs Unsettled Contributions, Unpaid Penalties, Active Loans, and Net Balance (Page 14 of 17)</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-800">
+                    <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 uppercase text-[11px] font-bold tracking-wider">
+                      <tr>
+                        <th className="p-4 text-slate-700">Member Name</th>
+                        <th className="p-4 text-right text-slate-700">Total Contribution (KES)</th>
+                        <th className="p-4 text-right text-amber-800 font-bold">Unsettled Contributions (KES)</th>
+                        <th className="p-4 text-right text-rose-800 font-bold">Unpaid Penalties (KES)</th>
+                        <th className="p-4 text-right text-slate-700">Active Loans (KES)</th>
+                        <th className="p-4 text-right text-[#0A5C36] font-bold">Net Balance (KES)</th>
+                        <th className="p-4 text-right text-sky-800 font-bold">% Share Holding</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {automatedMembers.map((m) => {
+                        const memberUnsettled = memberOutstandingContribs[m.fullName] || 0;
+                        const memberPenalty = memberUnpaidPenalties[m.fullName] || 0;
+                        return (
+                          <tr key={m.id} className="hover:bg-emerald-50/20 transition">
+                            <td className="p-4 font-sans font-semibold text-slate-900">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-1 ring-emerald-500/30 bg-slate-100 shadow-sm">
+                                  <img
+                                    src={m.avatar || getMemberAvatar(m.fullName || m.id)}
+                                    alt={m.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <span className="font-bold text-slate-900">{m.fullName}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right font-black text-slate-900">{m.totalContribution.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-bold text-amber-600">{memberUnsettled.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-bold text-rose-600">{memberPenalty.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-semibold text-slate-700">{m.activeLoans.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-black text-[#0A5C36]">{m.netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="p-4 text-right font-bold text-sky-700">{m.shares}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-900">
+                        <td className="p-4 uppercase font-sans font-black tracking-wider text-slate-900">GRAND TOTALS</td>
+                        <td className="p-4 text-right text-slate-900 font-black">{grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-amber-700 font-black">{grandTotalOutstandingContribs.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-rose-700 font-black">{grandTotalUnpaidPenalties.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-slate-900 font-black">{totalActiveLoansAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-[#0A5C36] font-black">{(grandTotalContributions - totalActiveLoansAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-4 text-right text-sky-700 font-black">100.00%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
