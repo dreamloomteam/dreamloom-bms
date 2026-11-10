@@ -3553,68 +3553,68 @@ export default function Home() {
                 {/* 1. AUTOMATIC PENALTY SUMMARY CARDS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Card 1: Total Fines Recorded */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400">Total Fines Recorded</span>
-                      <div className="w-9 h-9 rounded-xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-slate-300">
-                        <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Fines Recorded</span>
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                        <AlertTriangle className="w-4 h-4 text-amber-600" />
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xl font-black text-white font-mono">
+                      <div className="text-2xl font-black text-slate-900 font-mono">
                         KES {totalRecordedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1 font-sans">{filteredFines.length} Fines Recorded</p>
+                      <p className="text-[11px] text-slate-500 mt-1 font-sans">{filteredFines.length} Fines Recorded</p>
                     </div>
                   </div>
 
                   {/* Card 2: Total Fines Collected */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400">Total Fines Collected</span>
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <CheckCircle className="w-4 h-4" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Fines Collected</span>
+                      <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0A5C36]">
+                        <CheckCircle className="w-4 h-4 text-[#0A5C36]" />
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xl font-black text-emerald-400 font-mono">
+                      <div className="text-2xl font-black text-[#0A5C36] font-mono">
                         KES {totalCollectedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </div>
-                      <p className="text-[11px] text-emerald-400/80 mt-1 font-sans">
+                      <p className="text-[11px] text-slate-500 mt-1 font-sans">
                         {paidFinesList.length} Penalties Paid ({filteredFines.length > 0 ? Math.round((paidFinesList.length / filteredFines.length) * 100) : 0}%)
                       </p>
                     </div>
                   </div>
 
                   {/* Card 3: Outstanding Fines */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400">Outstanding Fines</span>
-                      <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                        <Coins className="w-4 h-4" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Outstanding Fines</span>
+                      <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                        <Coins className="w-4 h-4 text-rose-600" />
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xl font-black text-rose-400 font-mono">
+                      <div className="text-2xl font-black text-rose-600 font-mono">
                         KES {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </div>
-                      <p className="text-[11px] text-rose-400/80 mt-1 font-sans">Unsettled Member Penalties</p>
+                      <p className="text-[11px] text-slate-500 mt-1 font-sans">Unsettled Member Penalties</p>
                     </div>
                   </div>
 
                   {/* Card 4: Number of Unpaid Penalties */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-400">Number of Unpaid Penalties</span>
-                      <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                        <Users className="w-4 h-4" />
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Number of Unpaid Penalties</span>
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
+                        <Users className="w-4 h-4 text-slate-700" />
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xl font-black text-amber-400 font-mono">
+                      <div className="text-2xl font-black text-slate-900 font-mono">
                         {unpaidFinesList.length}
                       </div>
-                      <p className="text-[11px] text-amber-400/80 mt-1 font-sans">
+                      <p className="text-[11px] text-slate-500 mt-1 font-sans">
                         {unpaidFinesList.length === 1 ? '1 Penalty Outstanding' : `${unpaidFinesList.length} Penalties Outstanding`}
                       </p>
                     </div>
@@ -3630,11 +3630,11 @@ export default function Home() {
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-slate-400">Month:</label>
+                        <label className="text-xs font-semibold text-slate-700">Month:</label>
                         <select
                           value={selectedPenaltyMonth}
                           onChange={(e) => setSelectedPenaltyMonth(e.target.value)}
-                          className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-medium"
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 cursor-pointer font-semibold shadow-sm"
                         >
                           <option value="All">All Months</option>
                           {ALL_MONTHS.map(m => (
@@ -3644,11 +3644,11 @@ export default function Home() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold text-slate-400">Year:</label>
+                        <label className="text-xs font-semibold text-slate-700">Year:</label>
                         <select
                           value={selectedPenaltyYear}
                           onChange={(e) => setSelectedPenaltyYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-                          className="bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 cursor-pointer font-bold shadow-sm"
                         >
                           <option value="All">All Years</option>
                           {AVAILABLE_YEARS.map(y => (
@@ -3677,15 +3677,15 @@ export default function Home() {
                                 alert('Sync failed');
                               }
                             }}
-                            className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+                            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 transition shadow-sm"
                             title="Synchronize all contributions with fines & penalties register"
                           >
-                            <RotateCw className="w-3.5 h-3.5 text-emerald-400" /> Sync Contributions
+                            <RotateCw className="w-3.5 h-3.5 text-emerald-600" /> Sync Contributions
                           </button>
 
                           <button
                             onClick={() => handleOpenQuickModal('Fines & Penalties')}
-                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                            className="px-3.5 py-1.5 bg-[#0A5C36] hover:bg-[#047857] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
                           >
                             <Plus className="w-3.5 h-3.5" /> Levy Penalty
                           </button>
@@ -3695,20 +3695,20 @@ export default function Home() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-[#121B2F] text-slate-400 uppercase text-[10px] font-bold">
+                    <table className="w-full text-left text-xs text-slate-800">
+                      <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[#0A5C36] uppercase text-[11px] font-bold tracking-wider">
                         <tr>
-                          <th className="p-4">Member Name</th>
-                          <th className="p-4">Contribution Month</th>
-                          <th className="p-4 text-right">Fine (KES)</th>
-                          <th className="p-4 text-center">Payment Status</th>
-                          {canEdit && <th className="p-4 text-center">Actions</th>}
+                          <th className="p-4 font-bold">Member Name</th>
+                          <th className="p-4 font-bold">Contribution Month</th>
+                          <th className="p-4 text-right font-bold">Fine (KES)</th>
+                          <th className="p-4 text-center font-bold">Payment Status</th>
+                          {canEdit && <th className="p-4 text-center font-bold">Actions</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-mono text-slate-800">
                         {filteredFines.length === 0 ? (
                           <tr>
-                            <td colSpan={canEdit ? 5 : 4} className="p-8 text-center text-slate-400 font-sans">
+                            <td colSpan={canEdit ? 5 : 4} className="p-8 text-center text-slate-500 font-sans">
                               No penalty records found matching the selected filters.
                             </td>
                           </tr>
@@ -3719,23 +3719,23 @@ export default function Home() {
                             const memberName = resolvePenaltyMemberName(f);
 
                             return (
-                              <tr key={f.id} className="hover:bg-[#142036] transition">
-                                <td className="p-4 font-sans text-white font-medium">{memberName}</td>
-                                <td className="p-4 text-slate-300 font-sans font-semibold">
-                                  <span className="text-white block font-mono font-medium">{displayMonth}</span>
+                              <tr key={f.id} className="hover:bg-slate-50 transition">
+                                <td className="p-4 font-sans text-slate-900 font-semibold">{memberName}</td>
+                                <td className="p-4 text-slate-700 font-sans font-medium">
+                                  <span className="text-slate-900 block font-mono font-semibold">{displayMonth}</span>
                                 </td>
-                                <td className="p-4 text-right font-bold text-white">
+                                <td className="p-4 text-right font-mono font-black text-slate-900">
                                   500.00
                                 </td>
                                 <td className="p-4 text-center font-sans">
                                   <span
                                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${
                                       isPaid
-                                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                                        : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                                        ? 'bg-emerald-50 text-[#0A5C36] border-emerald-200'
+                                        : 'bg-rose-50 text-rose-700 border-rose-200'
                                     }`}
                                   >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-[#0A5C36]' : 'bg-rose-600'}`}></span>
                                     {isPaid ? 'Paid' : 'Unpaid'}
                                   </span>
                                 </td>
@@ -3746,7 +3746,7 @@ export default function Home() {
                                         {
                                           id: 'settle',
                                           label: isPaid ? 'Mark Unpaid' : 'Mark Paid',
-                                          icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
+                                          icon: <CheckCircle className="w-4 h-4 text-[#0A5C36]" />,
                                           onClick: () => handleToggleFineStatus(f.id)
                                         },
                                         {
@@ -3789,16 +3789,16 @@ export default function Home() {
                             );
                           })
                         )}
-                        <tr className="bg-[#121B2F] font-bold text-white">
-                          <td className="p-4 uppercase font-sans">TOTALS</td>
-                          <td className="p-4 font-sans text-slate-400">{filteredFines.length} Record{filteredFines.length === 1 ? '' : 's'}</td>
-                          <td className="p-4 text-right text-emerald-400 font-black">
+                        <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-900">
+                          <td className="p-4 uppercase font-sans font-extrabold text-slate-900">TOTALS</td>
+                          <td className="p-4 font-sans text-slate-600 font-medium">{filteredFines.length} Record{filteredFines.length === 1 ? '' : 's'}</td>
+                          <td className="p-4 text-right text-slate-900 font-mono font-black">
                             {totalRecordedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="p-4 text-center font-sans text-slate-400">
-                            <span className="text-emerald-400 font-mono">{paidFinesList.length} Paid</span>
-                            <span className="mx-1">/</span>
-                            <span className="text-rose-400 font-mono">{unpaidFinesList.length} Unpaid</span>
+                          <td className="p-4 text-center font-sans text-slate-600">
+                            <span className="text-[#0A5C36] font-mono font-bold">{paidFinesList.length} Paid</span>
+                            <span className="mx-1 text-slate-400">/</span>
+                            <span className="text-rose-600 font-mono font-bold">{unpaidFinesList.length} Unpaid</span>
                           </td>
                           {canEdit && <td className="p-4"></td>}
                         </tr>
@@ -5054,43 +5054,43 @@ export default function Home() {
       {/* 5. DUES & PENALTIES PAYMENT MODAL WITH ALLOCATION PREVIEW */}
       {/* ========================================================================= */}
       {isPaymentModalOpen && selectedPenaltyForPayment && (
-        <div className="fixed inset-0 bg-[#070D18]/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex justify-between items-center p-5 border-b border-[#1E293B]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl text-slate-900">
+            <div className="flex justify-between items-center p-5 border-b border-slate-200 bg-white">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Coins className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0A5C36]">
+                  <Coins className="w-4 h-4 text-[#0A5C36]" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Record Dues Payment</h3>
-                  <p className="text-xs text-slate-400">{selectedPenaltyForPayment.member} — {selectedPenaltyForPayment.monthYear || selectedPenaltyForPayment.date}</p>
+                  <h3 className="text-sm font-bold text-slate-900">Record Dues Payment</h3>
+                  <p className="text-xs text-slate-500">{selectedPenaltyForPayment.member} — {selectedPenaltyForPayment.monthYear || selectedPenaltyForPayment.date}</p>
                 </div>
               </div>
-              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg">
+              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleExecutePayment} className="p-6 space-y-4">
               {/* Outstanding Breakdown Card */}
-              <div className="grid grid-cols-3 gap-2 p-3 bg-[#142036] rounded-xl border border-[#1E2D4A] text-xs font-mono">
+              <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono">
                 <div>
-                  <div className="text-[10px] text-slate-400 font-sans uppercase">Contribution</div>
-                  <div className="text-amber-400 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.unsettledContribution || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[10px] text-slate-500 font-sans uppercase font-bold">Contribution</div>
+                  <div className="text-amber-800 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.unsettledContribution || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-400 font-sans uppercase">Late Fine</div>
-                  <div className="text-rose-400 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.penaltyAmount || 500).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[10px] text-slate-500 font-sans uppercase font-bold">Late Fine</div>
+                  <div className="text-rose-700 font-bold mt-0.5">KES {Number(selectedPenaltyForPayment.penaltyAmount || 500).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-400 font-sans uppercase">Remaining Due</div>
-                  <div className="text-emerald-400 font-black mt-0.5">KES {Number(selectedPenaltyForPayment.remainingBalance !== undefined ? selectedPenaltyForPayment.remainingBalance : (selectedPenaltyForPayment.amount || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                  <div className="text-[10px] text-slate-500 font-sans uppercase font-bold">Remaining Due</div>
+                  <div className="text-[#0A5C36] font-black mt-0.5">KES {Number(selectedPenaltyForPayment.remainingBalance !== undefined ? selectedPenaltyForPayment.remainingBalance : (selectedPenaltyForPayment.amount || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
               </div>
 
               {/* Payment Amount Input */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Payment Amount (KES)
                 </label>
                 <input
@@ -5102,7 +5102,7 @@ export default function Home() {
                   value={paymentAmountInput}
                   onChange={(e) => setPaymentAmountInput(e.target.value)}
                   placeholder="Enter payment amount e.g. 2000"
-                  className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 font-mono font-bold focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
@@ -5119,26 +5119,26 @@ export default function Home() {
                 const newStatus = newRemTotal === 0 ? 'PAID' : 'PARTIALLY PAID';
 
                 return (
-                  <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl space-y-2 text-xs">
-                    <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2 text-xs">
+                    <div className="flex items-center justify-between text-slate-800 font-semibold text-[11px]">
                       <span>Payment Allocation Preview</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${newStatus === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${newStatus === 'PAID' ? 'bg-emerald-100 text-[#0A5C36] border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'}`}>
                         Resulting Status: {newStatus}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
-                        <span className="text-slate-400 block text-[10px] font-sans">To Contribution:</span>
-                        <span className="text-emerald-400 font-bold">KES {allocC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <div className="bg-white p-2 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[10px] font-sans">To Contribution:</span>
+                        <span className="text-[#0A5C36] font-bold">KES {allocC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                       </div>
-                      <div className="bg-[#142036] p-2 rounded-lg border border-[#1E2D4A]">
-                        <span className="text-slate-400 block text-[10px] font-sans">To Late Fine:</span>
-                        <span className="text-cyan-400 font-bold">KES {allocF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <div className="bg-white p-2 rounded-lg border border-slate-200">
+                        <span className="text-slate-500 block text-[10px] font-sans">To Late Fine:</span>
+                        <span className="text-blue-700 font-bold">KES {allocF.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] pt-1 border-t border-emerald-500/20 text-slate-300">
+                    <div className="flex justify-between items-center text-[11px] pt-1 border-t border-emerald-200 text-slate-700">
                       <span>New Remaining Balance:</span>
-                      <span className="font-mono font-bold text-white">KES {newRemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="font-mono font-bold text-slate-900">KES {newRemTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 );
@@ -5147,11 +5147,11 @@ export default function Home() {
               {/* Payment Method & Reference */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Payment Method</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Method</label>
                   <select
                     value={paymentMethodInput}
                     onChange={(e) => setPaymentMethodInput(e.target.value)}
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="M-PESA">M-PESA</option>
                     <option value="Equity Bank">Equity Bank</option>
@@ -5159,30 +5159,30 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Reference / Code</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Reference / Code</label>
                   <input
                     type="text"
                     value={paymentRefInput}
                     onChange={(e) => setPaymentRefInput(e.target.value)}
                     placeholder="e.g. QKH489291"
-                    className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end items-center gap-3 pt-3 border-t border-[#1E293B]">
+              <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsPaymentModalOpen(false)}
-                  className="px-4 py-2 bg-[#142036] text-slate-300 rounded-xl text-xs font-medium hover:bg-slate-700"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingPayment}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-950/50 flex items-center gap-1.5"
+                  className="px-4 py-2 bg-[#0A5C36] hover:bg-[#047857] text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5"
                 >
                   {isSubmittingPayment ? 'Recording...' : 'Confirm & Record Payment'}
                 </button>

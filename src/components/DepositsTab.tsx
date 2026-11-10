@@ -523,64 +523,64 @@ export default function DepositsTab({
       {/* --------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* CARD 1: Total Deposits */}
-        <div className="bg-gradient-to-br from-[#059669] to-[#10B981] rounded-2xl p-5 shadow-xl flex items-center gap-4 text-white">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6 text-white" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0 text-[#0A5C36]">
+            <Wallet className="w-6 h-6 text-[#0A5C36]" />
           </div>
           <div>
-            <span className="text-white/80 text-xs font-medium block">Total Deposits Received</span>
-            <span className="text-2xl font-extrabold text-white block leading-tight font-mono">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Deposits Received</span>
+            <span className="text-2xl font-black text-slate-900 block leading-tight font-mono">
               {selectedCurrency} {metrics.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[11px] text-white/90 font-medium flex items-center gap-1 mt-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> {metrics.activeCount} active verified transactions
+            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {metrics.activeCount} active verified transactions
             </span>
           </div>
         </div>
 
         {/* CARD 2: Deposits This Month */}
-        <div className="bg-gradient-to-br from-[#0284C7] to-[#38BDF8] rounded-2xl p-5 shadow-xl flex items-center gap-4 text-white">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <Calendar className="w-6 h-6 text-white" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 text-blue-600">
+            <Calendar className="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <span className="text-white/80 text-xs font-medium block">Deposits This Month</span>
-            <span className="text-2xl font-extrabold text-white block leading-tight font-mono">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Deposits This Month</span>
+            <span className="text-2xl font-black text-slate-900 block leading-tight font-mono">
               {selectedCurrency} {metrics.thisMonthAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[11px] text-white/90 font-medium flex items-center gap-1 mt-0.5">
-              <ArrowUpRight className="w-3.5 h-3.5" /> Inflow for {getEATCurrentMonthName()} {getEATCurrentYear()}
+            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+              <ArrowUpRight className="w-3.5 h-3.5 text-blue-600" /> Inflow for {getEATCurrentMonthName()} {getEATCurrentYear()}
             </span>
           </div>
         </div>
 
         {/* CARD 3: Deposits Today */}
-        <div className="bg-gradient-to-br from-[#6366F1] to-[#818CF8] rounded-2xl p-5 shadow-xl flex items-center gap-4 text-white">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <Coins className="w-6 h-6 text-white" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-indigo-600">
+            <Coins className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <span className="text-white/80 text-xs font-medium block">Deposits Today</span>
-            <span className="text-2xl font-extrabold text-white block leading-tight font-mono">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Deposits Today</span>
+            <span className="text-2xl font-black text-slate-900 block leading-tight font-mono">
               {selectedCurrency} {metrics.todayAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-[11px] text-white/90 font-medium flex items-center gap-1 mt-0.5">
-              <Clock className="w-3.5 h-3.5" /> Date: {getEATISODate()} (EAT)
+            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+              <Clock className="w-3.5 h-3.5 text-indigo-600" /> Date: {getEATISODate()} (EAT)
             </span>
           </div>
         </div>
 
         {/* CARD 4: Total Number of Transactions */}
-        <div className="bg-gradient-to-br from-[#D97706] to-[#F59E0B] rounded-2xl p-5 shadow-xl flex items-center gap-4 text-white">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <ArrowDownCircle className="w-6 h-6 text-white" />
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+            <ArrowDownCircle className="w-6 h-6 text-amber-600" />
           </div>
           <div>
-            <span className="text-white/80 text-xs font-medium block">Total Transactions</span>
-            <span className="text-2xl font-extrabold text-white block leading-tight font-mono">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Total Transactions</span>
+            <span className="text-2xl font-black text-slate-900 block leading-tight font-mono">
               {metrics.totalCount}
             </span>
-            <span className="text-[11px] text-white/90 font-medium flex items-center gap-1 mt-0.5">
+            <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
               Reconciled: {metrics.reconciledCount} | Unreconciled: {metrics.unreconciledCount}
             </span>
           </div>
@@ -590,18 +590,18 @@ export default function DepositsTab({
       {/* --------------------------------------------------------------------- */}
       {/* 2. FILTER & CONTROLS TOOLBAR */}
       {/* --------------------------------------------------------------------- */}
-      <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl p-5 shadow-xl space-y-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="font-bold text-white text-base flex items-center gap-2">
-                <Landmark className="w-4 h-4 text-emerald-400" /> Deposits & Financial Inflow Register
+              <h2 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-[#0A5C36]" /> Deposits & Financial Inflow Register
               </h2>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-[10px] font-bold text-emerald-300">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-[#0A5C36]">
                 Official Treasury
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 mt-0.5">
               Central ledger of money received with automatic classification, bank/M-Pesa reconciliation, and anti-duplication protection.
             </p>
           </div>
@@ -613,30 +613,30 @@ export default function DepositsTab({
                 await onRefresh();
                 setIsRefreshing(false);
               }}
-              className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 transition shadow-sm"
               title="Refresh deposits from database"
             >
-              <RotateCw className={`w-3.5 h-3.5 text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
+              <RotateCw className={`w-3.5 h-3.5 text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
             </button>
 
             <button
               onClick={handleExportExcel}
-              className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 transition shadow-sm"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> Export Excel
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Export Excel
             </button>
 
             <button
               onClick={handleExportPDF}
-              className="px-3 py-1.5 bg-[#142036] hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-[#1E2D4A] transition"
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 transition shadow-sm"
             >
-              <FileText className="w-3.5 h-3.5 text-sky-400" /> Export PDF
+              <FileText className="w-3.5 h-3.5 text-sky-600" /> Export PDF
             </button>
 
             {canEdit && (
               <button
                 onClick={handleOpenAddModal}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-950/50 transition"
+                className="px-4 py-1.5 bg-[#0A5C36] hover:bg-[#047857] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition"
               >
                 <Plus className="w-4 h-4" /> Record New Deposit
               </button>
@@ -645,7 +645,7 @@ export default function DepositsTab({
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-3 border-t border-[#1E293B]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-3 border-t border-slate-100">
           {/* Search */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
@@ -654,7 +654,7 @@ export default function DepositsTab({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name, ref, ID..."
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 shadow-sm"
             />
           </div>
 
@@ -663,7 +663,7 @@ export default function DepositsTab({
             <select
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
             >
               <option value="All">All Months</option>
               {ALL_MONTHS.map((m) => (
@@ -677,7 +677,7 @@ export default function DepositsTab({
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value === 'All' ? 'All' : parseInt(e.target.value, 10))}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer font-bold"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
             >
               <option value="All">All Years</option>
               {AVAILABLE_YEARS.map((y) => (
@@ -691,7 +691,7 @@ export default function DepositsTab({
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
             >
               <option value="All">All Types</option>
               {TRANSACTION_TYPES.map((t) => (
@@ -705,7 +705,7 @@ export default function DepositsTab({
             <select
               value={filterAccount}
               onChange={(e) => setFilterAccount(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
             >
               <option value="All">All Receiving Accounts</option>
               {RECEIVING_ACCOUNTS.map((acc) => (
@@ -719,7 +719,7 @@ export default function DepositsTab({
             <select
               value={filterReconciliation}
               onChange={(e) => setFilterReconciliation(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
             >
               <option value="All">All Reconciliation</option>
               <option value="Unreconciled">Unreconciled</option>
@@ -736,34 +736,34 @@ export default function DepositsTab({
       {/* --------------------------------------------------------------------- */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
+          <table className="w-full text-left text-xs text-slate-800">
+            <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-[#0A5C36] uppercase text-[11px] font-bold tracking-wider">
               <tr>
                 <th
                   onClick={() => {
                     if (sortBy === 'date') setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
                     else { setSortBy('date'); setSortOrder('desc'); }
                   }}
-                  className="p-4 cursor-pointer hover:text-white transition"
+                  className="p-4 cursor-pointer hover:text-emerald-900 transition font-bold"
                 >
                   Date {sortBy === 'date' && (sortOrder === 'desc' ? '▼' : '▲')}
                 </th>
-                <th className="p-4">Depositor Name</th>
-                <th className="p-4">Transaction Type</th>
-                <th className="p-4">Reason / Description</th>
+                <th className="p-4 font-bold">Depositor Name</th>
+                <th className="p-4 font-bold">Transaction Type</th>
+                <th className="p-4 font-bold">Reason / Description</th>
                 <th
                   onClick={() => {
                     if (sortBy === 'amount') setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
                     else { setSortBy('amount'); setSortOrder('desc'); }
                   }}
-                  className="p-4 text-right cursor-pointer hover:text-white transition"
+                  className="p-4 text-right cursor-pointer hover:text-emerald-900 transition font-bold"
                 >
                   Amount (KES) {sortBy === 'amount' && (sortOrder === 'desc' ? '▼' : '▲')}
                 </th>
-                <th className="p-4">Payment Method & Account</th>
-                <th className="p-4">Reference</th>
-                <th className="p-4 text-center">Reconciliation</th>
-                <th className="p-4 text-center">Actions</th>
+                <th className="p-4 font-bold">Payment Method & Account</th>
+                <th className="p-4 font-bold">Reference</th>
+                <th className="p-4 text-center font-bold">Reconciliation</th>
+                <th className="p-4 text-center font-bold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono text-slate-800">
@@ -781,23 +781,23 @@ export default function DepositsTab({
                   return (
                     <tr
                       key={dep.id}
-                      className={`hover:bg-emerald-50/20 transition ${
-                        isRev ? 'opacity-60 bg-rose-950/10' : ''
+                      className={`hover:bg-slate-50 transition ${
+                        isRev ? 'opacity-60 bg-rose-50/40' : ''
                       }`}
                     >
                       {/* Date */}
-                      <td className="p-4 whitespace-nowrap text-slate-300">
+                      <td className="p-4 whitespace-nowrap text-slate-800 font-mono font-semibold">
                         {dateStr}
-                        <span className="block text-[10px] text-slate-500 font-sans">{dep.customId}</span>
+                        <span className="block text-[10px] text-slate-500 font-sans font-medium">{dep.customId}</span>
                       </td>
 
                       {/* Name / Depositor */}
-                      <td className="p-4 font-sans font-medium text-white whitespace-nowrap">
+                      <td className="p-4 font-sans font-semibold text-slate-900 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <User className="w-3.5 h-3.5 text-[#0A5C36] shrink-0" />
                           <span>{dep.depositorName}</span>
                           {dep.member && (
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-950/80 border border-emerald-500/30 text-[9px] text-emerald-300 font-mono">
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-50 border border-emerald-200 text-[9px] text-[#0A5C36] font-mono font-bold">
                               Member
                             </span>
                           )}
@@ -807,20 +807,20 @@ export default function DepositsTab({
                       {/* Transaction Type */}
                       <td className="p-4 font-sans whitespace-nowrap">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                             dep.transactionType === 'Share Capital'
-                              ? 'bg-purple-950/80 text-purple-300 border border-purple-500/30'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
                               : dep.transactionType === 'Loan Repayment'
-                              ? 'bg-blue-950/80 text-blue-300 border border-blue-500/30'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : dep.transactionType === 'Land Payment'
-                              ? 'bg-teal-950/80 text-teal-300 border border-teal-500/30'
+                              ? 'bg-teal-50 text-teal-700 border-teal-200'
                               : dep.transactionType === 'Member Deposit'
-                              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
+                              ? 'bg-emerald-50 text-[#0A5C36] border-emerald-200'
                               : dep.transactionType === 'Additional Contribution'
-                              ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30'
+                              ? 'bg-cyan-50 text-cyan-800 border-cyan-200'
                               : dep.transactionType === 'Investment Income'
-                              ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-500/30'
-                              : 'bg-slate-800 text-slate-300 border border-slate-700'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
                           {dep.transactionType === 'Other' && dep.customTransactionType
@@ -830,10 +830,10 @@ export default function DepositsTab({
                       </td>
 
                       {/* Reason / Allocation */}
-                      <td className="p-4 font-sans max-w-xs truncate text-slate-300" title={dep.reason}>
+                      <td className="p-4 font-sans max-w-xs truncate text-slate-800 font-normal" title={dep.reason}>
                         <span>{dep.reason}</span>
                         {dep.allocationType && dep.allocationType !== 'None' && (
-                          <span className="block text-[10px] text-emerald-400 font-mono mt-0.5">
+                          <span className="block text-[10px] text-[#0A5C36] font-mono font-medium mt-0.5">
                             ↳ Linked {dep.allocationType}: {dep.allocationRef || '-'}
                           </span>
                         )}
@@ -843,7 +843,7 @@ export default function DepositsTab({
                       <td className="p-4 text-right whitespace-nowrap">
                         <span
                           className={`font-black text-sm font-mono ${
-                            isRev ? 'line-through text-slate-500' : 'text-emerald-400'
+                            isRev ? 'line-through text-slate-400' : 'text-slate-900'
                           }`}
                         >
                           {Number(dep.amount).toLocaleString('en-US', {
@@ -854,35 +854,35 @@ export default function DepositsTab({
                       </td>
 
                       {/* Payment Method & Receiving Account */}
-                      <td className="p-4 font-sans whitespace-nowrap text-slate-300">
-                        <div className="font-medium text-white">{dep.paymentMethod}</div>
-                        <div className="text-[10px] text-slate-400 truncate max-w-[180px]" title={dep.receivingAccount}>
+                      <td className="p-4 font-sans whitespace-nowrap">
+                        <div className="font-semibold text-slate-900">{dep.paymentMethod}</div>
+                        <div className="text-[10px] text-slate-500 font-medium truncate max-w-[180px]" title={dep.receivingAccount}>
                           {dep.receivingAccount.split('•')[0]}
                         </div>
                       </td>
 
                       {/* Reference */}
-                      <td className="p-4 whitespace-nowrap text-emerald-300 font-mono font-semibold">
-                        {dep.reference ? dep.reference : <span className="text-slate-600">-</span>}
+                      <td className="p-4 whitespace-nowrap text-slate-900 font-mono font-bold">
+                        {dep.reference ? dep.reference : <span className="text-slate-400 font-normal">-</span>}
                       </td>
 
                       {/* Reconciliation Status */}
                       <td className="p-4 text-center whitespace-nowrap font-sans">
                         {isRev ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-500/40 flex items-center gap-1 justify-center">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1 justify-center">
                             <ShieldAlert className="w-3 h-3" /> REVERSED
                           </span>
                         ) : dep.reconciliationStatus === 'Reconciled' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 justify-center">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#0A5C36] border border-emerald-200 flex items-center gap-1 justify-center">
                             <Check className="w-3 h-3" /> Reconciled
                           </span>
                         ) : dep.reconciliationStatus === 'Discrepancy' ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/80 text-amber-300 border border-amber-500/40 flex items-center gap-1 justify-center">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 justify-center">
                             <AlertTriangle className="w-3 h-3" /> Discrepancy
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1 justify-center">
-                            <Clock className="w-3 h-3 text-slate-400" /> Unreconciled
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1 justify-center">
+                            <Clock className="w-3 h-3 text-slate-500" /> Unreconciled
                           </span>
                         )}
                       </td>
@@ -953,23 +953,23 @@ export default function DepositsTab({
       {/* 4. MODAL: RECORD / EDIT DEPOSIT ENTRY */}
       {/* --------------------------------------------------------------------- */}
       {isEntryModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-5 text-white">
-            <div className="flex justify-between items-center pb-4 border-b border-[#1E293B]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-5 text-slate-900">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0A5C36]">
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-slate-900">
                     {editingDeposit ? `Edit Deposit [${editingDeposit.customId}]` : 'Record New Deposit Entry'}
                   </h3>
-                  <p className="text-xs text-slate-400">Official company inflow recording and automatic ledger assignment</p>
+                  <p className="text-xs text-slate-500">Official company inflow recording and automatic ledger assignment</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsEntryModalOpen(false)}
-                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition"
+                className="p-1.5 rounded-lg bg-slate-100 text-slate-400 hover:text-slate-600 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -979,8 +979,8 @@ export default function DepositsTab({
               {/* Row 1: Depositor Name & Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Depositor Name / Organisation <span className="text-rose-400">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Depositor Name / Organisation <span className="text-rose-500">*</span>
                   </label>
                   <MemberAutocomplete
                     value={formData.depositorName}
@@ -993,34 +993,34 @@ export default function DepositsTab({
                       });
                     }}
                     placeholder="Type name or search member..."
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Deposit Date <span className="text-rose-400">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Deposit Date <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               {/* Highlighted Mandatory AMOUNT DEPOSITED (KES) */}
-              <div className="bg-[#121B2F] p-4 rounded-2xl border-2 border-emerald-500/50 shadow-lg space-y-1.5">
+              <div className="bg-emerald-50/70 p-4 rounded-2xl border-2 border-emerald-500/40 shadow-sm space-y-1.5">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
-                  <label className="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
-                    <Coins className="w-4 h-4 text-emerald-400" /> AMOUNT DEPOSITED (KES) <span className="text-rose-400 font-bold">* MANDATORY</span>
+                  <label className="text-xs font-black uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-[#0A5C36]" /> AMOUNT DEPOSITED (KES) <span className="text-rose-600 font-bold">* MANDATORY</span>
                   </label>
-                  <span className="text-[10px] text-emerald-300/80 font-mono font-medium">Whole numbers & decimals accepted</span>
+                  <span className="text-[10px] text-emerald-800 font-mono font-medium">Whole numbers & decimals accepted</span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-sm font-bold font-mono text-emerald-400 select-none">KES</span>
+                  <span className="absolute left-3.5 top-2.5 text-sm font-bold font-mono text-[#0A5C36] select-none">KES</span>
                   <input
                     type="number"
                     step="any"
@@ -1029,10 +1029,10 @@ export default function DepositsTab({
                     placeholder="0.00"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    className="w-full bg-[#0B1324] border border-[#1E2D4A] rounded-xl pl-14 pr-4 py-2.5 text-base text-white font-mono font-black tracking-tight focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 shadow-inner"
+                    className="w-full bg-white border border-emerald-300 rounded-xl pl-14 pr-4 py-2.5 text-base text-slate-900 font-mono font-black tracking-tight focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500">
                   Must be greater than zero. Persistently recorded to PostgreSQL database and feeds all deposit calculations.
                 </p>
               </div>
@@ -1040,13 +1040,13 @@ export default function DepositsTab({
               {/* Row 2: Transaction Type & Payment Method */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Transaction Type <span className="text-rose-400">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Transaction Type <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.transactionType}
                     onChange={(e) => setFormData({ ...formData, transactionType: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     {TRANSACTION_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -1055,13 +1055,13 @@ export default function DepositsTab({
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Payment Method <span className="text-rose-400">*</span>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Payment Method <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={formData.paymentMethod}
                     onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
                   >
                     {PAYMENT_METHODS.map((pm) => (
                       <option key={pm} value={pm}>{pm}</option>
@@ -1073,7 +1073,7 @@ export default function DepositsTab({
               {/* Optional Custom Type if 'Other' */}
               {formData.transactionType === 'Other' && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Custom Transaction Classification
                   </label>
                   <input
@@ -1081,20 +1081,20 @@ export default function DepositsTab({
                     placeholder="Specify classification (e.g. Grant, Equipment Sale, Refund)..."
                     value={formData.customTransactionType}
                     onChange={(e) => setFormData({ ...formData, customTransactionType: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               )}
 
               {/* Row 3: Receiving Account */}
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Receiving Company Account <span className="text-rose-400">*</span>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Receiving Company Account <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={formData.receivingAccount}
                   onChange={(e) => setFormData({ ...formData, receivingAccount: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   {RECEIVING_ACCOUNTS.map((acc) => (
                     <option key={acc} value={acc}>{acc}</option>
@@ -1104,7 +1104,7 @@ export default function DepositsTab({
 
               {/* Row 4: External Reference & Duplicate Warning */}
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Reference Number (M-Pesa / Bank Ref / Receipt Slip)
                 </label>
                 <input
@@ -1112,11 +1112,11 @@ export default function DepositsTab({
                   placeholder="e.g. QK89123456 or EQ-TXN-9981"
                   value={formData.reference}
                   onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono uppercase font-bold focus:outline-none focus:border-emerald-500"
                 />
                 {duplicateWarning && (
-                  <div className="mt-1.5 p-2 bg-rose-950/60 border border-rose-500/40 rounded-lg text-rose-300 text-xs flex items-start gap-1.5 font-sans">
-                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                  <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-start gap-1.5 font-sans">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
                     <span>{duplicateWarning}</span>
                   </div>
                 )}
@@ -1124,8 +1124,8 @@ export default function DepositsTab({
 
               {/* Row 5: Reason / Description */}
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
-                  Reason / Description <span className="text-rose-400">*</span>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Reason / Description <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   required
@@ -1133,22 +1133,22 @@ export default function DepositsTab({
                   placeholder="Explain the purpose of this deposit..."
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               {/* Row 6: Financial Allocation (Anti-Double Counting Controls) */}
-              <div className="p-3 bg-[#121B2F] border border-[#1E293B] rounded-xl space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#0A5C36]">
                   <ShieldAlert className="w-3.5 h-3.5" /> Financial Integration & Allocation (Optional)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">Allocate To Module:</label>
+                    <label className="text-[11px] text-slate-600 font-medium block mb-1">Allocate To Module:</label>
                     <select
                       value={formData.allocationType}
                       onChange={(e) => setFormData({ ...formData, allocationType: e.target.value, allocationRef: '' })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                     >
                       <option value="None">None (Unallocated Inflow)</option>
                       <option value="Contribution">Monthly Contribution</option>
@@ -1160,12 +1160,12 @@ export default function DepositsTab({
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-slate-400 block mb-1">Target Identifier / Reference:</label>
+                    <label className="text-[11px] text-slate-600 font-medium block mb-1">Target Identifier / Reference:</label>
                     {formData.allocationType === 'Loan' ? (
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Active Loan --</option>
                         {loans.filter((l) => l.status === 'Active').map((l) => (
@@ -1178,7 +1178,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Month / Cycle --</option>
                         {ALL_MONTHS.map((m) => (
@@ -1189,7 +1189,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Project --</option>
                         {projects.map((p) => (
@@ -1200,7 +1200,7 @@ export default function DepositsTab({
                       <select
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                       >
                         <option value="">-- Select Investment Asset --</option>
                         {investments.map((inv) => (
@@ -1213,19 +1213,19 @@ export default function DepositsTab({
                         placeholder="Optional parcel or note..."
                         value={formData.allocationRef}
                         onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full bg-white border border-slate-200 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
                       />
                     )}
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-slate-500">
                   Note: Allocating this deposit directly updates the linked loan or project ledger safely without creating duplicate records.
                 </p>
               </div>
 
               {/* Row 7: Attachment Name / Reference */}
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Attachment Reference (Bank Slip / M-Pesa Confirmation Screenshot)
                 </label>
                 <div className="flex items-center gap-2">
@@ -1234,24 +1234,24 @@ export default function DepositsTab({
                     placeholder="e.g. MPesa_Confirmation_QK89123456.png or Bank_Slip_Scan.pdf"
                     value={formData.attachmentName}
                     onChange={(e) => setFormData({ ...formData, attachmentName: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-[#1E293B]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsEntryModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !!duplicateWarning}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/50"
+                  className="px-5 py-2 bg-[#0A5C36] hover:bg-[#047857] disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                 >
                   <Check className="w-4 h-4" /> {isSubmitting ? 'Saving...' : editingDeposit ? 'Update Deposit' : 'Confirm & Save Deposit'}
                 </button>
@@ -1265,87 +1265,87 @@ export default function DepositsTab({
       {/* 5. MODAL: VIEW COMPLETE DEPOSIT DETAILS */}
       {/* --------------------------------------------------------------------- */}
       {isDetailsModalOpen && viewingDeposit && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-white">
-            <div className="flex justify-between items-center pb-3 border-b border-[#1E293B]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 text-slate-900">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <Landmark className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-white text-base">Deposit Transaction Details</h3>
+                <Landmark className="w-5 h-5 text-[#0A5C36]" />
+                <h3 className="font-bold text-slate-900 text-base">Deposit Transaction Details</h3>
               </div>
               <button
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded bg-slate-100 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Internal Transaction ID:</span>
-                <span className="font-mono font-bold text-emerald-400">{viewingDeposit.customId}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Internal Transaction ID:</span>
+                <span className="font-mono font-bold text-[#0A5C36]">{viewingDeposit.customId}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Date Received:</span>
-                <span className="font-mono">{new Date(viewingDeposit.date).toISOString().slice(0, 10)}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Date Received:</span>
+                <span className="font-mono font-semibold text-slate-800">{new Date(viewingDeposit.date).toISOString().slice(0, 10)}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Depositor Name:</span>
-                <span className="font-bold text-white">{viewingDeposit.depositorName}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Depositor Name:</span>
+                <span className="font-bold text-slate-900">{viewingDeposit.depositorName}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Amount Received:</span>
-                <span className="font-mono font-black text-emerald-400 text-sm">
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Amount Received:</span>
+                <span className="font-mono font-black text-slate-900 text-sm">
                   KES {Number(viewingDeposit.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Classification:</span>
-                <span className="font-medium">{viewingDeposit.transactionType}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Classification:</span>
+                <span className="font-semibold text-slate-800">{viewingDeposit.transactionType}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Receiving Account:</span>
-                <span className="text-slate-200">{viewingDeposit.receivingAccount}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Receiving Account:</span>
+                <span className="text-slate-800 font-medium">{viewingDeposit.receivingAccount}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Payment Method:</span>
-                <span>{viewingDeposit.paymentMethod}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Payment Method:</span>
+                <span className="font-semibold text-slate-900">{viewingDeposit.paymentMethod}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">External Reference:</span>
-                <span className="font-mono text-emerald-300 font-bold">{viewingDeposit.reference || '-'}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">External Reference:</span>
+                <span className="font-mono text-slate-900 font-bold">{viewingDeposit.reference || '-'}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Allocation:</span>
-                <span>{viewingDeposit.allocationType !== 'None' ? `${viewingDeposit.allocationType}: ${viewingDeposit.allocationRef || '-'}` : 'Unallocated'}</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Allocation:</span>
+                <span className="text-slate-800">{viewingDeposit.allocationType !== 'None' ? `${viewingDeposit.allocationType}: ${viewingDeposit.allocationRef || '-'}` : 'Unallocated'}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                <span className="text-slate-400">Reconciliation Status:</span>
+              <div className="flex justify-between py-1.5 border-b border-slate-100">
+                <span className="text-slate-500">Reconciliation Status:</span>
                 <span className="font-bold">
                   {viewingDeposit.isReversed ? 'REVERSED' : viewingDeposit.reconciliationStatus}
                 </span>
               </div>
               {viewingDeposit.reconciliationNotes && (
-                <div className="py-1.5 border-b border-[#1E293B]/60">
-                  <span className="text-slate-400 block mb-0.5">Reconciliation Notes:</span>
-                  <span className="text-slate-200 italic">{viewingDeposit.reconciliationNotes}</span>
+                <div className="py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500 block mb-0.5">Reconciliation Notes:</span>
+                  <span className="text-slate-800 italic">{viewingDeposit.reconciliationNotes}</span>
                 </div>
               )}
               {viewingDeposit.attachmentName && (
-                <div className="flex justify-between py-1.5 border-b border-[#1E293B]/60">
-                  <span className="text-slate-400">Attachment:</span>
-                  <span className="text-emerald-400 flex items-center gap-1 font-mono">
+                <div className="flex justify-between py-1.5 border-b border-slate-100">
+                  <span className="text-slate-500">Attachment:</span>
+                  <span className="text-[#0A5C36] flex items-center gap-1 font-mono font-medium">
                     <Paperclip className="w-3 h-3" /> {viewingDeposit.attachmentName}
                   </span>
                 </div>
               )}
               {viewingDeposit.isReversed && (
-                <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 space-y-1">
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 space-y-1">
                   <div className="font-bold flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" /> Transaction Reversed
                   </div>
                   <div>Reason: {viewingDeposit.reversalReason || 'Administrative Reversal'}</div>
-                  <div className="text-[10px] text-rose-400">Reversed by: {viewingDeposit.reversedBy || 'Admin'}</div>
+                  <div className="text-[10px] text-rose-500">Reversed by: {viewingDeposit.reversedBy || 'Admin'}</div>
                 </div>
               )}
             </div>
@@ -1353,7 +1353,7 @@ export default function DepositsTab({
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setIsDetailsModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
               >
                 Close
               </button>
@@ -1366,36 +1366,36 @@ export default function DepositsTab({
       {/* 6. MODAL: RECONCILE AGAINST BANK / M-PESA */}
       {/* --------------------------------------------------------------------- */}
       {isReconcileModalOpen && reconcilingDeposit && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0F172A] border border-[#1E293B] rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white">
-            <div className="flex justify-between items-center pb-3 border-b border-[#1E293B]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <h3 className="font-bold text-white text-base">Account Reconciliation</h3>
+                <CheckCircle2 className="w-5 h-5 text-[#0A5C36]" />
+                <h3 className="font-bold text-slate-900 text-base">Account Reconciliation</h3>
               </div>
               <button
                 onClick={() => setIsReconcileModalOpen(false)}
-                className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded bg-slate-100 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-[#121B2F] border border-[#1E293B] rounded-xl text-xs space-y-1">
-              <div><span className="text-slate-400">ID:</span> <span className="font-mono text-emerald-400">{reconcilingDeposit.customId}</span></div>
-              <div><span className="text-slate-400">Depositor:</span> <span className="font-bold text-white">{reconcilingDeposit.depositorName}</span></div>
-              <div><span className="text-slate-400">Amount:</span> <span className="font-mono font-bold text-white">KES {reconcilingDeposit.amount.toLocaleString()}</span></div>
-              <div><span className="text-slate-400">Account:</span> <span className="text-slate-300">{reconcilingDeposit.receivingAccount}</span></div>
-              <div><span className="text-slate-400">Reference:</span> <span className="font-mono text-emerald-300">{reconcilingDeposit.reference || '-'}</span></div>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-700">
+              <div><span className="text-slate-500">ID:</span> <span className="font-mono font-bold text-[#0A5C36]">{reconcilingDeposit.customId}</span></div>
+              <div><span className="text-slate-500">Depositor:</span> <span className="font-bold text-slate-900">{reconcilingDeposit.depositorName}</span></div>
+              <div><span className="text-slate-500">Amount:</span> <span className="font-mono font-black text-slate-900">KES {reconcilingDeposit.amount.toLocaleString()}</span></div>
+              <div><span className="text-slate-500">Account:</span> <span className="text-slate-800 font-medium">{reconcilingDeposit.receivingAccount}</span></div>
+              <div><span className="text-slate-500">Reference:</span> <span className="font-mono font-bold text-slate-900">{reconcilingDeposit.reference || '-'}</span></div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Reconciliation Outcome</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Reconciliation Outcome</label>
                 <select
                   value={reconcileStatusInput}
                   onChange={(e) => setReconcileStatusInput(e.target.value as any)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   <option value="Reconciled">Reconciled (Matched to Bank / M-Pesa Statement)</option>
                   <option value="Discrepancy">Discrepancy (Amount or Reference mismatch)</option>
@@ -1403,22 +1403,22 @@ export default function DepositsTab({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Reconciliation Notes / Statement Reference</label>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Reconciliation Notes / Statement Reference</label>
                 <textarea
                   rows={2}
                   placeholder="e.g. Confirmed on Equity Bank Statement Page 4, line 12..."
                   value={reconcileNotesInput}
                   onChange={(e) => setReconcileNotesInput(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#1E293B]">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsReconcileModalOpen(false)}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
               >
                 Cancel
               </button>
@@ -1426,7 +1426,7 @@ export default function DepositsTab({
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleSubmitReconcile}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                className="px-4 py-1.5 bg-[#0A5C36] hover:bg-[#047857] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
                 <Check className="w-3.5 h-3.5" /> {isSubmitting ? 'Saving...' : 'Confirm Reconciliation'}
               </button>
@@ -1439,36 +1439,36 @@ export default function DepositsTab({
       {/* 7. MODAL: REVERSE DEPOSIT */}
       {/* --------------------------------------------------------------------- */}
       {isReverseModalOpen && reversingDeposit && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0F172A] border border-rose-500/40 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white">
-            <div className="flex justify-between items-center pb-3 border-b border-[#1E293B]">
-              <div className="flex items-center gap-2 text-rose-400">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-rose-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 text-slate-900">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2 text-rose-600">
                 <RotateCcw className="w-5 h-5" />
-                <h3 className="font-bold text-white text-base">Reverse Financial Deposit</h3>
+                <h3 className="font-bold text-slate-900 text-base">Reverse Financial Deposit</h3>
               </div>
               <button
                 onClick={() => setIsReverseModalOpen(false)}
-                className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1 rounded bg-slate-100 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-rose-950/30 border border-rose-500/30 rounded-xl text-xs space-y-1 text-slate-300">
-              <div><span className="text-slate-400">ID:</span> <span className="font-mono text-emerald-400">{reversingDeposit.customId}</span></div>
-              <div><span className="text-slate-400">Depositor:</span> <span className="font-bold text-white">{reversingDeposit.depositorName}</span></div>
-              <div><span className="text-slate-400">Amount:</span> <span className="font-mono font-bold text-rose-400">KES {reversingDeposit.amount.toLocaleString()}</span></div>
-              <div><span className="text-slate-400">Account:</span> <span>{reversingDeposit.receivingAccount}</span></div>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs space-y-1 text-slate-800">
+              <div><span className="text-slate-500">ID:</span> <span className="font-mono font-bold text-[#0A5C36]">{reversingDeposit.customId}</span></div>
+              <div><span className="text-slate-500">Depositor:</span> <span className="font-bold text-slate-900">{reversingDeposit.depositorName}</span></div>
+              <div><span className="text-slate-500">Amount:</span> <span className="font-mono font-black text-rose-600">KES {reversingDeposit.amount.toLocaleString()}</span></div>
+              <div><span className="text-slate-500">Account:</span> <span className="font-medium text-slate-800">{reversingDeposit.receivingAccount}</span></div>
             </div>
 
-            <div className="text-xs text-slate-400 bg-[#121B2F] p-3 rounded-xl border border-[#1E293B]">
-              <span className="font-bold text-amber-400 block mb-1">Financial Impact Notice:</span>
+            <div className="text-xs text-amber-900 bg-amber-50 p-3 rounded-xl border border-amber-200">
+              <span className="font-bold text-amber-950 block mb-1">Financial Impact Notice:</span>
               Reversing this deposit removes its amount from active company balances, reverts any linked loan repayments, and flags the record as REVERSED. The historical record is preserved in the audit log for governance compliance.
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
-                Reason for Reversal <span className="text-rose-400">*</span>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Reason for Reversal <span className="text-rose-500">*</span>
               </label>
               <textarea
                 required
@@ -1476,15 +1476,15 @@ export default function DepositsTab({
                 placeholder="State why this deposit is being reversed (e.g. Duplicate entry, bounced transfer, entered to wrong account)..."
                 value={reversalReasonInput}
                 onChange={(e) => setReversalReasonInput(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-rose-500"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-rose-500"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#1E293B]">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsReverseModalOpen(false)}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
               >
                 Cancel
               </button>
@@ -1492,7 +1492,7 @@ export default function DepositsTab({
                 type="button"
                 disabled={isSubmitting || !reversalReasonInput.trim()}
                 onClick={handleSubmitReverse}
-                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
               >
                 <RotateCcw className="w-3.5 h-3.5" /> {isSubmitting ? 'Reversing...' : 'Execute Reversal'}
               </button>
