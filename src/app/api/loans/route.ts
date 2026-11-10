@@ -112,28 +112,6 @@ export async function GET(request: Request) {
     const asOfDate = resolveAsOfDateFromParams(searchParams);
     const filterMemberId = searchParams.get('memberId');
 
-    if (searchParams.get('debug') === 'repayments') {
-      const reps = await prisma.loanRepayment.findMany({
-        where: {
-          OR: [
-            { loanId: { contains: '1067' } },
-            { loanId: { contains: '1070' } },
-            { id: { gte: 65 } }
-          ]
-        }
-      });
-      const rawLoans = await prisma.loan.findMany({
-        where: {
-          OR: [
-            { id: { contains: '1067' } },
-            { id: { contains: '1070' } }
-          ]
-        },
-        include: { repayments: true, member: true }
-      });
-      return NextResponse.json({ reps, rawLoans });
-    }
-
     const loans = await prisma.loan.findMany({
       include: {
         member: true,
@@ -143,6 +121,53 @@ export async function GET(request: Request) {
       },
       orderBy: { issueDate: 'desc' }
     });
+
+    // Synchronize authoritative computed values back into PostgreSQL for loans with repayments
+    for (const l of loans) {
+      if (l.status === 'Cancelled') continue;
+      const profile = calculateLoanProfile(
+        { ...l, memberName: l.member?.fullName, repayments: l.repayments || [] },
+        asOfDate
+      );
+      const isSettled = profile.status === 'Settled';
+      const statusChanged = l.status !== profile.status;
+      const paidChanged = Math.abs(Number(l.paidAmount) - profile.totalAmountPaid) > 0.01;
+      const interestChanged = Math.abs(Number(l.interest) - profile.totalInterestAccrued) > 0.01;
+
+      if (statusChanged || paidChanged || interestChanged) {
+        await prisma.loan.update({
+          where: { id: l.id },
+          data: {
+            status: profile.status,
+            paidAmount: profile.totalAmountPaid,
+            interestPaid: profile.interestPaid,
+            principalPaid: profile.principalRepaid,
+            interest: profile.totalInterestAccrued,
+            totalPayable: profile.totalLoanAmount,
+            clearedDate: isSettled ? (l.clearedDate || toUTCMidnight(profile.settlementDate)) : null
+          }
+        });
+
+        for (const ep of profile.repayments) {
+          if (ep.id && Number(ep.id) > 0) {
+            await prisma.loanRepayment.update({
+              where: { id: Number(ep.id) },
+              data: {
+                interestAllocated: ep.computedInterestAllocated,
+                principalAllocated: ep.computedPrincipalAllocated
+              }
+            });
+          }
+        }
+        l.status = profile.status;
+        l.paidAmount = profile.totalAmountPaid;
+        l.interestPaid = profile.interestPaid;
+        l.principalPaid = profile.principalRepaid;
+        l.interest = profile.totalInterestAccrued;
+        l.totalPayable = profile.totalLoanAmount;
+        l.clearedDate = isSettled ? (l.clearedDate || toUTCMidnight(profile.settlementDate)) : null;
+      }
+    }
 
     let enriched = loans.map(l => enrichLoanForResponse(l, asOfDate));
     if (filterMemberId) {
@@ -257,7 +282,7 @@ export async function POST(request: Request) {
       const payDateUTC = toUTCMidnight(paymentDate);
       const payDateStr = formatISODate(payDateUTC);
       const evalDate = asOfDate
-        ? toUTCMidnight(asOfDate)
+        ? (payDateUTC.getTime() > toUTCMidnight(asOfDate).getTime() ? payDateUTC : toUTCMidnight(asOfDate))
         : payDateUTC.getTime() > Date.now()
         ? payDateUTC
         : toUTCMidnight(new Date());
@@ -770,6 +795,7 @@ export async function PUT(request: Request) {
       remarks,
       notes,
       paid,
+      paidAmount,
       status,
       clearedDate,
       asOfDate,
@@ -839,14 +865,15 @@ export async function PUT(request: Request) {
 
     // Preserve existing repayments unless caller explicitly settles an un-repaid loan via quick-settle
     const currentReps = [...existing.repayments];
+    const effectivePaid = paid !== undefined ? paid : paidAmount;
     if (
       status === 'Settled' &&
       existing.status !== 'Settled' &&
       currentReps.length === 0 &&
-      paid !== undefined &&
-      Number(paid) > 0
+      effectivePaid !== undefined &&
+      Number(effectivePaid) > 0
     ) {
-      const settleAmt = Number(paid);
+      const settleAmt = Number(effectivePaid);
       const settleDt =
         clearedDate && clearedDate !== '-' ? toUTCMidnight(clearedDate) : toUTCMidnight(new Date());
 

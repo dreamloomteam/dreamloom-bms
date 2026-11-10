@@ -337,11 +337,24 @@ export function calculateLoanProfile(
 
   const completedPeriodsRaw = getCompletedMonthlyPeriods(issueDate, effectiveAsOfDate);
 
-  // If a loan is settled or has repayments within Month 1 (before 1st anniversary),
-  // Period 1 is active for interest/principal allocation; otherwise strictly completedPeriodsRaw.
-  const hasEarlyActivityInMonth1 =
-    completedPeriodsRaw === 0 && (validRepayments.length > 0 || loan.status === 'Settled');
-  const accruedPeriodCount = hasEarlyActivityInMonth1 ? 1 : completedPeriodsRaw;
+  // Determine the maximum period index that has either a completed anniversary or active repayments on/before rawAsOfDate
+  let maxActivePeriod = completedPeriodsRaw;
+  for (const rep of validRepayments) {
+    let k = 1;
+    while (k <= 240) {
+      const kEnd = getAnniversaryDate(issueDate, k);
+      if (rep.parsedDate.getTime() <= kEnd.getTime()) {
+        if (k > maxActivePeriod) maxActivePeriod = k;
+        break;
+      }
+      k++;
+    }
+  }
+
+  // Also if settled early in Month 1 with 0 completed periods
+  if (maxActivePeriod === 0 && (validRepayments.length > 0 || loan.status === 'Settled')) {
+    maxActivePeriod = 1;
+  }
 
   const schedule: LoanScheduleRow[] = [];
   let openingPrincipal = originalPrincipal;
@@ -369,12 +382,13 @@ export function calculateLoanProfile(
       ? 12
       : 1;
 
-  const totalScheduleRows = Math.max(accruedPeriodCount, loanDuration);
+  const totalScheduleRows = Math.max(maxActivePeriod, loanDuration);
 
   for (let p = 1; p <= totalScheduleRows; p++) {
     const pStart = getAnniversaryDate(issueDate, p - 1);
     const pEnd = getAnniversaryDate(issueDate, p);
-    const isCompleted = p <= accruedPeriodCount;
+    const isCompletedAnniversary = p <= completedPeriodsRaw;
+    const isOngoingActivePeriod = p <= maxActivePeriod;
 
     // Stop accruing interest if principal & interest were already 100% settled in a prior period
     const alreadySettledPrior =
@@ -388,7 +402,12 @@ export function calculateLoanProfile(
       totalRepaidSoFar <= originalPrincipal;
 
     let interestCharged = 0;
-    if (!alreadySettledPrior && openingPrincipal > 0.005 && !isIncompleteMonth1WithPayment) {
+    if (
+      isCompletedAnniversary &&
+      !alreadySettledPrior &&
+      openingPrincipal > 0.005 &&
+      !isIncompleteMonth1WithPayment
+    ) {
       if (interestMethod === 'Simple') {
         interestCharged = roundCurrency(originalPrincipal * rateDecimal);
       } else if (interestMethod === 'Reducing Balance') {
@@ -407,7 +426,7 @@ export function calculateLoanProfile(
     if (
       (loan.interestRate === undefined || loan.interestRate === null) &&
       loan.status === 'Settled' &&
-      accruedPeriodCount === 1 &&
+      completedPeriodsRaw <= 1 &&
       p === 1 &&
       loan.interest !== undefined &&
       Number(loan.interest) > 0 &&
@@ -416,121 +435,98 @@ export function calculateLoanProfile(
       interestCharged = roundCurrency(Number(loan.interest));
     }
 
-    if (isCompleted) {
-      cumulativeInterestAccrued = roundCurrency(cumulativeInterestAccrued + interestCharged);
+    cumulativeInterestAccrued = roundCurrency(cumulativeInterestAccrued + interestCharged);
 
-      // Gather repayments belonging to period p
-      const periodRepayments: typeof validRepayments = [];
-      validRepayments.forEach((rep, idx) => {
-        if (usedRepaymentIndices.has(idx)) return;
-        const t = rep.parsedDate.getTime();
-        const inWindow =
-          p === 1
-            ? t <= pEnd.getTime()
-            : p === accruedPeriodCount
-            ? t > pStart.getTime() && t <= rawAsOfDate.getTime()
-            : t > pStart.getTime() && t <= pEnd.getTime();
-        if (inWindow) {
-          usedRepaymentIndices.add(idx);
-          periodRepayments.push(rep);
-        }
-      });
-
-      let periodPaymentReceived = 0;
-      let periodInterestPaid = 0;
-      let periodPrincipalPaid = 0;
-
-      let runningInterestDue = roundCurrency(carryOverUnpaidInterest + interestCharged);
-      let runningPrincipalDue = openingPrincipal;
-
-      for (const rep of periodRepayments) {
-        const alloc = allocatePaymentAmount(
-          rep.amount,
-          runningInterestDue,
-          runningPrincipalDue,
-          allocationPolicy
-        );
-        runningInterestDue = roundCurrency(Math.max(0, runningInterestDue - alloc.interestPaid));
-        runningPrincipalDue = roundCurrency(Math.max(0, runningPrincipalDue - alloc.principalPaid));
-
-        periodPaymentReceived = roundCurrency(periodPaymentReceived + rep.amount);
-        periodInterestPaid = roundCurrency(periodInterestPaid + alloc.interestPaid);
-        periodPrincipalPaid = roundCurrency(periodPrincipalPaid + alloc.principalPaid);
-
-        enrichedRepayments.push({
-          ...rep,
-          paymentDateStr: rep.paymentDateStr || formatISODate(rep.parsedDate),
-          computedInterestAllocated: alloc.interestPaid,
-          computedPrincipalAllocated: alloc.principalPaid,
-          runningBalanceAfter: roundCurrency(runningPrincipalDue + runningInterestDue)
-        });
+    // Gather repayments belonging to period p (or remaining valid repayments if p is the maxActivePeriod or final row)
+    const periodRepayments: typeof validRepayments = [];
+    validRepayments.forEach((rep, idx) => {
+      if (usedRepaymentIndices.has(idx)) return;
+      const t = rep.parsedDate.getTime();
+      const inWindow =
+        p === 1
+          ? t <= pEnd.getTime()
+          : p === totalScheduleRows || p === maxActivePeriod
+          ? t > pStart.getTime() && t <= rawAsOfDate.getTime()
+          : t > pStart.getTime() && t <= pEnd.getTime();
+      if (inWindow) {
+        usedRepaymentIndices.add(idx);
+        periodRepayments.push(rep);
       }
+    });
 
-      cumulativeInterestPaid = roundCurrency(cumulativeInterestPaid + periodInterestPaid);
-      cumulativePrincipalPaid = roundCurrency(cumulativePrincipalPaid + periodPrincipalPaid);
+    let periodPaymentReceived = 0;
+    let periodInterestPaid = 0;
+    let periodPrincipalPaid = 0;
 
-      const closingPrincipal = roundCurrency(Math.max(0, openingPrincipal - periodPrincipalPaid));
-      const outstandingInterest = roundCurrency(
-        Math.max(0, carryOverUnpaidInterest + interestCharged - periodInterestPaid)
+    let runningInterestDue = roundCurrency(carryOverUnpaidInterest + interestCharged);
+    let runningPrincipalDue = openingPrincipal;
+
+    for (const rep of periodRepayments) {
+      const alloc = allocatePaymentAmount(
+        rep.amount,
+        runningInterestDue,
+        runningPrincipalDue,
+        allocationPolicy
       );
-      const totalOutstandingBalance = roundCurrency(closingPrincipal + outstandingInterest);
+      runningInterestDue = roundCurrency(Math.max(0, runningInterestDue - alloc.interestPaid));
+      runningPrincipalDue = roundCurrency(Math.max(0, runningPrincipalDue - alloc.principalPaid));
 
-      let paymentStatus: LoanScheduleRow['paymentStatus'] = 'Unpaid';
-      if (totalOutstandingBalance <= 0.005) {
-        paymentStatus = 'Settled';
-      } else if (periodPaymentReceived > 0 && outstandingInterest <= 0.005) {
-        paymentStatus = 'Paid';
-      } else if (periodPaymentReceived > 0) {
-        paymentStatus = 'Partially Paid';
-      }
+      periodPaymentReceived = roundCurrency(periodPaymentReceived + rep.amount);
+      periodInterestPaid = roundCurrency(periodInterestPaid + alloc.interestPaid);
+      periodPrincipalPaid = roundCurrency(periodPrincipalPaid + alloc.principalPaid);
 
-      schedule.push({
-        monthNumber: p,
-        periodStart: formatISODate(pStart),
-        periodEnd: formatISODate(pEnd),
-        interestPeriod: `${formatDisplayDate(pStart)} – ${formatDisplayDate(pEnd)}`,
-        isCompleted: true,
-        openingPrincipal,
-        interestCharged,
-        paymentReceived: periodPaymentReceived,
-        interestPaid: periodInterestPaid,
-        principalPaid: periodPrincipalPaid,
-        closingPrincipal,
-        outstandingInterest,
-        totalOutstandingBalance,
-        paymentStatus
+      enrichedRepayments.push({
+        ...rep,
+        paymentDateStr: rep.paymentDateStr || formatISODate(rep.parsedDate),
+        computedInterestAllocated: alloc.interestPaid,
+        computedPrincipalAllocated: alloc.principalPaid,
+        runningBalanceAfter: roundCurrency(runningPrincipalDue + runningInterestDue)
       });
+    }
 
-      openingPrincipal = closingPrincipal;
-      carryOverUnpaidInterest = outstandingInterest;
+    cumulativeInterestPaid = roundCurrency(cumulativeInterestPaid + periodInterestPaid);
+    cumulativePrincipalPaid = roundCurrency(cumulativePrincipalPaid + periodPrincipalPaid);
 
-      // If loan is fully settled during completed periods, no further schedule rows needed
-      if (totalOutstandingBalance <= 0.005) {
-        break;
-      }
-    } else {
-      // Projected / incomplete future period (excluded from accrued totals!)
-      const isCurrentIncompletePeriod = p === accruedPeriodCount + 1;
-      const projectedClosingPrincipal = openingPrincipal;
-      const projectedOutstandingInterest = roundCurrency(carryOverUnpaidInterest + interestCharged);
-      const projectedTotalBalance = roundCurrency(projectedClosingPrincipal + projectedOutstandingInterest);
+    const closingPrincipal = roundCurrency(Math.max(0, openingPrincipal - periodPrincipalPaid));
+    const outstandingInterest = roundCurrency(
+      Math.max(0, carryOverUnpaidInterest + interestCharged - periodInterestPaid)
+    );
+    const totalOutstandingBalance = roundCurrency(closingPrincipal + outstandingInterest);
 
-      schedule.push({
-        monthNumber: p,
-        periodStart: formatISODate(pStart),
-        periodEnd: formatISODate(pEnd),
-        interestPeriod: `${formatDisplayDate(pStart)} – ${formatDisplayDate(pEnd)}`,
-        isCompleted: false,
-        openingPrincipal,
-        interestCharged,
-        paymentReceived: 0,
-        interestPaid: 0,
-        principalPaid: 0,
-        closingPrincipal: projectedClosingPrincipal,
-        outstandingInterest: projectedOutstandingInterest,
-        totalOutstandingBalance: projectedTotalBalance,
-        paymentStatus: isCurrentIncompletePeriod ? 'In Progress' : 'Scheduled'
-      });
+    let paymentStatus: LoanScheduleRow['paymentStatus'] = 'Unpaid';
+    if (totalOutstandingBalance <= 0.005) {
+      paymentStatus = 'Settled';
+    } else if (periodPaymentReceived > 0 && outstandingInterest <= 0.005) {
+      paymentStatus = 'Paid';
+    } else if (periodPaymentReceived > 0) {
+      paymentStatus = 'Partially Paid';
+    } else if (!isCompletedAnniversary) {
+      paymentStatus = p === completedPeriodsRaw + 1 ? 'In Progress' : 'Scheduled';
+    }
+
+    schedule.push({
+      monthNumber: p,
+      periodStart: formatISODate(pStart),
+      periodEnd: formatISODate(pEnd),
+      interestPeriod: `${formatDisplayDate(pStart)} – ${formatDisplayDate(pEnd)}`,
+      isCompleted: isCompletedAnniversary || periodPaymentReceived > 0,
+      openingPrincipal,
+      interestCharged,
+      paymentReceived: periodPaymentReceived,
+      interestPaid: periodInterestPaid,
+      principalPaid: periodPrincipalPaid,
+      closingPrincipal,
+      outstandingInterest,
+      totalOutstandingBalance,
+      paymentStatus
+    });
+
+    openingPrincipal = closingPrincipal;
+    carryOverUnpaidInterest = outstandingInterest;
+
+    // If loan is fully settled during active periods, no further schedule rows needed
+    if (totalOutstandingBalance <= 0.005 && isOngoingActivePeriod) {
+      break;
     }
   }
 
@@ -546,8 +542,8 @@ export function calculateLoanProfile(
   if (isCancelled) {
     computedStatus = 'Cancelled';
   } else if (
-    (totalOutstandingBalance <= 0.005 && (accruedPeriodCount > 0 || totalAmountPaid >= originalPrincipal)) ||
-    (loan.status === 'Settled' && totalOutstandingBalance <= 0.005)
+    totalOutstandingBalance <= 0.005 &&
+    (totalAmountPaid >= originalPrincipal || maxActivePeriod > 0)
   ) {
     computedStatus = 'Settled';
   } else if (totalAmountPaid > 0 && totalOutstandingBalance > 0.005) {
