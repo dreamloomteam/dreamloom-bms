@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
-import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/session';
+import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin } from '@/lib/session';
 import { ALL_PAGE_KEYS, DEFAULT_PAGE_APPEARANCE } from '@/lib/appearance';
 
 function getUserIdFromRequest(request: NextRequest): string {
@@ -18,7 +18,7 @@ function getUserIdFromRequest(request: NextRequest): string {
     return paramUser.toLowerCase().trim();
   }
 
-  return 'global_admin';
+  return 'simon@dreamloom.co.ke';
 }
 
 async function ensureAppearanceTable() {
@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
   try {
     await ensureDatabaseSchema();
     await ensureAppearanceTable();
-    const userId = getUserIdFromRequest(request);
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const payload = verifySessionToken(token);
+    // Non-admin users inherit the administrator's saved appearance preferences
+    const userId = (payload && isUserAdmin(payload)) ? payload.email.toLowerCase().trim() : 'simon@dreamloom.co.ke';
     const url = new URL(request.url);
     const pageKey = url.searchParams.get('pageKey');
 
@@ -54,12 +57,14 @@ export async function GET(request: NextRequest) {
       if (pageKey) {
         rows = await prisma.$queryRaw<Array<{ pageKey: string; settings: any }>>`
           SELECT "pageKey", "settings" FROM "PageAppearance"
-          WHERE "userId" = ${userId} AND "pageKey" = ${pageKey}
+          WHERE "userId" IN (${userId}, 'global_admin', 'simon@dreamloom.co.ke') AND "pageKey" = ${pageKey}
+          ORDER BY "updatedAt" DESC LIMIT 1
         `;
       } else {
         rows = await prisma.$queryRaw<Array<{ pageKey: string; settings: any }>>`
           SELECT "pageKey", "settings" FROM "PageAppearance"
-          WHERE "userId" = ${userId}
+          WHERE "userId" IN (${userId}, 'global_admin', 'simon@dreamloom.co.ke')
+          ORDER BY "updatedAt" DESC
         `;
       }
     } catch (dbErr) {
@@ -68,7 +73,9 @@ export async function GET(request: NextRequest) {
 
     const map: Record<string, any> = {};
     for (const r of rows) {
-      map[r.pageKey] = typeof r.settings === 'string' ? JSON.parse(r.settings) : r.settings;
+      if (!map[r.pageKey]) {
+        map[r.pageKey] = typeof r.settings === 'string' ? JSON.parse(r.settings) : r.settings;
+      }
     }
 
     return NextResponse.json({
@@ -89,10 +96,19 @@ export async function POST(request: NextRequest) {
   try {
     await ensureDatabaseSchema();
     await ensureAppearanceTable();
+
+    // STRICT ADMINISTRATOR CHECK: Only Simon Memia Wanjiru (Super Admin) may modify appearance
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const payload = verifySessionToken(token);
+    if (!payload || !isUserAdmin(payload)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Only the Administrator can modify appearance settings.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    const userId = (body.userId && typeof body.userId === 'string' && body.userId.trim() !== '')
-      ? body.userId.toLowerCase().trim()
-      : getUserIdFromRequest(request);
+    const userId = payload.email.toLowerCase().trim();
     const { action = 'save', pageKey, settings, fromPageKey } = body;
 
     if (!pageKey && action !== 'reset_all') {

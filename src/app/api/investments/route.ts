@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { isAuthorizedEditor } from '@/lib/audit';
+import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
+import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
 
 // GET /api/investments
 export async function GET() {
   try {
+    await ensureDatabaseSchema();
     const investments = await prisma.investment.findMany({
       orderBy: { id: 'asc' },
     });
@@ -17,18 +18,19 @@ export async function GET() {
 // POST /api/investments
 export async function POST(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const body = await request.json();
-    const { userEmail, id, asset, type, capital, expectedReturn, status } = body;
+    const { userEmail, userName, id, asset, type, capital, expectedReturn, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
     const customId = id || `INV-${String(Date.now()).slice(-4)}`;
     const created = await prisma.investment.create({
       data: {
         id: customId,
-        asset,
+        asset: asset?.trim() || 'Strategic Investment',
         type: type || 'Strategic Capital',
         capital: Number(capital) || 0,
         expectedReturn: expectedReturn || '12%',
@@ -36,19 +38,17 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Investments',
-        action: 'Added',
-        changes: JSON.stringify({
-          entity: created.asset,
-          field: 'Capital Investment Added',
-          prevValue: 'KES 0.00',
-          newValue: `KES ${created.capital.toLocaleString()}`,
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Investments',
+      action: 'Added',
+      recordRef: created.id,
+      userEmail,
+      userName,
+      member: created.asset,
+      oldValues: {},
+      newValues: created,
+      remarks: `Added investment ${created.id} (${created.asset}) with capital KES ${created.capital.toLocaleString()}`,
+    });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
@@ -59,19 +59,23 @@ export async function POST(request: Request) {
 // PUT /api/investments
 export async function PUT(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const body = await request.json();
-    const { userEmail, id, asset, type, capital, expectedReturn, status } = body;
+    const { userEmail, userName, id, asset, type, capital, expectedReturn, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
+    if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
+
     const prev = await prisma.investment.findUnique({ where: { id } });
+    if (!prev) return NextResponse.json({ success: false, error: 'Investment not found' }, { status: 404 });
 
     const updated = await prisma.investment.update({
       where: { id },
       data: {
-        ...(asset && { asset }),
+        ...(asset && { asset: asset.trim() }),
         ...(type && { type }),
         ...(capital !== undefined && { capital: Number(capital) }),
         ...(expectedReturn && { expectedReturn }),
@@ -79,19 +83,17 @@ export async function PUT(request: Request) {
       },
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Investments',
-        action: 'Edited',
-        changes: JSON.stringify({
-          entity: updated.asset,
-          field: 'Capital Investment Updated',
-          prevValue: prev ? `KES ${prev.capital.toLocaleString()} (${prev.status})` : 'Existing',
-          newValue: `KES ${updated.capital.toLocaleString()} (${updated.status})`,
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Investments',
+      action: 'Updated',
+      recordRef: updated.id,
+      userEmail,
+      userName,
+      member: updated.asset,
+      oldValues: prev,
+      newValues: updated,
+      remarks: `Updated investment ${updated.id} (${updated.asset})`,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
@@ -102,32 +104,34 @@ export async function PUT(request: Request) {
 // DELETE /api/investments
 export async function DELETE(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const userEmail = searchParams.get('userEmail');
+    const userName = searchParams.get('userName');
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
     if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
 
     const prev = await prisma.investment.findUnique({ where: { id } });
+    if (!prev) return NextResponse.json({ success: false, error: 'Investment not found' }, { status: 404 });
+
     await prisma.investment.delete({ where: { id } });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Investments',
-        action: 'Deleted',
-        changes: JSON.stringify({
-          entity: prev?.asset || id,
-          field: 'Investment Entry Removed',
-          prevValue: prev ? `KES ${prev.capital.toLocaleString()}` : 'Active',
-          newValue: 'Deleted',
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Investments',
+      action: 'Deleted',
+      recordRef: id,
+      userEmail,
+      userName,
+      member: prev.asset,
+      oldValues: prev,
+      newValues: { status: 'Deleted' },
+      remarks: `Deleted investment ${id} (${prev.asset})`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

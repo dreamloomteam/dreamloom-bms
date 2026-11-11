@@ -241,14 +241,31 @@ model Document {
 }
 
 model Asset {
-  id        String   @id
-  name      String
-  category  String
-  valuation Float
-  location  String
-  status    String   @default("Active")
-  createdAt DateTime @default(now())
+  id          String   @id
+  name        String
+  category    String
+  valuation   Float    @default(0.0)
+  cost        Float?   @default(0.0)
+  location    String   @default("Nairobi")
+  custodian   String?  @default("Dreamloom Trustees")
+  status      String   @default("Active")
+  createdAt   DateTime @default(now())
 }
+
+model Inventory {
+  id           String   @id
+  sku          String   @unique
+  name         String
+  category     String
+  location     String   @default("Executive Safe")
+  quantity     Int      @default(0)
+  reorderLevel Int      @default(0)
+  unitValue    Float    @default(0.0)
+  totalValue   Float    @default(0.0)
+  status       String   @default("In Stock")
+  createdAt    DateTime @default(now())
+}
+
 
 model Deposit {
   id                    Int       @id @default(autoincrement())

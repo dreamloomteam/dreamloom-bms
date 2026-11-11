@@ -8,7 +8,7 @@ import {
   BarChart3, Settings, Shield, LogIn, LogOut,
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
-  CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
+  CreditCard, ArrowUpRight, ArrowDownRight, ArrowLeft, Clock, CheckCircle2, UserCheck, ShieldAlert,
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle,
   Palette, Sparkles, Copy, Sliders
 } from 'lucide-react';
@@ -385,6 +385,42 @@ export default function Home() {
           }
         })
         .catch(err => console.warn('Could not fetch server documents:', err));
+
+      // 10. Assets Persistence from Database
+      const savedAssets = localStorage.getItem('dreamloom_assets');
+      if (savedAssets) {
+        try {
+          const parsed = JSON.parse(savedAssets);
+          if (Array.isArray(parsed) && parsed.length > 0) setAssets(parsed);
+        } catch (e) { console.warn('Saved assets parse failed:', e); }
+      }
+      fetch('/api/assets')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setAssets(res.data);
+            localStorage.setItem('dreamloom_assets', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server assets:', err));
+
+      // 11. Inventory Persistence from Database
+      const savedInventory = localStorage.getItem('dreamloom_inventory');
+      if (savedInventory) {
+        try {
+          const parsed = JSON.parse(savedInventory);
+          if (Array.isArray(parsed) && parsed.length > 0) setInventory(parsed);
+        } catch (e) { console.warn('Saved inventory parse failed:', e); }
+      }
+      fetch('/api/inventory')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            setInventory(res.data);
+            localStorage.setItem('dreamloom_inventory', JSON.stringify(res.data));
+          }
+        })
+        .catch(err => console.warn('Could not fetch server inventory:', err));
     } catch (e) {
       console.error(e);
     }
@@ -872,6 +908,99 @@ export default function Home() {
     { id: 'DOC-04', name: 'Mawega Land Sale & Conveyancing Agreement', category: 'Legal Contract', link: '#', status: 'Available' },
     { id: 'DOC-05', name: 'Official Membership & Contact Directory', category: 'Governance', link: '#', status: 'Available' },
   ]);
+
+  // 9b. Group Assets State
+  const [assets, setAssets] = useState<any[]>([
+    {
+      id: 'AST-001',
+      name: "Ting'ang'a Prime Commercial Land (Parcel A)",
+      category: 'Real Estate',
+      location: 'KIAMBU/TINGANGA/4892',
+      cost: 6000000,
+      valuation: 7500000,
+      custodian: 'Dreamloom Trustees',
+      status: 'Titled & Secured'
+    },
+    {
+      id: 'AST-002',
+      name: 'Juja Highridge Residential Land Plot',
+      category: 'Real Estate',
+      location: 'JUJA/BLOCK-2/1034',
+      cost: 3200000,
+      valuation: 3700000,
+      custodian: 'Simon Memia / David Wainaina',
+      status: 'Active Holding'
+    },
+    {
+      id: 'AST-003',
+      name: 'High-Precision Optical Survey Equipment Kit',
+      category: 'Operational Equipment',
+      location: 'Nairobi Central Office',
+      cost: 850000,
+      valuation: 850000,
+      custodian: 'Elijah Waitara Gichari',
+      status: 'Operational'
+    },
+    {
+      id: 'AST-004',
+      name: 'Corporate Registry Servers & Secured Workstations',
+      category: 'IT & Infrastructure',
+      location: 'Primary Cloud & Secure Node',
+      cost: 800000,
+      valuation: 800000,
+      custodian: 'Simon Memia Wanjiru',
+      status: 'Active'
+    }
+  ]);
+
+  // 9c. Corporate Inventory State
+  const [inventory, setInventory] = useState<any[]>([
+    {
+      id: 'INV-001',
+      sku: 'INV-DOC-001',
+      name: 'Embossed Corporate Share Certificates (2026 Batch)',
+      category: 'Corporate Materials',
+      location: 'Executive Safe',
+      quantity: 150,
+      reorderLevel: 25,
+      unitValue: 1200,
+      totalValue: 180000,
+      status: 'In Stock'
+    },
+    {
+      id: 'INV-002',
+      sku: 'INV-STA-002',
+      name: 'Official Company Seal & Foil Stamps',
+      category: 'Office Equipment',
+      location: 'Secretariat Desk',
+      quantity: 4,
+      reorderLevel: 1,
+      unitValue: 25000,
+      totalValue: 100000,
+      status: 'Good Condition'
+    },
+    {
+      id: 'INV-003',
+      sku: 'INV-SEC-003',
+      name: 'Hardware 2FA Security Tokens (YubiKeys)',
+      category: 'Security Hardware',
+      location: 'Admin Dispatch',
+      quantity: 7,
+      reorderLevel: 2,
+      unitValue: 8500,
+      totalValue: 59500,
+      status: 'Allocated'
+    }
+  ]);
+
+  // Operations & Assets View Modal
+  const [viewDetailsModal, setViewDetailsModal] = useState<{
+    module: string;
+    title: string;
+    item: any;
+    fields: Array<{ label: string; value: any; isBadge?: boolean; badgeColor?: string; isCurrency?: boolean }>;
+    moduleKey: string;
+  } | null>(null);
 
   // 10. Recent Transactions Stream
   const [transactions, setTransactions] = useState([
@@ -1714,7 +1843,7 @@ export default function Home() {
   const refreshInvestments = async () => {
     try {
       const res = await fetch('/api/investments').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setInvestments(res.data);
         try { localStorage.setItem('dreamloom_investments', JSON.stringify(res.data)); } catch (e) {}
       }
@@ -1726,7 +1855,7 @@ export default function Home() {
   const refreshProjects = async () => {
     try {
       const res = await fetch('/api/projects').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setProjects(res.data);
         try { localStorage.setItem('dreamloom_projects', JSON.stringify(res.data)); } catch (e) {}
       }
@@ -1738,7 +1867,7 @@ export default function Home() {
   const refreshSuppliers = async () => {
     try {
       const res = await fetch('/api/suppliers').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setSuppliers(res.data);
         try { localStorage.setItem('dreamloom_suppliers', JSON.stringify(res.data)); } catch (e) {}
       }
@@ -1750,12 +1879,102 @@ export default function Home() {
   const refreshDocuments = async () => {
     try {
       const res = await fetch('/api/documents').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setDocuments(res.data);
         try { localStorage.setItem('dreamloom_documents', JSON.stringify(res.data)); } catch (e) {}
       }
     } catch (e) {
       console.warn('Could not refresh documents:', e);
+    }
+  };
+
+  const refreshAssets = async () => {
+    try {
+      const res = await fetch('/api/assets').then(r => r.json());
+      if (res.success && Array.isArray(res.data)) {
+        setAssets(res.data);
+        try { localStorage.setItem('dreamloom_assets', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh assets:', e);
+    }
+  };
+
+  const refreshInventory = async () => {
+    try {
+      const res = await fetch('/api/inventory').then(r => r.json());
+      if (res.success && Array.isArray(res.data)) {
+        setInventory(res.data);
+        try { localStorage.setItem('dreamloom_inventory', JSON.stringify(res.data)); } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('Could not refresh inventory:', e);
+    }
+  };
+
+  const handleViewItem = (
+    module: string,
+    title: string,
+    item: any,
+    fields: Array<{ label: string; value: any; isBadge?: boolean; badgeColor?: string; isCurrency?: boolean }>,
+    moduleKey: string
+  ) => {
+    setViewDetailsModal({
+      module,
+      title,
+      item,
+      fields,
+      moduleKey
+    });
+  };
+
+  const handleDeleteRecord = async (item: any, mode: string) => {
+    if (!canEdit) {
+      alert('Access Restricted: Only authorized administrators and officers can delete records.');
+      return;
+    }
+    const name = item.name || item.asset || item.description || item.sku || item.id;
+    const confirmDelete = window.confirm(`Are you sure you want to permanently delete "${name}" from ${mode}? This action will update the database immediately.`);
+    if (!confirmDelete) return;
+
+    try {
+      const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+      const userName = currentUser?.fullName || currentUser?.name || 'Authorized Editor';
+      let endpoint = '';
+      let refreshFn: () => Promise<void>;
+
+      if (mode === 'Investments') {
+        endpoint = `/api/investments?id=${encodeURIComponent(String(item.id))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshInvestments;
+      } else if (mode === 'Projects') {
+        endpoint = `/api/projects?id=${encodeURIComponent(String(item.id))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshProjects;
+      } else if (mode === 'Suppliers') {
+        endpoint = `/api/suppliers?id=${encodeURIComponent(String(item.id))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshSuppliers;
+      } else if (mode === 'Documents') {
+        endpoint = `/api/documents?id=${encodeURIComponent(String(item.id))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshDocuments;
+      } else if (mode === 'Assets') {
+        endpoint = `/api/assets?id=${encodeURIComponent(String(item.id))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshAssets;
+      } else if (mode === 'Inventory') {
+        endpoint = `/api/inventory?id=${encodeURIComponent(String(item.id))}&sku=${encodeURIComponent(String(item.sku || ''))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshInventory;
+      } else {
+        return;
+      }
+
+      const res = await fetch(endpoint, { method: 'DELETE' }).then(r => r.json());
+      if (!res.success) {
+        alert('Delete failed: ' + (res.error || 'Server error.'));
+        return;
+      }
+      await refreshFn();
+      await refreshAuditLogs();
+      setToastMessage(`Record "${name}" deleted successfully.`);
+    } catch (err: any) {
+      alert('Error deleting record: ' + err.message);
     }
   };
 
@@ -1995,13 +2214,59 @@ export default function Home() {
       setField5('');
       setField6('');
       setField7('');
-    } else if (targetMode === 'Deposits' || targetMode === 'Record Deposit') {
+    } else if (targetMode === 'Assets' || targetMode === 'Register Asset' || targetMode === 'Add Asset') {
+      setModalMode('Assets');
       setField1('');
-      setField2(todayISO);
+      setField2('Real Estate');
       setField3('');
-      setField4('Member Deposit');
-      setField5('Direct Deposit Received');
-      setField6('M-Pesa');
+      setField4('');
+      setField5('Nairobi');
+      setField6('Dreamloom Trustees');
+      setField7('Active');
+    } else if (targetMode === 'Inventory' || targetMode === 'Add Item' || targetMode === 'Add Inventory') {
+      setModalMode('Inventory');
+      setField1('');
+      setField2(`SKU-${Date.now().toString().slice(-4)}`);
+      setField3('Corporate Materials');
+      setField4('Executive Safe');
+      setField5('1');
+      setField6('');
+      setField7('In Stock');
+    } else if (targetMode === 'Investments' || targetMode === 'Add Investment') {
+      setModalMode('Investments');
+      setField1('');
+      setField2('Strategic Capital');
+      setField3('');
+      setField4('15%');
+      setField5('Active');
+      setField6('');
+      setField7('');
+    } else if (targetMode === 'Projects' || targetMode === 'Add Project') {
+      setModalMode('Projects');
+      setField1('');
+      setField2('Simon Memia Wanjiru');
+      setField3('');
+      setField4('Active');
+      setField5('');
+      setField6('');
+      setField7('');
+    } else if (targetMode === 'Suppliers' || targetMode === 'Add Supplier') {
+      setModalMode('Suppliers');
+      setField1('');
+      setField2('General Operations');
+      setField3('Nairobi Office');
+      setField4('Active');
+      setField5('');
+      setField6('');
+      setField7('');
+    } else if (targetMode === 'Documents' || targetMode === 'Add Document') {
+      setModalMode('Documents');
+      setField1('');
+      setField2('Statutory');
+      setField3('Available');
+      setField4('');
+      setField5('');
+      setField6('');
       setField7('');
     } else {
       setField1(''); setField2(''); setField3(''); setField4(''); setField5(''); setField6(''); setField7('');
@@ -2083,6 +2348,22 @@ export default function Home() {
       setField5(item.reason || '');
       setField6(item.paymentMethod || 'M-Pesa');
       setField7(item.reference || '');
+    } else if (mode === 'Assets') {
+      setField1(item.name || '');
+      setField2(item.category || 'Real Estate');
+      setField3(String(item.valuation || 0));
+      setField4(String(item.cost || 0));
+      setField5(item.location || 'Nairobi');
+      setField6(item.custodian || 'Dreamloom Trustees');
+      setField7(item.status || 'Active');
+    } else if (mode === 'Inventory') {
+      setField1(item.name || '');
+      setField2(item.sku || '');
+      setField3(item.category || 'Corporate Materials');
+      setField4(item.location || 'Executive Safe');
+      setField5(String(item.quantity || 0));
+      setField6(String(item.unitValue || 0));
+      setField7(item.status || 'In Stock');
     }
     setIsModalOpen(true);
   };
@@ -2207,6 +2488,26 @@ export default function Home() {
           return;
         }
         await refreshDeposits();
+        deleteSuccess = true;
+      } else if (modalMode === 'Assets') {
+        const res = await fetch(`/api/assets?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(currentUser?.fullName || currentUser?.name || 'Authorized Editor')}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting asset record.'));
+          return;
+        }
+        await refreshAssets();
+        deleteSuccess = true;
+      } else if (modalMode === 'Inventory') {
+        const res = await fetch(`/api/inventory?id=${encodeURIComponent(String(editingId))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(currentUser?.fullName || currentUser?.name || 'Authorized Editor')}`, {
+          method: 'DELETE'
+        }).then(r => r.json());
+        if (!res.success) {
+          alert('Delete failed: ' + (res.error || 'Server error occurred while deleting inventory item.'));
+          return;
+        }
+        await refreshInventory();
         deleteSuccess = true;
       }
 
@@ -2485,6 +2786,56 @@ export default function Home() {
         }
         await refreshDeposits();
       }
+      // 11. Assets
+      else if (modalMode === 'Assets') {
+        const res = await fetch('/api/assets', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            userName: currentUser?.fullName || currentUser?.name || 'Authorized Editor',
+            id: editingId || `AST-${Date.now().toString().slice(-4)}`,
+            name: field1.trim(),
+            category: field2 || 'Real Estate',
+            valuation: Number(field3) || 0,
+            cost: Number(field4) || 0,
+            location: field5 || 'Nairobi',
+            custodian: field6 || 'Dreamloom Trustees',
+            status: field7 || 'Active'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save asset: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshAssets();
+      }
+      // 12. Inventory
+      else if (modalMode === 'Inventory') {
+        const res = await fetch('/api/inventory', {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            userName: currentUser?.fullName || currentUser?.name || 'Authorized Editor',
+            id: editingId || `INV-${Date.now().toString().slice(-4)}`,
+            name: field1.trim(),
+            sku: field2.trim() || `SKU-${Date.now().toString().slice(-4)}`,
+            category: field3 || 'Corporate Materials',
+            location: field4 || 'Executive Safe',
+            quantity: Number(field5) || 0,
+            unitValue: Number(field6) || 0,
+            status: field7 || 'In Stock'
+          })
+        }).then(r => r.json());
+
+        if (!res.success) {
+          alert('Failed to save inventory item: ' + (res.error || 'Server error.'));
+          return;
+        }
+        await refreshInventory();
+      }
 
       await refreshAuditLogs();
       setIsModalOpen(false);
@@ -2522,8 +2873,8 @@ export default function Home() {
     {
       group: 'ADMINISTRATION & SYSTEM',
       items: [
-        { name: 'Appearance', icon: Palette },
         ...(isAdmin ? [
+          { name: 'Appearance', icon: Palette },
           { name: 'Login Log', icon: LogIn },
           { name: 'Edit Log', icon: History },
           { name: 'Users', icon: UserCog },
@@ -2747,18 +3098,20 @@ export default function Home() {
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
 
-            {/* Quick Appearance & Customisation Button */}
-            <button
-              onClick={() => {
-                setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
-                setIsAppearanceDrawerOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#0A5C36] font-bold text-xs transition shadow-2xs"
-              title={`Customize ${activeTab} Appearance`}
-            >
-              <Palette className="w-4 h-4 text-emerald-600" />
-              <span className="hidden lg:inline">Appearance</span>
-            </button>
+            {/* Quick Appearance & Customisation Button (Admin Only) */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
+                  setIsAppearanceDrawerOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#0A5C36] font-bold text-xs transition shadow-2xs"
+                title={`Customize ${activeTab} Appearance`}
+              >
+                <Palette className="w-4 h-4 text-emerald-600" />
+                <span className="hidden lg:inline">Appearance</span>
+              </button>
+            )}
 
             {/* Quick Settings Icon */}
             <button
@@ -2854,21 +3207,23 @@ export default function Home() {
                   <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
                   <p className="text-xs text-slate-500 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
-                    setIsAppearanceDrawerOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:border-[#0A5C36] text-slate-700 hover:text-[#0A5C36] text-xs font-bold transition shadow-2xs hover:shadow-xs"
-                  title={`Customise appearance of ${activeTab}`}
-                >
-                  <Palette className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Appearance</span>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.5 rounded-md border border-emerald-200/60">
-                    {activeTab}
-                  </span>
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
+                      setIsAppearanceDrawerOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:border-[#0A5C36] text-slate-700 hover:text-[#0A5C36] text-xs font-bold transition shadow-2xs hover:shadow-xs"
+                    title={`Customise appearance of ${activeTab}`}
+                  >
+                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Appearance</span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                      {activeTab}
+                    </span>
+                  </button>
+                )}
               </div>
 
             <div className="flex items-center gap-2.5">
@@ -3671,10 +4026,10 @@ export default function Home() {
               userEmail={currentUser?.email || 'simon@dreamloom.co.ke'}
               onRefreshContributions={refreshContributions}
               showToast={(msg) => setToastMessage(msg)}
-              onOpenAppearance={() => {
+              onOpenAppearance={isAdmin ? () => {
                 setPreviewAppearance(pageAppearances['Contributions'] || DEFAULT_PAGE_APPEARANCE);
                 setIsAppearanceDrawerOpen(true);
-              }}
+              } : undefined}
             />
           )}
 
@@ -3692,10 +4047,10 @@ export default function Home() {
               currentUser={currentUser}
               onRefresh={refreshDeposits}
               selectedCurrency={selectedCurrency}
-              onOpenAppearance={() => {
+              onOpenAppearance={isAdmin ? () => {
                 setPreviewAppearance(pageAppearances['Deposits'] || DEFAULT_PAGE_APPEARANCE);
                 setIsAppearanceDrawerOpen(true);
-              }}
+              } : undefined}
             />
           )}
 
@@ -3711,10 +4066,10 @@ export default function Home() {
               onRefreshLoans={refreshLoans}
               onNavigateTab={(tabId) => setActiveTab(tabId === 'members' ? 'Member Directory' : tabId)}
               showToast={(msg) => setToastMessage(msg)}
-              onOpenAppearance={() => {
+              onOpenAppearance={isAdmin ? () => {
                 setPreviewAppearance(pageAppearances['Loan Portfolio'] || DEFAULT_PAGE_APPEARANCE);
                 setIsAppearanceDrawerOpen(true);
-              }}
+              } : undefined}
             />
           )}
 
@@ -4174,111 +4529,577 @@ export default function Home() {
           {/* ===================================================================== */}
           {/* INVESTMENTS, PROJECTS, SUPPLIERS, DOCUMENTS (WITH EDIT AVAILABILITY) */}
           {/* ===================================================================== */}
+          {/* ===================================================================== */}
+          {/* 1. INVESTMENTS REGISTER (FULL DATA TABLE WITH DEDICATED ACTIONS)     */}
+          {/* ===================================================================== */}
           {activeTab === 'Investments' && (
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h2 className="font-extrabold text-slate-900 text-base">Group Strategic Assets & Investments</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {investments.map(inv => (
-                  <div key={inv.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{inv.asset}</p>
-                      <p className="text-xs text-slate-600 mt-1">{inv.type} • Expected Return: <span className="text-[#0A5C36] font-bold">{inv.expectedReturn}</span></p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-[#0A5C36] font-mono">{selectedCurrency} {inv.capital.toLocaleString()}</span>
-                      {canEdit && (
-                        <button onClick={() => handleOpenEditModal(inv, 'Investments')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-emerald-700" />
                   </div>
-                ))}
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Group Strategic Assets & Investments</h2>
+                    <p className="text-xs text-slate-500">Official registry of capital allocations, land ventures, and group portfolio yield</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Investments'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Investments')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>New Investment</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Total Capital Committed</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">
+                    {selectedCurrency} {investments.reduce((sum, i) => sum + (Number(i.capital) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">100% Fully Backed</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Active Portfolios</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">{investments.length} Portfolios</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Real estate & strategic capital</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Expected Annual Yield</p>
+                  <p className="text-xl font-black text-amber-800 mt-1 font-mono">15% - 25%</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Weighted benchmark</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Risk & Custody</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">Low-Medium</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">Title Deed Secured</span>
+                </div>
+              </div>
+
+              {/* Investments Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">Code</th>
+                        <th className="p-3.5">Investment Asset & Scope</th>
+                        <th className="p-3.5">Asset Class / Type</th>
+                        <th className="p-3.5">Capital Committed</th>
+                        <th className="p-3.5">Projected Return</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {investments.map((inv, idx) => (
+                        <tr key={inv.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{inv.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{inv.asset}</td>
+                          <td className="p-3.5">{inv.type}</td>
+                          <td className="p-3.5 font-mono font-bold text-emerald-700">
+                            {selectedCurrency} {(Number(inv.capital) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5 font-semibold text-slate-900">{inv.expectedReturn}</td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {inv.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Investments',
+                                    inv.asset,
+                                    inv,
+                                    [
+                                      { label: 'Investment Code', value: inv.id },
+                                      { label: 'Asset Name / Description', value: inv.asset },
+                                      { label: 'Asset Class / Type', value: inv.type },
+                                      { label: 'Capital Committed', value: inv.capital, isCurrency: true },
+                                      { label: 'Projected Annual Return', value: inv.expectedReturn },
+                                      { label: 'Portfolio Status', value: inv.status || 'Active', isBadge: true, badgeColor: 'bg-emerald-100 text-emerald-800' }
+                                    ],
+                                    'Investments'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(inv, 'Investments')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(inv, 'Investments')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
+          {/* ===================================================================== */}
+          {/* 2. PROJECTS REGISTER (FULL DATA TABLE WITH DEDICATED ACTIONS)        */}
+          {/* ===================================================================== */}
           {activeTab === 'Projects' && (
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h2 className="font-extrabold text-slate-900 text-base">Operations & Legal Projects</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {projects.map(p => (
-                  <div key={p.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{p.name}</p>
-                      <p className="text-xs text-slate-600 mt-1">Lead: {p.manager} • Status: <span className="text-sky-700 font-bold">{p.status}</span></p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-amber-800 font-mono">{selectedCurrency} {p.budget.toLocaleString()}</span>
-                      {canEdit && (
-                        <button onClick={() => handleOpenEditModal(p, 'Projects')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <Briefcase className="w-5 h-5 text-emerald-700" />
                   </div>
-                ))}
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Operations & Legal Projects</h2>
+                    <p className="text-xs text-slate-500">Official execution tracking for land titling, development, and compliance projects</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Projects'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Projects')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>New Project</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Total Allocated Budget</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">
+                    {selectedCurrency} {projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">Active Allocations</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Active Initiatives</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">{projects.length} Operations</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Title processing & legal</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Executive Leadership</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">Board Led</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Assigned Project Leads</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Delivery Milestone</p>
+                  <p className="text-xl font-black text-emerald-700 mt-1 font-mono">On Schedule</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">2026 Deliverables</span>
+                </div>
+              </div>
+
+              {/* Projects Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">Code</th>
+                        <th className="p-3.5">Project Title & Objective</th>
+                        <th className="p-3.5">Project Lead / Manager</th>
+                        <th className="p-3.5">Allocated Budget</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {projects.map((p, idx) => (
+                        <tr key={p.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{p.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{p.name}</td>
+                          <td className="p-3.5 font-semibold text-slate-800">{p.manager}</td>
+                          <td className="p-3.5 font-mono font-bold text-amber-800">
+                            {selectedCurrency} {(Number(p.budget) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                              {p.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Projects',
+                                    p.name,
+                                    p,
+                                    [
+                                      { label: 'Project Code', value: p.id },
+                                      { label: 'Project Title', value: p.name },
+                                      { label: 'Project Manager / Lead', value: p.manager },
+                                      { label: 'Allocated Budget', value: p.budget, isCurrency: true },
+                                      { label: 'Current Status', value: p.status || 'Active', isBadge: true, badgeColor: 'bg-sky-100 text-sky-800' }
+                                    ],
+                                    'Projects'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(p, 'Projects')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(p, 'Projects')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
+          {/* ===================================================================== */}
+          {/* 3. SUPPLIERS REGISTER (FULL DATA TABLE WITH DEDICATED ACTIONS)       */}
+          {/* ===================================================================== */}
           {activeTab === 'Suppliers' && (
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h2 className="font-extrabold text-slate-900 text-base">Key Operational Partners & Suppliers</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {suppliers.map(s => (
-                  <div key={s.id} className="p-5 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{s.name}</p>
-                      <p className="text-xs text-slate-600 mt-1">{s.category}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono font-bold text-[#0A5C36]">{s.contact}</span>
-                      {canEdit && (
-                        <button onClick={() => handleOpenEditModal(s, 'Suppliers')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <Truck className="w-5 h-5 text-emerald-700" />
                   </div>
-                ))}
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Key Operational Partners & Suppliers</h2>
+                    <p className="text-xs text-slate-500">Registry of vetted corporate vendors, legal advocates, and technical service providers</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Suppliers'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Suppliers')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Supplier</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Registered Suppliers</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">{suppliers.length} Vendors</p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">100% Vetted</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Legal & Survey</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">2 Key Firms</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Title processing advocates</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Compliance Rating</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">Tier 1</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Verified PIN & Tax Records</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Payment Terms</p>
+                  <p className="text-xl font-black text-emerald-700 mt-1 font-mono">Net 30 Days</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">Official Invoicing</span>
+                </div>
+              </div>
+
+              {/* Suppliers Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">Code</th>
+                        <th className="p-3.5">Supplier / Company Name</th>
+                        <th className="p-3.5">Service Category</th>
+                        <th className="p-3.5">Contact / Office Details</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {suppliers.map((s, idx) => (
+                        <tr key={s.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{s.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{s.name}</td>
+                          <td className="p-3.5">{s.category}</td>
+                          <td className="p-3.5 font-mono text-[11px] text-slate-800 font-bold">{s.contact}</td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {s.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Suppliers',
+                                    s.name,
+                                    s,
+                                    [
+                                      { label: 'Supplier Code', value: s.id },
+                                      { label: 'Partner / Company Name', value: s.name },
+                                      { label: 'Service Category', value: s.category },
+                                      { label: 'Contact & Office Address', value: s.contact },
+                                      { label: 'Engagement Status', value: s.status || 'Active', isBadge: true, badgeColor: 'bg-emerald-100 text-emerald-800' }
+                                    ],
+                                    'Suppliers'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(s, 'Suppliers')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(s, 'Suppliers')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
+          {/* ===================================================================== */}
+          {/* 4. DOCUMENTS REGISTER (FULL DATA TABLE WITH DEDICATED ACTIONS)       */}
+          {/* ===================================================================== */}
           {activeTab === 'Documents' && (
-            <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm p-6 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h2 className="font-extrabold text-slate-900 text-base">Corporate & Legal Documents Directory</h2>
-              </div>
-              <div className="space-y-3">
-                {documents.map(d => (
-                  <div key={d.id} className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl flex justify-between items-center hover:border-emerald-300 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-[#0A5C36]" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">{d.name}</p>
-                        <p className="text-[10px] text-slate-500">{d.category}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-bold">
-                        {d.status}
-                      </span>
-                      {canEdit && (
-                        <button onClick={() => handleOpenEditModal(d, 'Documents')} className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-emerald-700" />
                   </div>
-                ))}
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Corporate & Legal Documents Directory</h2>
+                    <p className="text-xs text-slate-500">Official archive of incorporation papers, constitutions, resolutions, and regulatory filings</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Documents'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Documents')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Register Document</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Total Documents Registered</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">{documents.length} Files</p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">100% Certified Copies</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Statutory & Governance</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">Incorporated</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">BRS certified registration</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Title Deeds in Safe</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">2 Prime Deeds</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Ting'ang'a & Juja parcels</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Archival Integrity</p>
+                  <p className="text-xl font-black text-emerald-700 mt-1 font-mono">Verified</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">Digital & physical safe</span>
+                </div>
+              </div>
+
+              {/* Documents Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">Code</th>
+                        <th className="p-3.5">Document Title & Description</th>
+                        <th className="p-3.5">Category</th>
+                        <th className="p-3.5">Repository Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {documents.map((d, idx) => (
+                        <tr key={d.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{d.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-[#0A5C36] shrink-0" />
+                            <span>{d.name}</span>
+                          </td>
+                          <td className="p-3.5">{d.category}</td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {d.status || 'Available'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Documents',
+                                    d.name,
+                                    d,
+                                    [
+                                      { label: 'Document Code', value: d.id },
+                                      { label: 'Document Title', value: d.name },
+                                      { label: 'Category / Classification', value: d.category },
+                                      { label: 'Archival Status', value: d.status || 'Available', isBadge: true, badgeColor: 'bg-emerald-100 text-emerald-800' }
+                                    ],
+                                    'Documents'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(d, 'Documents')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(d, 'Documents')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -4943,6 +5764,28 @@ export default function Home() {
           {/* APPEARANCE & CUSTOMISATION MANAGEMENT CENTER                           */}
           {/* ===================================================================== */}
           {activeTab === 'Appearance' && (
+            !isAdmin ? (
+              <div className="bg-white border border-rose-200 rounded-3xl p-8 max-w-lg mx-auto my-12 text-center shadow-lg shadow-rose-950/5">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-200 shadow-xs">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 inline-block mb-2">
+                  Access Restricted • 403 Forbidden
+                </span>
+                <h2 className="text-xl font-black text-slate-900 mb-2">Administrator Access Required</h2>
+                <p className="text-xs text-slate-600 mb-6 leading-relaxed">
+                  Appearance and system customisation controls are strictly restricted to the Super Administrator (Simon Memia Wanjiru). All other member accounts, including Treasurer and Shareholders, do not have permission to view or modify appearance preferences.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('Overview')}
+                  className="px-5 py-2.5 bg-[#0A5C36] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-sm inline-flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Return to Dashboard Overview</span>
+                </button>
+              </div>
+            ) : (
             <div className="space-y-6">
               {/* Header Card */}
               <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
@@ -5128,13 +5971,17 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          )}
+          ))}
 
           {/* ===================================================================== */}
           {/* GROUP ASSETS REGISTER                                                 */}
           {/* ===================================================================== */}
+          {/* ===================================================================== */}
+          {/* 5. GROUP ASSETS REGISTER (DYNAMIC DATA TABLE WITH DEDICATED ACTIONS) */}
+          {/* ===================================================================== */}
           {activeTab === 'Assets' && (
             <div className="space-y-6">
+              {/* Header Card */}
               <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
@@ -5146,21 +5993,23 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewAppearance(pageAppearances['Assets'] || DEFAULT_PAGE_APPEARANCE);
-                      setIsAppearanceDrawerOpen(true);
-                    }}
-                    className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
-                  >
-                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Appearance</span>
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Assets'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
                   {canEdit && (
                     <button
                       type="button"
-                      onClick={() => handleOpenQuickModal('Add Member')}
+                      onClick={() => handleOpenQuickModal('Assets')}
                       className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
                     >
                       <Plus className="w-4 h-4" />
@@ -5170,22 +6019,26 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Summary Cards */}
+              {/* Dynamic Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
                   <p className="text-xs text-slate-500 font-semibold">Total Asset Valuation</p>
-                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">KES 12,850,000.00</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">
+                    KES {assets.reduce((sum, a) => sum + (Number(a.valuation) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">Appreciating Asset Base</span>
                 </div>
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs text-slate-500 font-semibold">Land Parcels & Plots</p>
-                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">KES 11,200,000.00</p>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Ting'ang'a & Juja parcels</span>
+                  <p className="text-xs text-slate-500 font-semibold">Total Acquisition Cost</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">
+                    KES {assets.reduce((sum, a) => sum + (Number(a.cost) || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Capital investment base</span>
                 </div>
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
-                  <p className="text-xs text-slate-500 font-semibold">Equipment & Fixed Assets</p>
-                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">KES 1,650,000.00</p>
-                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Survey, office & computing</span>
+                  <p className="text-xs text-slate-500 font-semibold">Registered Holdings</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">{assets.length} Holdings</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Land, office & computing</span>
                 </div>
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
                   <p className="text-xs text-slate-500 font-semibold">Registered Custodians</p>
@@ -5208,49 +6061,72 @@ export default function Home() {
                         <th className="p-3.5">Current Valuation</th>
                         <th className="p-3.5">Custodian</th>
                         <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      <tr className="hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-001</td>
-                        <td className="p-3.5 font-bold text-slate-900">Ting'ang'a Prime Commercial Land (Parcel A)</td>
-                        <td className="p-3.5">Real Estate</td>
-                        <td className="p-3.5 font-mono text-[11px]">KIAMBU/TINGANGA/4892</td>
-                        <td className="p-3.5 font-mono">KES 6,000,000.00</td>
-                        <td className="p-3.5 font-mono font-bold text-emerald-700">KES 7,500,000.00</td>
-                        <td className="p-3.5 font-semibold">Dreamloom Trustees</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Titled & Secured</span></td>
-                      </tr>
-                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-002</td>
-                        <td className="p-3.5 font-bold text-slate-900">Juja Highridge Residential Land Plot</td>
-                        <td className="p-3.5">Real Estate</td>
-                        <td className="p-3.5 font-mono text-[11px]">JUJA/BLOCK-2/1034</td>
-                        <td className="p-3.5 font-mono">KES 3,200,000.00</td>
-                        <td className="p-3.5 font-mono font-bold text-emerald-700">KES 3,700,000.00</td>
-                        <td className="p-3.5 font-semibold">Simon Memia / David Wainaina</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active Holding</span></td>
-                      </tr>
-                      <tr className="hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-003</td>
-                        <td className="p-3.5 font-bold text-slate-900">High-Precision Optical Survey Equipment Kit</td>
-                        <td className="p-3.5">Operational Equipment</td>
-                        <td className="p-3.5 text-[11px]">Nairobi Central Office</td>
-                        <td className="p-3.5 font-mono">KES 850,000.00</td>
-                        <td className="p-3.5 font-mono font-bold text-slate-800">KES 850,000.00</td>
-                        <td className="p-3.5 font-semibold">Elijah Waitara Gichari</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">Operational</span></td>
-                      </tr>
-                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-004</td>
-                        <td className="p-3.5 font-bold text-slate-900">Corporate Registry Servers & Secured Workstations</td>
-                        <td className="p-3.5">IT & Infrastructure</td>
-                        <td className="p-3.5 text-[11px]">Primary Cloud & Secure Node</td>
-                        <td className="p-3.5 font-mono">KES 800,000.00</td>
-                        <td className="p-3.5 font-mono font-bold text-slate-800">KES 800,000.00</td>
-                        <td className="p-3.5 font-semibold">Simon Memia Wanjiru</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td>
-                      </tr>
+                      {assets.map((a, idx) => (
+                        <tr key={a.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{a.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{a.name}</td>
+                          <td className="p-3.5">{a.category}</td>
+                          <td className="p-3.5 font-mono text-[11px] text-slate-800 font-bold">{a.location}</td>
+                          <td className="p-3.5 font-mono text-slate-700">
+                            KES {(Number(a.cost) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-emerald-700">
+                            KES {(Number(a.valuation) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5 font-semibold text-slate-800">{a.custodian || 'Dreamloom Trustees'}</td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {a.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Assets',
+                                    a.name,
+                                    a,
+                                    [
+                                      { label: 'Asset Code', value: a.id },
+                                      { label: 'Asset Description', value: a.name },
+                                      { label: 'Asset Category', value: a.category },
+                                      { label: 'Location / Title Deed', value: a.location },
+                                      { label: 'Purchase Cost', value: a.cost, isCurrency: true },
+                                      { label: 'Current Valuation', value: a.valuation, isCurrency: true },
+                                      { label: 'Registered Custodian', value: a.custodian || 'Dreamloom Trustees' },
+                                      { label: 'Title / Holding Status', value: a.status || 'Active', isBadge: true, badgeColor: 'bg-emerald-100 text-emerald-800' }
+                                    ],
+                                    'Assets'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(a, 'Assets')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(a, 'Assets')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -5259,10 +6135,11 @@ export default function Home() {
           )}
 
           {/* ===================================================================== */}
-          {/* GROUP INVENTORY REGISTER                                              */}
+          {/* 6. GROUP INVENTORY REGISTER (DYNAMIC DATA TABLE WITH DEDICATED ACTIONS)*/}
           {/* ===================================================================== */}
           {activeTab === 'Inventory' && (
             <div className="space-y-6">
+              {/* Header Card */}
               <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
@@ -5270,31 +6147,61 @@ export default function Home() {
                   </div>
                   <div>
                     <h2 className="text-lg font-extrabold text-slate-900">Corporate Inventory & Materials Register</h2>
-                    <p className="text-xs text-slate-500">Stock records, operational documentation, and consumable inventories</p>
+                    <p className="text-xs text-slate-500">Official registry of securities stock, corporate materials, and hardware tokens</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewAppearance(pageAppearances['Inventory'] || DEFAULT_PAGE_APPEARANCE);
-                      setIsAppearanceDrawerOpen(true);
-                    }}
-                    className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
-                  >
-                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Appearance</span>
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances['Inventory'] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Appearance</span>
+                    </button>
+                  )}
                   {canEdit && (
                     <button
                       type="button"
-                      onClick={() => handleOpenQuickModal('Add Member')}
+                      onClick={() => handleOpenQuickModal('Inventory')}
                       className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Item</span>
                     </button>
                   )}
+                </div>
+              </div>
+
+              {/* Dynamic Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Total Inventory Value</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">
+                    KES {inventory.reduce((sum, item) => sum + (Number(item.totalValue) || ((Number(item.quantity) || 0) * (Number(item.unitValue) || 0))), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">Appraised Holdings</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Stock Line Items</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">{inventory.length} Stock Lines</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Certificates & devices</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Units in Safe Custody</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">
+                    {inventory.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)} Units
+                  </p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Total unit inventory</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Storage Security</p>
+                  <p className="text-xl font-black text-emerald-700 mt-1 font-mono">Executive Safe</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">Dual-Control Vault</span>
                 </div>
               </div>
 
@@ -5307,48 +6214,77 @@ export default function Home() {
                         <th className="p-3.5">SKU / Item Code</th>
                         <th className="p-3.5">Item Name & Description</th>
                         <th className="p-3.5">Category</th>
-                        <th className="p-3.5">Location</th>
+                        <th className="p-3.5">Storage Location</th>
                         <th className="p-3.5">In Stock</th>
-                        <th className="p-3.5">Reorder Level</th>
                         <th className="p-3.5">Unit Value</th>
                         <th className="p-3.5">Total Value</th>
                         <th className="p-3.5">Stock Status</th>
+                        <th className="p-3.5 text-center">ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      <tr className="hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-DOC-001</td>
-                        <td className="p-3.5 font-bold text-slate-900">Embossed Corporate Share Certificates (2026 Batch)</td>
-                        <td className="p-3.5">Corporate Materials</td>
-                        <td className="p-3.5">Executive Safe</td>
-                        <td className="p-3.5 font-mono font-bold">150 Units</td>
-                        <td className="p-3.5 font-mono text-slate-500">25 Units</td>
-                        <td className="p-3.5 font-mono">KES 1,200.00</td>
-                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 180,000.00</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">In Stock</span></td>
-                      </tr>
-                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-STA-002</td>
-                        <td className="p-3.5 font-bold text-slate-900">Official Company Seal & Foil Stamps</td>
-                        <td className="p-3.5">Office Equipment</td>
-                        <td className="p-3.5">Secretariat Desk</td>
-                        <td className="p-3.5 font-mono font-bold">4 Sets</td>
-                        <td className="p-3.5 font-mono text-slate-500">1 Set</td>
-                        <td className="p-3.5 font-mono">KES 25,000.00</td>
-                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 100,000.00</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Good Condition</span></td>
-                      </tr>
-                      <tr className="hover:bg-slate-50/80 transition">
-                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-SEC-003</td>
-                        <td className="p-3.5 font-bold text-slate-900">Hardware 2FA Security Tokens (YubiKeys)</td>
-                        <td className="p-3.5">Security Hardware</td>
-                        <td className="p-3.5">Admin Dispatch</td>
-                        <td className="p-3.5 font-mono font-bold">7 Units</td>
-                        <td className="p-3.5 font-mono text-slate-500">2 Units</td>
-                        <td className="p-3.5 font-mono">KES 8,500.00</td>
-                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 59,500.00</td>
-                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">Allocated</span></td>
-                      </tr>
+                      {inventory.map((inv, idx) => (
+                        <tr key={inv.sku || inv.id || idx} className={`${idx % 2 === 1 ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                          <td className="p-3.5 font-mono font-bold text-emerald-800">{inv.sku || inv.id}</td>
+                          <td className="p-3.5 font-bold text-slate-900">{inv.name}</td>
+                          <td className="p-3.5">{inv.category}</td>
+                          <td className="p-3.5 text-slate-800 font-medium">{inv.location}</td>
+                          <td className="p-3.5 font-mono font-bold text-slate-900">{inv.quantity} Units</td>
+                          <td className="p-3.5 font-mono text-slate-700">
+                            KES {(Number(inv.unitValue) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-emerald-700">
+                            KES {(Number(inv.totalValue) || ((Number(inv.quantity) || 0) * (Number(inv.unitValue) || 0))).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3.5">
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {inv.status || 'In Stock'}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-center whitespace-nowrap">
+                            <ActionsDropdown
+                              items={[
+                                {
+                                  id: 'view',
+                                  label: 'View Details',
+                                  icon: <Eye className="w-4 h-4 text-emerald-700" />,
+                                  onClick: () => handleViewItem(
+                                    'Inventory',
+                                    inv.name,
+                                    inv,
+                                    [
+                                      { label: 'SKU / Item Code', value: inv.sku || inv.id },
+                                      { label: 'Item Name & Description', value: inv.name },
+                                      { label: 'Item Category', value: inv.category },
+                                      { label: 'Storage Location', value: inv.location },
+                                      { label: 'Units In Stock', value: `${inv.quantity} Units` },
+                                      { label: 'Unit Value', value: inv.unitValue, isCurrency: true },
+                                      { label: 'Total Valuation', value: inv.totalValue || ((inv.quantity || 0) * (inv.unitValue || 0)), isCurrency: true },
+                                      { label: 'Stock Status', value: inv.status || 'In Stock', isBadge: true, badgeColor: 'bg-emerald-100 text-emerald-800' }
+                                    ],
+                                    'Inventory'
+                                  )
+                                },
+                                {
+                                  id: 'edit',
+                                  label: 'Edit Record',
+                                  icon: <Edit3 className="w-4 h-4 text-slate-700" />,
+                                  disabled: !canEdit,
+                                  onClick: () => handleOpenEditModal(inv, 'Inventory')
+                                },
+                                {
+                                  id: 'delete',
+                                  label: 'Delete Record',
+                                  icon: <Trash2 className="w-4 h-4 text-rose-600" />,
+                                  danger: true,
+                                  disabled: !canEdit,
+                                  onClick: () => handleDeleteRecord(inv, 'Inventory')
+                                }
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -5592,6 +6528,8 @@ export default function Home() {
                    modalMode.includes('Expense') ? 'Description' :
                    modalMode.includes('Investment') ? 'Asset Name' :
                    modalMode.includes('Project') ? 'Project Title' :
+                   modalMode === 'Assets' ? 'Asset Name & Description *' :
+                   modalMode === 'Inventory' ? 'Item Name & Description *' :
                    modalMode.includes('Deposit') ? 'Depositor Name / Organisation *' : 'Name / Title'}
                 </label>
                 {(modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Member') || modalMode.includes('Deposit')) ? (
@@ -5636,6 +6574,8 @@ export default function Home() {
                    modalMode.includes('Expense') ? 'Expense Category' :
                    modalMode.includes('Investment') ? 'Investment Type' :
                    modalMode.includes('Project') ? 'Project Manager / Lead' :
+                   modalMode === 'Assets' ? 'Asset Category (e.g. Real Estate, Equipment) *' :
+                   modalMode === 'Inventory' ? 'SKU / Item Code *' :
                    modalMode.includes('Deposit') ? 'Deposit Date (YYYY-MM-DD) *' : 'Category'}
                 </label>
                 {(modalMode.includes('Contribution') || modalMode.includes('Project')) ? (
@@ -5678,6 +6618,8 @@ export default function Home() {
                    modalMode.includes('Expense') ? 'Amount (KES)' :
                    modalMode.includes('Investment') ? 'Capital Allocated (KES)' :
                    modalMode.includes('Project') ? 'Project Budget (KES)' :
+                   modalMode === 'Assets' ? 'Current Valuation (KES) *' :
+                   modalMode === 'Inventory' ? 'Stock Category (e.g. Corporate Materials) *' :
                    modalMode.includes('Deposit') ? 'AMOUNT DEPOSITED (KES) * (MANDATORY)' : 'Contact / Value'}
                 </label>
                 {modalMode.includes('Deposit') ? (
@@ -5714,6 +6656,8 @@ export default function Home() {
                    modalMode.includes('Expense') ? 'Expense Date (YYYY-MM-DD)' :
                    modalMode.includes('Investment') ? 'Expected Return (e.g. 15%)' :
                    modalMode.includes('Project') ? 'Project Status (Active / Completed)' :
+                   modalMode === 'Assets' ? 'Purchase / Acquisition Cost (KES) *' :
+                   modalMode === 'Inventory' ? 'Storage Location / Custody Vault *' :
                    modalMode.includes('Deposit') ? 'Transaction Type (e.g. Member Deposit, Share Capital) *' : 'Status'}
                 </label>
                 {(modalMode.includes('Loan') || modalMode.includes('Expense')) ? (
@@ -5735,7 +6679,7 @@ export default function Home() {
               </div>
 
               {/* Field 5 */}
-              {(modalMode.includes('Contribution') || modalMode.includes('Member') || modalMode.includes('Expense') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Investment') || modalMode.includes('Deposit')) && (
+              {(modalMode.includes('Contribution') || modalMode.includes('Member') || modalMode.includes('Expense') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Investment') || modalMode.includes('Deposit') || modalMode === 'Assets' || modalMode === 'Inventory') && (
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     {modalMode.includes('Member') ? 'Email Address' :
@@ -5743,6 +6687,8 @@ export default function Home() {
                      modalMode.includes('Loan') ? 'Date Settled (or "-" if active)' :
                      modalMode.includes('Fines') ? 'Payment Status (Active / Paid)' :
                      modalMode.includes('Expense') ? 'Paid To / Reference' :
+                     modalMode === 'Assets' ? 'Location / Title Deed Reference' :
+                     modalMode === 'Inventory' ? 'Quantity In Stock (Units)' :
                      modalMode.includes('Deposit') ? 'Reason / Description *' : 'Status'}
                   </label>
                   {modalMode.includes('Expense') ? (
@@ -5764,12 +6710,14 @@ export default function Home() {
               )}
 
               {/* Field 6 */}
-              {(modalMode.includes('Contribution') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Deposit')) && (
+              {(modalMode.includes('Contribution') || modalMode.includes('Loan') || modalMode.includes('Fines') || modalMode.includes('Deposit') || modalMode === 'Assets' || modalMode === 'Inventory') && (
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     {modalMode.includes('Contribution') ? 'Notes / Remarks' :
                      modalMode.includes('Loan') ? 'Loan Status (Active / Settled)' :
                      modalMode.includes('Fines') ? 'Date Paid' :
+                     modalMode === 'Assets' ? 'Registered Custodian (e.g. Dreamloom Trustees)' :
+                     modalMode === 'Inventory' ? 'Unit Value (KES)' :
                      modalMode.includes('Deposit') ? 'Payment Method (M-Pesa, Cash, Bank Transfer, Other)' : 'Additional Info'}
                   </label>
                   <input
@@ -5782,15 +6730,17 @@ export default function Home() {
               )}
 
               {/* Field 7 */}
-              {modalMode.includes('Deposit') && (
+              {(modalMode.includes('Deposit') || modalMode === 'Assets' || modalMode === 'Inventory') && (
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Reference Number (M-Pesa / Bank Slip)
+                    {modalMode === 'Assets' ? 'Title / Holding Status (e.g. Titled & Secured, Active)' :
+                     modalMode === 'Inventory' ? 'Stock Status (e.g. In Stock, Low Stock, Allocated)' :
+                     'Reference Number (M-Pesa / Bank Slip)'}
                   </label>
                   <input
                     type="text"
                     value={field7}
-                    placeholder="e.g. QK89123456"
+                    placeholder={modalMode.includes('Deposit') ? 'e.g. QK89123456' : 'e.g. Active'}
                     onChange={(e) => setField7(e.target.value)}
                     className="w-full bg-[#142036] border border-[#1E2D4A] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
                   />
@@ -6123,6 +7073,89 @@ export default function Home() {
               >
                 Close Profile
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DEDICATED VIEW DETAILS MODAL FOR OPERATIONS & ASSETS                     */}
+      {/* ========================================================================= */}
+      {viewDetailsModal && (
+        <div className="fixed inset-0 bg-[#070D18]/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl border border-slate-200/90 w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-emerald-50/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-800 flex items-center justify-center font-bold">
+                  <Eye className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-700 bg-white border border-emerald-200 px-2.5 py-0.5 rounded-full inline-block">
+                    {viewDetailsModal.module} Details
+                  </span>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-1">{viewDetailsModal.title}</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewDetailsModal(null)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Field cards */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {viewDetailsModal.fields.map((f, idx) => (
+                  <div key={idx} className="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{f.label}</p>
+                    {f.isBadge ? (
+                      <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${f.badgeColor || 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`}>
+                        {String(f.value ?? '-')}
+                      </span>
+                    ) : f.isCurrency ? (
+                      <p className="text-sm font-extrabold text-slate-900 font-mono mt-1">
+                        KES {Number(f.value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    ) : (
+                      <p className="text-sm font-bold text-slate-900 mt-1 break-words">
+                        {String(f.value ?? '-')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setViewDetailsModal(null)}
+                className="px-5 py-2.5 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Register</span>
+              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const item = viewDetailsModal.item;
+                    const mode = viewDetailsModal.moduleKey;
+                    setViewDetailsModal(null);
+                    handleOpenEditModal(item, mode);
+                  }}
+                  className="px-5 py-2.5 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-2"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  <span>Edit This Record</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

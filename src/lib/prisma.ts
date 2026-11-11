@@ -115,6 +115,143 @@ export async function ensureDatabaseSchema(): Promise<void> {
       CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey")
     `);
 
+    // 4c. Create Asset & Inventory tables idempotently
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Asset" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "category" TEXT NOT NULL,
+        "valuation" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+        "cost" DOUBLE PRECISION DEFAULT 0.0,
+        "location" TEXT NOT NULL DEFAULT 'Nairobi',
+        "custodian" TEXT DEFAULT 'Dreamloom Trustees',
+        "status" TEXT NOT NULL DEFAULT 'Active',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Asset_pkey" PRIMARY KEY ("id")
+      );
+      ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "cost" DOUBLE PRECISION DEFAULT 0.0;
+      ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "custodian" TEXT DEFAULT 'Dreamloom Trustees';
+
+      CREATE TABLE IF NOT EXISTS "Inventory" (
+        "id" TEXT NOT NULL,
+        "sku" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "category" TEXT NOT NULL,
+        "location" TEXT NOT NULL DEFAULT 'Executive Safe',
+        "quantity" INTEGER NOT NULL DEFAULT 0,
+        "reorderLevel" INTEGER NOT NULL DEFAULT 0,
+        "unitValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+        "totalValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+        "status" TEXT NOT NULL DEFAULT 'In Stock',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Inventory_pkey" PRIMARY KEY ("id")
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS "Inventory_sku_key" ON "Inventory"("sku");
+    `);
+
+    // Seed default assets if empty
+    try {
+      const assetCount = await prisma.asset.count();
+      if (assetCount === 0) {
+        await prisma.asset.createMany({
+          data: [
+            {
+              id: 'AST-001',
+              name: "Ting'ang'a Prime Commercial Land (Parcel A)",
+              category: 'Real Estate',
+              cost: 6000000,
+              valuation: 7500000,
+              location: 'KIAMBU/TINGANGA/4892',
+              custodian: 'Dreamloom Trustees',
+              status: 'Titled & Secured'
+            },
+            {
+              id: 'AST-002',
+              name: 'Juja Highridge Residential Land Plot',
+              category: 'Real Estate',
+              cost: 3200000,
+              valuation: 3700000,
+              location: 'JUJA/BLOCK-2/1034',
+              custodian: 'Simon Memia / David Wainaina',
+              status: 'Active Holding'
+            },
+            {
+              id: 'AST-003',
+              name: 'High-Precision Optical Survey Equipment Kit',
+              category: 'Operational Equipment',
+              cost: 850000,
+              valuation: 850000,
+              location: 'Nairobi Central Office',
+              custodian: 'Elijah Waitara Gichari',
+              status: 'Operational'
+            },
+            {
+              id: 'AST-004',
+              name: 'Corporate Registry Servers & Secured Workstations',
+              category: 'IT & Infrastructure',
+              cost: 800000,
+              valuation: 800000,
+              location: 'Primary Cloud & Secure Node',
+              custodian: 'Simon Memia Wanjiru',
+              status: 'Active'
+            }
+          ]
+        });
+      }
+    } catch (e) {
+      console.warn('Notice seeding default assets:', e);
+    }
+
+    // Seed default inventory if empty
+    try {
+      const invCount = await prisma.inventory.count();
+      if (invCount === 0) {
+        await prisma.inventory.createMany({
+          data: [
+            {
+              id: 'INV-001',
+              sku: 'INV-DOC-001',
+              name: 'Embossed Corporate Share Certificates (2026 Batch)',
+              category: 'Corporate Materials',
+              location: 'Executive Safe',
+              quantity: 150,
+              reorderLevel: 25,
+              unitValue: 1200,
+              totalValue: 180000,
+              status: 'In Stock'
+            },
+            {
+              id: 'INV-002',
+              sku: 'INV-STA-002',
+              name: 'Official Company Seal & Foil Stamps',
+              category: 'Office Equipment',
+              location: 'Secretariat Desk',
+              quantity: 4,
+              reorderLevel: 1,
+              unitValue: 25000,
+              totalValue: 100000,
+              status: 'Good Condition'
+            },
+            {
+              id: 'INV-003',
+              sku: 'INV-SEC-003',
+              name: 'Hardware 2FA Security Tokens (YubiKeys)',
+              category: 'Security Hardware',
+              location: 'Admin Dispatch',
+              quantity: 7,
+              reorderLevel: 2,
+              unitValue: 8500,
+              totalValue: 59500,
+              status: 'Allocated'
+            }
+          ]
+        });
+      }
+    } catch (e) {
+      console.warn('Notice seeding default inventory:', e);
+    }
+
+
     // 5. Backfill any legacy Contribution rows missing memberId, month, or year
     const legacyRows = await prisma.contribution.findMany({
       where: {

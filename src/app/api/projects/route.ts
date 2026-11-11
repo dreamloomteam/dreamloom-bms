@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { isAuthorizedEditor } from '@/lib/audit';
+import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
+import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
 
 // GET /api/projects
 export async function GET() {
   try {
+    await ensureDatabaseSchema();
     const projects = await prisma.project.findMany({
       orderBy: { id: 'asc' },
     });
@@ -17,37 +18,36 @@ export async function GET() {
 // POST /api/projects
 export async function POST(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const body = await request.json();
-    const { userEmail, id, name, manager, budget, status } = body;
+    const { userEmail, userName, id, name, manager, budget, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
     const customId = id || `PRJ-${String(Date.now()).slice(-4)}`;
     const created = await prisma.project.create({
       data: {
         id: customId,
-        name,
+        name: name?.trim() || 'Untitled Project',
         manager: manager || 'Simon Memia',
         budget: Number(budget) || 0,
         status: status || 'Active',
       },
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Projects',
-        action: 'Added',
-        changes: JSON.stringify({
-          entity: created.name,
-          field: 'Project Created',
-          prevValue: 'None',
-          newValue: `Budget: KES ${created.budget.toLocaleString()}`,
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Projects',
+      action: 'Added',
+      recordRef: created.id,
+      userEmail,
+      userName,
+      member: created.manager || 'Simon Memia',
+      oldValues: {},
+      newValues: created,
+      remarks: `Created project ${created.id} (${created.name}) with budget KES ${created.budget.toLocaleString()}`,
+    });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error) {
@@ -58,38 +58,40 @@ export async function POST(request: Request) {
 // PUT /api/projects
 export async function PUT(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const body = await request.json();
-    const { userEmail, id, name, manager, budget, status } = body;
+    const { userEmail, userName, id, name, manager, budget, status } = body;
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
+    if (!id) return NextResponse.json({ success: false, error: 'Missing Project ID' }, { status: 400 });
+
     const prev = await prisma.project.findUnique({ where: { id } });
+    if (!prev) return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
 
     const updated = await prisma.project.update({
       where: { id },
       data: {
-        ...(name && { name }),
+        ...(name && { name: name.trim() }),
         ...(manager && { manager }),
         ...(budget !== undefined && { budget: Number(budget) }),
         ...(status && { status }),
       },
     });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Projects',
-        action: 'Edited',
-        changes: JSON.stringify({
-          entity: updated.name,
-          field: 'Project Updated',
-          prevValue: prev ? `KES ${prev.budget.toLocaleString()} (${prev.status})` : 'Existing',
-          newValue: `KES ${updated.budget.toLocaleString()} (${updated.status})`,
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Projects',
+      action: 'Updated',
+      recordRef: updated.id,
+      userEmail,
+      userName,
+      member: updated.manager || 'Simon Memia',
+      oldValues: prev,
+      newValues: updated,
+      remarks: `Updated project ${updated.id} (${updated.name})`,
+    });
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
@@ -100,32 +102,34 @@ export async function PUT(request: Request) {
 // DELETE /api/projects
 export async function DELETE(request: Request) {
   try {
+    await ensureDatabaseSchema();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const userEmail = searchParams.get('userEmail');
+    const userName = searchParams.get('userName');
 
     if (!isAuthorizedEditor(userEmail)) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Unauthorized: Requires editor role.' }, { status: 403 });
     }
 
-    if (!id) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
+    if (!id) return NextResponse.json({ success: false, error: 'Missing Project ID' }, { status: 400 });
 
     const prev = await prisma.project.findUnique({ where: { id } });
+    if (!prev) return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+
     await prisma.project.delete({ where: { id } });
 
-    await prisma.editLog.create({
-      data: {
-        model: 'Projects',
-        action: 'Deleted',
-        changes: JSON.stringify({
-          entity: prev?.name || id,
-          field: 'Project Removed',
-          prevValue: prev ? prev.name : 'Active',
-          newValue: 'Deleted',
-          user: userEmail,
-        }),
-      },
-    }).catch(() => {});
+    await createAuditLog({
+      model: 'Projects',
+      action: 'Deleted',
+      recordRef: id,
+      userEmail,
+      userName,
+      member: prev.manager || 'Simon Memia',
+      oldValues: prev,
+      newValues: { status: 'Deleted' },
+      remarks: `Deleted project ${id} (${prev.name})`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
