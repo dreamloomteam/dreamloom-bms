@@ -32,7 +32,8 @@ import {
   X,
   Coins,
   ChevronDown,
-  Check
+  Check,
+  Palette
 } from 'lucide-react';
 import {
   calculateLoanProfile,
@@ -52,6 +53,7 @@ interface LoanPortfolioTabProps {
   onRefreshLoans: (asOfDate?: string) => Promise<void>;
   onNavigateTab: (tabId: string) => void;
   showToast: (msg: string) => void;
+  onOpenAppearance?: () => void;
 }
 
 type LoanSubView =
@@ -70,7 +72,8 @@ export default function LoanPortfolioTab({
   userEmail,
   onRefreshLoans,
   onNavigateTab,
-  showToast
+  showToast,
+  onOpenAppearance
 }: LoanPortfolioTabProps) {
   // Navigation state
   const [subView, setSubView] = useState<LoanSubView>('register');
@@ -962,6 +965,17 @@ export default function LoanPortfolioTab({
             <Users className="w-3.5 h-3.5" />
             <span>Member Directory</span>
           </button>
+          {onOpenAppearance && (
+            <button
+              type="button"
+              onClick={onOpenAppearance}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-[#064E3B] bg-white hover:bg-emerald-50 border border-slate-300 hover:border-emerald-600 transition-all shadow-2xs"
+              title="Customise Loan Portfolio Appearance"
+            >
+              <Palette className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Appearance</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

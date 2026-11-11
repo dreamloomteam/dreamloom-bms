@@ -30,7 +30,7 @@ import {
 } from '@/lib/dateUtils';
 import { getMemberAvatar } from '@/lib/memberAvatars';
 import ActionsDropdown from '@/components/ActionsDropdown';
-import { Eye } from 'lucide-react';
+import { Eye, Palette } from 'lucide-react';
 
 interface ContributionsTabProps {
   contributions: any[];
@@ -43,6 +43,7 @@ interface ContributionsTabProps {
   userEmail: string;
   onRefreshContributions: () => Promise<void>;
   showToast: (msg: string) => void;
+  onOpenAppearance?: () => void;
 }
 
 type ContribSubView =
@@ -61,7 +62,8 @@ export default function ContributionsTab({
   canEdit,
   userEmail,
   onRefreshContributions,
-  showToast
+  showToast,
+  onOpenAppearance
 }: ContributionsTabProps) {
   const [subView, setSubView] = useState<ContribSubView>('monthly-register');
   const [searchQuery, setSearchQuery] = useState('');
@@ -806,6 +808,17 @@ export default function ContributionsTab({
               </button>
             );
           })}
+          {onOpenAppearance && (
+            <button
+              type="button"
+              onClick={onOpenAppearance}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-[#0A5C36] bg-white hover:bg-emerald-50 border border-slate-300 hover:border-emerald-600 transition-all shadow-2xs"
+              title="Customise Contributions Appearance"
+            >
+              <Palette className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Appearance</span>
+            </button>
+          )}
         </div>
 
         {/* Authoritative Month & Year Selectors (Section 3.2) */}

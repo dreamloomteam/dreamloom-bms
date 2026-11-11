@@ -97,6 +97,19 @@ export async function ensureDatabaseSchema(): Promise<void> {
       );
     `);
 
+    // 4b. Create PageAppearance table idempotently for persistent per-page customisation
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PageAppearance" (
+        "id" SERIAL NOT NULL,
+        "userId" TEXT NOT NULL,
+        "pageKey" TEXT NOT NULL,
+        "settings" JSONB NOT NULL,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PageAppearance_pkey" PRIMARY KEY ("id")
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey");
+    `);
+
     // 5. Backfill any legacy Contribution rows missing memberId, month, or year
     const legacyRows = await prisma.contribution.findMany({
       where: {

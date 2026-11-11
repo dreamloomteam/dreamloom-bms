@@ -5,7 +5,7 @@ import {
   Wallet, Plus, Search, Filter, Download, FileText, CheckCircle2,
   AlertTriangle, Clock, ArrowDownCircle, RotateCcw, RotateCw, Eye,
   Edit3, Check, X, ShieldAlert, FileSpreadsheet, ExternalLink, Paperclip,
-  Landmark, CreditCard, Building2, User, Calendar, Coins, ArrowUpRight
+  Landmark, CreditCard, Building2, User, Calendar, Coins, ArrowUpRight, Palette
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import ActionsDropdown from '@/components/ActionsDropdown';
@@ -65,6 +65,7 @@ interface DepositsTabProps {
   currentUser: any;
   onRefresh: () => Promise<void>;
   selectedCurrency?: string;
+  onOpenAppearance?: () => void;
 }
 
 export const TRANSACTION_TYPES = [
@@ -105,6 +106,7 @@ export default function DepositsTab({
   currentUser,
   onRefresh,
   selectedCurrency = 'KES',
+  onOpenAppearance,
 }: DepositsTabProps) {
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -537,6 +539,17 @@ export default function DepositsTab({
           </div>
 
           <div className="flex items-center gap-3">
+            {onOpenAppearance && (
+              <button
+                type="button"
+                onClick={onOpenAppearance}
+                className="bg-white/20 hover:bg-white/30 border border-white/40 text-white font-bold text-xs px-4 py-2.5 rounded-2xl shadow-sm flex items-center gap-2 transition active:scale-95"
+                title="Customise Deposits Appearance"
+              >
+                <Palette className="w-4 h-4 text-emerald-200" />
+                <span>Appearance</span>
+              </button>
+            )}
             {canEdit && (
               <button
                 type="button"

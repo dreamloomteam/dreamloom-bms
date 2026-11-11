@@ -9,7 +9,8 @@ import {
   Download, Plus, X, Receipt, History, UserCog, Edit3, Lock, Mail, FileText, ExternalLink, Paperclip,
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, UserCheck, ShieldAlert,
-  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle
+  Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle,
+  Palette, Sparkles, Copy, Sliders
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
@@ -17,6 +18,14 @@ import LoanPortfolioTab from '@/components/LoanPortfolioTab';
 import ActionsDropdown from '@/components/ActionsDropdown';
 import ContributionsTab from '@/components/ContributionsTab';
 import LoginScreen from '@/components/LoginScreen';
+import AppearanceCustomizerDrawer from '@/components/AppearanceCustomizerDrawer';
+import {
+  PageAppearanceSettings,
+  DEFAULT_PAGE_APPEARANCE,
+  ALL_PAGE_KEYS,
+  PRESET_THEMES,
+  generateAppearanceCss
+} from '@/lib/appearance';
 import {
   ALL_MONTHS,
   AVAILABLE_YEARS,
@@ -524,6 +533,124 @@ export default function Home() {
 
   // Core App States
   const [activeTab, setActiveTab] = useState('Overview');
+
+  // Appearance & Customisation Engine States (Per-Page Styling)
+  const [pageAppearances, setPageAppearances] = useState<Record<string, PageAppearanceSettings>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('dreamloom_page_appearances');
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return {};
+  });
+  const [previewAppearance, setPreviewAppearance] = useState<PageAppearanceSettings | null>(null);
+  const [isAppearanceDrawerOpen, setIsAppearanceDrawerOpen] = useState(false);
+
+  // Active page appearance: if currently previewing, use preview; otherwise use stored page appearance or system default
+  const activePageAppearance = useMemo(() => {
+    if (previewAppearance) return previewAppearance;
+    return pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE;
+  }, [previewAppearance, pageAppearances, activeTab]);
+
+  // Load persistent appearance settings from server for the current user
+  useEffect(() => {
+    const userEmail = currentUser?.email || 'global';
+    fetch(`/api/appearance?userId=${encodeURIComponent(userEmail)}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.success && res.data && Object.keys(res.data).length > 0) {
+          setPageAppearances(prev => {
+            const merged = { ...prev, ...res.data };
+            try {
+              localStorage.setItem('dreamloom_page_appearances', JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+      })
+      .catch(err => console.warn('Could not load appearance settings from server:', err));
+  }, [currentUser]);
+
+  // Save appearance for a specific page
+  const handleSavePageAppearance = async (newSettings: PageAppearanceSettings) => {
+    const userEmail = currentUser?.email || 'global';
+    const targetPage = activeTab;
+    const updated = {
+      ...pageAppearances,
+      [targetPage]: newSettings
+    };
+    setPageAppearances(updated);
+    setPreviewAppearance(null);
+    try {
+      localStorage.setItem('dreamloom_page_appearances', JSON.stringify(updated));
+    } catch (e) {}
+
+    await fetch('/api/appearance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userEmail,
+        action: 'save',
+        pageKey: targetPage,
+        settings: newSettings
+      })
+    });
+  };
+
+  // Reset appearance for active page
+  const handleResetPageAppearance = async () => {
+    const userEmail = currentUser?.email || 'global';
+    const targetPage = activeTab;
+    const updated = { ...pageAppearances };
+    delete updated[targetPage];
+    setPageAppearances(updated);
+    setPreviewAppearance(null);
+    try {
+      localStorage.setItem('dreamloom_page_appearances', JSON.stringify(updated));
+    } catch (e) {}
+
+    await fetch('/api/appearance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userEmail,
+        action: 'reset_page',
+        pageKey: targetPage
+      })
+    });
+  };
+
+  // Apply current appearance to ALL pages
+  const handleApplyAppearanceToAll = async (newSettings: PageAppearanceSettings) => {
+    const userEmail = currentUser?.email || 'global';
+    const allMap: Record<string, PageAppearanceSettings> = {};
+    for (const pk of ALL_PAGE_KEYS) {
+      allMap[pk] = newSettings;
+    }
+    setPageAppearances(allMap);
+    setPreviewAppearance(null);
+    try {
+      localStorage.setItem('dreamloom_page_appearances', JSON.stringify(allMap));
+    } catch (e) {}
+
+    await fetch('/api/appearance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userEmail,
+        action: 'apply_all',
+        pageKey: activeTab,
+        settings: newSettings
+      })
+    });
+  };
+
+  // Copy appearance from another page
+  const handleCopyAppearanceFrom = async (fromPage: string) => {
+    const sourceSettings = pageAppearances[fromPage] || DEFAULT_PAGE_APPEARANCE;
+    await handleSavePageAppearance(sourceSettings);
+  };
 
   // Dynamic Current Header Date in Africa/Nairobi (UTC+3, EAT)
   const [currentHeaderDate, setCurrentHeaderDate] = useState(() => getEATHeaderDate());
@@ -2417,14 +2544,18 @@ export default function Home() {
         { name: 'Projects', icon: Briefcase },
         { name: 'Suppliers', icon: Truck },
         { name: 'Documents', icon: FileText },
+        { name: 'Assets', icon: Building2 },
+        { name: 'Inventory', icon: Boxes },
       ]
     },
     {
       group: 'ADMINISTRATION & SYSTEM',
       items: [
+        { name: 'Appearance', icon: Palette },
         ...(isAdmin ? [
           { name: 'Login Log', icon: LogIn },
           { name: 'Edit Log', icon: History },
+          { name: 'Users', icon: UserCog },
         ] : []),
         { name: 'Reports', icon: BarChart3 },
         { name: 'Settings', icon: Settings },
@@ -2645,6 +2776,19 @@ export default function Home() {
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>
 
+            {/* Quick Appearance & Customisation Button */}
+            <button
+              onClick={() => {
+                setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#0A5C36] font-bold text-xs transition shadow-2xs"
+              title={`Customize ${activeTab} Appearance`}
+            >
+              <Palette className="w-4 h-4 text-emerald-600" />
+              <span className="hidden lg:inline">Appearance</span>
+            </button>
+
             {/* Quick Settings Icon */}
             <button
               onClick={() => setActiveTab('Settings')}
@@ -2728,12 +2872,32 @@ export default function Home() {
         {/* 3. MAIN DASHBOARD CONTENT */}
         {/* ========================================================================= */}
         <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]" id="dashboard-content-area">
+          {/* Dynamic Scoped Appearance Stylesheet for Current Page */}
+          <style dangerouslySetInnerHTML={{ __html: generateAppearanceCss(activePageAppearance) }} />
+
           {/* Top Title Bar with Month / Currency / Export Button */}
           {activeTab !== 'Loan Portfolio' && (
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
-                <p className="text-xs text-slate-500 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{activeTab === 'Overview' ? 'Dashboard Overview' : activeTab}</h1>
+                  <p className="text-xs text-slate-500 mt-0.5">Dreamloom Holding Limited • Confidential Financial Register</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
+                    setIsAppearanceDrawerOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-300 hover:border-[#0A5C36] text-slate-700 hover:text-[#0A5C36] text-xs font-bold transition shadow-2xs hover:shadow-xs"
+                  title={`Customise appearance of ${activeTab}`}
+                >
+                  <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Appearance</span>
+                  <span className="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-1.5 py-0.5 rounded-md border border-emerald-200/60">
+                    {activeTab}
+                  </span>
+                </button>
               </div>
 
             <div className="flex items-center gap-2.5">
@@ -3536,6 +3700,10 @@ export default function Home() {
               userEmail={currentUser?.email || 'simon@dreamloom.co.ke'}
               onRefreshContributions={refreshContributions}
               showToast={(msg) => setToastMessage(msg)}
+              onOpenAppearance={() => {
+                setPreviewAppearance(pageAppearances['Contributions'] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
             />
           )}
 
@@ -3553,6 +3721,10 @@ export default function Home() {
               currentUser={currentUser}
               onRefresh={refreshDeposits}
               selectedCurrency={selectedCurrency}
+              onOpenAppearance={() => {
+                setPreviewAppearance(pageAppearances['Deposits'] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
             />
           )}
 
@@ -3568,6 +3740,10 @@ export default function Home() {
               onRefreshLoans={refreshLoans}
               onNavigateTab={(tabId) => setActiveTab(tabId === 'members' ? 'Member Directory' : tabId)}
               showToast={(msg) => setToastMessage(msg)}
+              onOpenAppearance={() => {
+                setPreviewAppearance(pageAppearances['Loan Portfolio'] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
             />
           )}
 
@@ -4791,6 +4967,524 @@ export default function Home() {
             </div>
             )
           )}
+
+          {/* ===================================================================== */}
+          {/* APPEARANCE & CUSTOMISATION MANAGEMENT CENTER                           */}
+          {/* ===================================================================== */}
+          {activeTab === 'Appearance' && (
+            <div className="space-y-6">
+              {/* Header Card */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center shadow-xs">
+                      <Palette className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Appearance & Customisation Studio</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Tailor fonts, background colors, tables, and buttons across every page with live preview and database persistence.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewAppearance(pageAppearances[activeTab] || DEFAULT_PAGE_APPEARANCE);
+                        setIsAppearanceDrawerOpen(true);
+                      }}
+                      className="px-4 py-2.5 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-2"
+                    >
+                      <Sliders className="w-4 h-4" />
+                      <span>Open Customiser Drawer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleResetPageAppearance()}
+                      className="px-3.5 py-2.5 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 rounded-xl text-xs font-semibold transition"
+                    >
+                      <RotateCw className="w-4 h-4 inline mr-1 text-slate-500" />
+                      Reset to Default
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ready-Made Theme Presets */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Ready-Made Professional Presets</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">One-click visual styling calibrated for clarity and contrast</p>
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    {Object.keys(PRESET_THEMES).length} Presets Available
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(PRESET_THEMES).map(([themeName, settings]) => {
+                    const isCurrent = activePageAppearance.presetName === themeName;
+                    return (
+                      <div
+                        key={themeName}
+                        className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                          isCurrent
+                            ? 'border-emerald-600 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-white'
+                        }`}
+                        onClick={() => {
+                          setPreviewAppearance(settings);
+                          setIsAppearanceDrawerOpen(true);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-900">{themeName}</span>
+                          {isCurrent && (
+                            <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">Active</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mb-3">Corporate theme styled with {settings.fontFamily} typography</p>
+                        <div className="flex items-center gap-1.5 pt-2 border-t border-slate-200/60">
+                          <div className="w-5 h-5 rounded-md border border-slate-300 shadow-2xs" style={{ backgroundColor: settings.pageBg }} title="Page Background" />
+                          <div className="w-5 h-5 rounded-md border border-slate-300 shadow-2xs" style={{ backgroundColor: settings.tableHeaderBg }} title="Header Background" />
+                          <div className="w-5 h-5 rounded-md border border-slate-300 shadow-2xs" style={{ backgroundColor: settings.buttonBg }} title="Button Color" />
+                          <div className="w-5 h-5 rounded-md border border-slate-300 shadow-2xs" style={{ backgroundColor: settings.oddRowBg }} title="Alt Row Color" />
+                          <span className="ml-auto text-[10px] text-slate-500 font-mono">{settings.fontFamily}</span>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSavePageAppearance(settings);
+                            }}
+                            className="flex-1 text-[11px] font-bold py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition"
+                          >
+                            Apply Here
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApplyAppearanceToAll(settings);
+                            }}
+                            className="flex-1 text-[11px] font-semibold py-1.5 px-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg transition"
+                          >
+                            Apply to All
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Per-Page Appearance Directory */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Per-Page Customisation Register</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Individually configure or synchronize each page of Dreamloom Financial</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyAppearanceToAll(activePageAppearance)}
+                    className="text-xs font-bold text-emerald-800 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-xl transition"
+                  >
+                    Sync All Pages to Active Style
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {ALL_PAGE_KEYS.map((pageName) => {
+                    const custom = pageAppearances[pageName];
+                    const effective = custom || DEFAULT_PAGE_APPEARANCE;
+                    const isPageActive = activeTab === pageName;
+                    return (
+                      <div
+                        key={pageName}
+                        className={`p-3.5 rounded-xl border flex flex-col justify-between transition ${
+                          isPageActive
+                            ? 'border-emerald-600 bg-emerald-50/30 ring-1 ring-emerald-500/30'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-bold text-slate-900">{pageName}</span>
+                            {custom ? (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Custom</span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-slate-400">Default</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mb-2">
+                            <div className="w-3.5 h-3.5 rounded border border-slate-300 shrink-0" style={{ backgroundColor: effective.pageBg }} />
+                            <span className="truncate">{effective.fontFamily}</span>
+                            <span className="text-slate-300">•</span>
+                            <span>{effective.fontSizeScale}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(pageName);
+                              setPreviewAppearance(effective);
+                              setIsAppearanceDrawerOpen(true);
+                            }}
+                            className="flex-1 py-1 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#0A5C36] font-bold text-[11px] rounded-lg transition"
+                          >
+                            Customise
+                          </button>
+                          {pageName !== activeTab && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyAppearanceFrom(pageName)}
+                              title={`Copy ${pageName} styling to active page`}
+                              className="py-1 px-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 text-[11px] rounded-lg transition"
+                            >
+                              Copy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* GROUP ASSETS REGISTER                                                 */}
+          {/* ===================================================================== */}
+          {activeTab === 'Assets' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Group Assets & Capital Holdings Register</h2>
+                    <p className="text-xs text-slate-500">Official registry of land holdings, equipment, and fixed corporate assets</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewAppearance(pageAppearances['Assets'] || DEFAULT_PAGE_APPEARANCE);
+                      setIsAppearanceDrawerOpen(true);
+                    }}
+                    className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Appearance</span>
+                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Add Member')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Register Asset</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Total Asset Valuation</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">KES 12,850,000.00</p>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded mt-1 inline-block">Appreciating Asset Base</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Land Parcels & Plots</p>
+                  <p className="text-xl font-black text-[#0A5C36] mt-1 font-mono">KES 11,200,000.00</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Ting'ang'a & Juja parcels</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Equipment & Fixed Assets</p>
+                  <p className="text-xl font-black text-slate-800 mt-1 font-mono">KES 1,650,000.00</p>
+                  <span className="text-[10px] text-slate-500 font-medium mt-1 block">Survey, office & computing</span>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm">
+                  <p className="text-xs text-slate-500 font-semibold">Registered Custodians</p>
+                  <p className="text-xl font-black text-slate-900 mt-1 font-mono">7 Members</p>
+                  <span className="text-[10px] text-emerald-700 font-bold mt-1 block">Joint Corporate Title</span>
+                </div>
+              </div>
+
+              {/* Assets Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">Asset Code</th>
+                        <th className="p-3.5">Asset Description</th>
+                        <th className="p-3.5">Category</th>
+                        <th className="p-3.5">Location / Title Deed</th>
+                        <th className="p-3.5">Purchase Cost</th>
+                        <th className="p-3.5">Current Valuation</th>
+                        <th className="p-3.5">Custodian</th>
+                        <th className="p-3.5">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      <tr className="hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-001</td>
+                        <td className="p-3.5 font-bold text-slate-900">Ting'ang'a Prime Commercial Land (Parcel A)</td>
+                        <td className="p-3.5">Real Estate</td>
+                        <td className="p-3.5 font-mono text-[11px]">KIAMBU/TINGANGA/4892</td>
+                        <td className="p-3.5 font-mono">KES 6,000,000.00</td>
+                        <td className="p-3.5 font-mono font-bold text-emerald-700">KES 7,500,000.00</td>
+                        <td className="p-3.5 font-semibold">Dreamloom Trustees</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Titled & Secured</span></td>
+                      </tr>
+                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-002</td>
+                        <td className="p-3.5 font-bold text-slate-900">Juja Highridge Residential Land Plot</td>
+                        <td className="p-3.5">Real Estate</td>
+                        <td className="p-3.5 font-mono text-[11px]">JUJA/BLOCK-2/1034</td>
+                        <td className="p-3.5 font-mono">KES 3,200,000.00</td>
+                        <td className="p-3.5 font-mono font-bold text-emerald-700">KES 3,700,000.00</td>
+                        <td className="p-3.5 font-semibold">Simon Memia / David Wainaina</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active Holding</span></td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-003</td>
+                        <td className="p-3.5 font-bold text-slate-900">High-Precision Optical Survey Equipment Kit</td>
+                        <td className="p-3.5">Operational Equipment</td>
+                        <td className="p-3.5 text-[11px]">Nairobi Central Office</td>
+                        <td className="p-3.5 font-mono">KES 850,000.00</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-800">KES 850,000.00</td>
+                        <td className="p-3.5 font-semibold">Elijah Waitara Gichari</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">Operational</span></td>
+                      </tr>
+                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">AST-004</td>
+                        <td className="p-3.5 font-bold text-slate-900">Corporate Registry Servers & Secured Workstations</td>
+                        <td className="p-3.5">IT & Infrastructure</td>
+                        <td className="p-3.5 text-[11px]">Primary Cloud & Secure Node</td>
+                        <td className="p-3.5 font-mono">KES 800,000.00</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-800">KES 800,000.00</td>
+                        <td className="p-3.5 font-semibold">Simon Memia Wanjiru</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Active</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* GROUP INVENTORY REGISTER                                              */}
+          {/* ===================================================================== */}
+          {activeTab === 'Inventory' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <Boxes className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Corporate Inventory & Materials Register</h2>
+                    <p className="text-xs text-slate-500">Stock records, operational documentation, and consumable inventories</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewAppearance(pageAppearances['Inventory'] || DEFAULT_PAGE_APPEARANCE);
+                      setIsAppearanceDrawerOpen(true);
+                    }}
+                    className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Appearance</span>
+                  </button>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Add Member')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Item</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Inventory Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">SKU / Item Code</th>
+                        <th className="p-3.5">Item Name & Description</th>
+                        <th className="p-3.5">Category</th>
+                        <th className="p-3.5">Location</th>
+                        <th className="p-3.5">In Stock</th>
+                        <th className="p-3.5">Reorder Level</th>
+                        <th className="p-3.5">Unit Value</th>
+                        <th className="p-3.5">Total Value</th>
+                        <th className="p-3.5">Stock Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      <tr className="hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-DOC-001</td>
+                        <td className="p-3.5 font-bold text-slate-900">Embossed Corporate Share Certificates (2026 Batch)</td>
+                        <td className="p-3.5">Corporate Materials</td>
+                        <td className="p-3.5">Executive Safe</td>
+                        <td className="p-3.5 font-mono font-bold">150 Units</td>
+                        <td className="p-3.5 font-mono text-slate-500">25 Units</td>
+                        <td className="p-3.5 font-mono">KES 1,200.00</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 180,000.00</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">In Stock</span></td>
+                      </tr>
+                      <tr className="bg-[#F2F9F5] hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-STA-002</td>
+                        <td className="p-3.5 font-bold text-slate-900">Official Company Seal & Foil Stamps</td>
+                        <td className="p-3.5">Office Equipment</td>
+                        <td className="p-3.5">Secretariat Desk</td>
+                        <td className="p-3.5 font-mono font-bold">4 Sets</td>
+                        <td className="p-3.5 font-mono text-slate-500">1 Set</td>
+                        <td className="p-3.5 font-mono">KES 25,000.00</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 100,000.00</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Good Condition</span></td>
+                      </tr>
+                      <tr className="hover:bg-slate-50/80 transition">
+                        <td className="p-3.5 font-mono font-bold text-emerald-800">INV-SEC-003</td>
+                        <td className="p-3.5 font-bold text-slate-900">Hardware 2FA Security Tokens (YubiKeys)</td>
+                        <td className="p-3.5">Security Hardware</td>
+                        <td className="p-3.5">Admin Dispatch</td>
+                        <td className="p-3.5 font-mono font-bold">7 Units</td>
+                        <td className="p-3.5 font-mono text-slate-500">2 Units</td>
+                        <td className="p-3.5 font-mono">KES 8,500.00</td>
+                        <td className="p-3.5 font-mono font-bold text-slate-900">KES 59,500.00</td>
+                        <td className="p-3.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">Allocated</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* USERS & ACCESS CONTROL                                                */}
+          {/* ===================================================================== */}
+          {activeTab === 'Users' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#0A5C36] flex items-center justify-center">
+                    <UserCog className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">Authorized User Accounts & Access Control</h2>
+                    <p className="text-xs text-slate-500">Corporate governance, administrative privileges, and security credentials</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewAppearance(pageAppearances['Users'] || DEFAULT_PAGE_APPEARANCE);
+                      setIsAppearanceDrawerOpen(true);
+                    }}
+                    className="px-3.5 py-2 bg-white border border-slate-300 hover:border-emerald-600 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Appearance</span>
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenQuickModal('Add Member')}
+                      className="px-4 py-2 bg-[#0A5C36] hover:bg-[#064E3B] text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add User</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Users Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#E6F4EA] border-b border-slate-200 text-slate-800 font-bold">
+                        <th className="p-3.5">User</th>
+                        <th className="p-3.5">Official Name</th>
+                        <th className="p-3.5">Primary Email</th>
+                        <th className="p-3.5">Phone Number</th>
+                        <th className="p-3.5">Assigned Role</th>
+                        <th className="p-3.5">Access Tier</th>
+                        <th className="p-3.5">Security Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {authorizedUsers.map((user, idx) => {
+                        const avatar = getMemberAvatar(user.name);
+                        const isSuper = user.email === 'kamera@dreamloom.co.ke' || user.email === 'simon@dreamloom.co.ke';
+                        const isTreasurer = user.email === 'elijah@dreamloom.co.ke';
+                        const isAlt = idx % 2 === 1;
+                        return (
+                          <tr key={user.email} className={`${isAlt ? 'bg-[#F2F9F5]' : 'bg-white'} hover:bg-slate-50/80 transition`}>
+                            <td className="p-3.5">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 ring-1 ring-emerald-600/30">
+                                <img src={avatar} alt={user.name} className="w-full h-full object-cover" />
+                              </div>
+                            </td>
+                            <td className="p-3.5 font-bold text-slate-900">{user.name}</td>
+                            <td className="p-3.5 font-mono text-[11px] text-slate-600">{user.email}</td>
+                            <td className="p-3.5 font-mono text-[11px]">{user.phone}</td>
+                            <td className="p-3.5">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isSuper
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : isTreasurer
+                                  ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {isSuper ? 'Super Administrator' : isTreasurer ? 'Treasurer / Administrator' : 'Executive Member'}
+                              </span>
+                            </td>
+                            <td className="p-3.5 font-semibold text-slate-800">
+                              {isSuper || isTreasurer ? 'Full Read & Write' : 'Standard Read-Only'}
+                            </td>
+                            <td className="p-3.5">
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                Active
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -5462,6 +6156,22 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* 5. APPEARANCE & CUSTOMISATION SLIDE-OVER DRAWER */}
+      <AppearanceCustomizerDrawer
+        isOpen={isAppearanceDrawerOpen}
+        onClose={() => {
+          setPreviewAppearance(null);
+          setIsAppearanceDrawerOpen(false);
+        }}
+        activePage={activeTab}
+        currentSettings={activePageAppearance}
+        onPreviewChange={(updated) => setPreviewAppearance(updated)}
+        onSave={handleSavePageAppearance}
+        onResetPage={handleResetPageAppearance}
+        onApplyToAll={handleApplyAppearanceToAll}
+        onCopyFromPage={handleCopyAppearanceFrom}
+      />
     </div>
   );
 }
