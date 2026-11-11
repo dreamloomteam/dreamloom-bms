@@ -106,8 +106,10 @@ export async function ensureDatabaseSchema(): Promise<void> {
         "settings" JSONB NOT NULL,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "PageAppearance_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey");
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey")
     `);
 
     // 5. Backfill any legacy Contribution rows missing memberId, month, or year

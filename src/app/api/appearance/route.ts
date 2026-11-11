@@ -21,9 +21,30 @@ function getUserIdFromRequest(request: NextRequest): string {
   return 'global_admin';
 }
 
+async function ensureAppearanceTable() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PageAppearance" (
+        "id" SERIAL NOT NULL,
+        "userId" TEXT NOT NULL,
+        "pageKey" TEXT NOT NULL,
+        "settings" JSONB NOT NULL,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PageAppearance_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey")
+    `);
+  } catch (e) {
+    console.warn('ensureAppearanceTable notice:', e);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     await ensureDatabaseSchema();
+    await ensureAppearanceTable();
     const userId = getUserIdFromRequest(request);
     const url = new URL(request.url);
     const pageKey = url.searchParams.get('pageKey');
@@ -67,6 +88,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await ensureDatabaseSchema();
+    await ensureAppearanceTable();
     const userId = getUserIdFromRequest(request);
     const body = await request.json();
     const { action = 'save', pageKey, settings, fromPageKey } = body;
