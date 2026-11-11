@@ -15,7 +15,6 @@ export interface AuditRecordParams {
 }
 
 const AUTHORIZED_EDITORS: Record<string, string> = {
-  'kamera@dreamloom.co.ke': 'Simon Memia Wanjiru',
   'simon@dreamloom.co.ke': 'Simon Memia Wanjiru',
   'elijah@dreamloom.co.ke': 'Elijah Waitara Gichari',
   'michael@dreamloom.co.ke': 'Michael Kiarie Wanjiru',
@@ -109,7 +108,7 @@ export async function createAuditLog(params: AuditRecordParams) {
 
     const payload = {
       user: authorName,
-      userEmail: params.userEmail || 'kamera@dreamloom.co.ke',
+      userEmail: params.userEmail || 'simon@dreamloom.co.ke',
       member: params.member || 'Member Record',
       module: params.model,
       action: params.action,

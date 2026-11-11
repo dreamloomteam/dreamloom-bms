@@ -18,16 +18,11 @@ export const STANDARD_DURATION = 24 * 60 * 60; // 24 hours in seconds
 
 export function isUserAdmin(user: { role?: string; email?: string } | null | undefined): boolean {
   if (!user) return false;
-  const role = (user.role || '').toLowerCase();
   const email = (user.email || '').toLowerCase().trim();
-  if (
-    role === 'administrator' ||
-    role === 'admin' ||
-    role.includes('admin') ||
-    email === 'kamera@dreamloom.co.ke'
-  ) {
-    return true;
-  }
+  // Unwanted kamera account is strictly revoked
+  if (email === 'kamera@dreamloom.co.ke') return false;
+  // Simon Memia Wanjiru is the sole Administrator and Super Admin
+  if (email === 'simon@dreamloom.co.ke') return true;
   return false;
 }
 
@@ -105,6 +100,11 @@ export function verifySessionToken(token: string | undefined | null): SessionPay
 
     const payloadJson = base64UrlDecode(payloadEncoded);
     const payload = JSON.parse(payloadJson) as SessionPayload;
+
+    // Immediately reject and invalidate any past or active tokens for kamera@dreamloom.co.ke
+    if (payload.email?.toLowerCase().trim() === 'kamera@dreamloom.co.ke') {
+      return null;
+    }
 
     const now = Math.floor(Date.now() / 1000);
     if (!payload.exp || payload.exp < now) {

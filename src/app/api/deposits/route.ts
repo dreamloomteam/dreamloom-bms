@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
 import { getEATISODate, getEATCurrentYear, parseDateToMonthYear } from '@/lib/dateUtils';
+import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin, SessionPayload } from '@/lib/session';
+
+function getSessionUser(request: Request): SessionPayload | null {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7).trim();
+    const payload = verifySessionToken(token);
+    if (payload) return payload;
+  }
+  const cookieHeader = request.headers.get('cookie') || '';
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]+)`));
+  if (match) {
+    const token = decodeURIComponent(match[1]);
+    const payload = verifySessionToken(token);
+    if (payload) return payload;
+  }
+  return null;
+}
 
 // Helper to generate next unique deposit ID (DEP-YYYY-XXXX)
 async function generateDepositId(date: Date = new Date()): Promise<string> {
@@ -21,6 +39,13 @@ async function generateDepositId(date: Date = new Date()): Promise<string> {
 // GET /api/deposits
 export async function GET(request: Request) {
   try {
+    const user = getSessionUser(request);
+    if (!user || !isUserAdmin(user)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Administrator privileges required to access the Deposit Register.' },
+        { status: 403 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const month = searchParams.get('month');
     const year = searchParams.get('year');
@@ -113,6 +138,15 @@ export async function GET(request: Request) {
 // POST /api/deposits
 export async function POST(request: Request) {
   try {
+    const user = getSessionUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required to submit deposit transactions.' },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = isUserAdmin(user);
     const body = await request.json();
     const {
       action,
@@ -145,12 +179,19 @@ export async function POST(request: Request) {
       reconciliationNotes,
     } = body;
 
-    const author = userName || (userEmail ? userEmail.split('@')[0] : 'Administrator');
+    const author = user.fullName || user.name || userName || (userEmail ? userEmail.split('@')[0] : 'Administrator');
+    const effectiveEmail = user.email || userEmail || 'simon@dreamloom.co.ke';
 
     // -------------------------------------------------------------------------
-    // ACTION: REVERSE A DEPOSIT
+    // ACTION: REVERSE A DEPOSIT (Admin Only)
     // -------------------------------------------------------------------------
     if (action === 'reverse') {
+      if (!isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden: Administrator privileges required to reverse deposits.' },
+          { status: 403 }
+        );
+      }
       const depId = Number(depositId || body.id);
       if (!depId) {
         return NextResponse.json({ success: false, error: 'Deposit ID is required for reversal' }, { status: 400 });
@@ -230,9 +271,15 @@ export async function POST(request: Request) {
     }
 
     // -------------------------------------------------------------------------
-    // ACTION: RECONCILE A DEPOSIT
+    // ACTION: RECONCILE A DEPOSIT (Admin Only)
     // -------------------------------------------------------------------------
     if (action === 'reconcile') {
+      if (!isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden: Administrator privileges required to reconcile deposits.' },
+          { status: 403 }
+        );
+      }
       const depId = Number(depositId || body.id);
       if (!depId) {
         return NextResponse.json({ success: false, error: 'Deposit ID is required for reconciliation' }, { status: 400 });
@@ -259,7 +306,7 @@ export async function POST(request: Request) {
         model: 'Deposits',
         action: 'Updated',
         recordId: depId,
-        userEmail: userEmail || 'system@dreamloom.co.ke',
+        userEmail: effectiveEmail,
         userName: author,
         member: existing.depositorName,
         oldValues: {
@@ -280,7 +327,37 @@ export async function POST(request: Request) {
     // -------------------------------------------------------------------------
     // ACTION: CREATE NEW DEPOSIT
     // -------------------------------------------------------------------------
-    if (!depositorName || !amount) {
+    // Resolve Member & Enforce Non-Admin Identity Lockdown
+    let finalDepositorName = (depositorName || '').trim();
+    let finalMemberId: number | null = memberId ? Number(memberId) : null;
+
+    if (!isAdmin) {
+      // Ordinary members cannot spoof another member's name or ID
+      finalDepositorName = user.fullName || user.name;
+      const sessionEmail = user.email.toLowerCase().trim();
+      const memberRecord = await prisma.member.findFirst({
+        where: {
+          OR: [
+            { email: { equals: sessionEmail, mode: 'insensitive' } },
+            { fullName: { equals: finalDepositorName, mode: 'insensitive' } },
+            ...(user.nationalId ? [{ nationalId: user.nationalId }] : []),
+          ],
+        },
+      });
+      if (memberRecord) {
+        finalMemberId = memberRecord.id;
+        finalDepositorName = memberRecord.fullName;
+      }
+    } else {
+      if (!finalMemberId && finalDepositorName) {
+        const matched = await prisma.member.findFirst({
+          where: { fullName: { contains: finalDepositorName, mode: 'insensitive' } },
+        });
+        if (matched) finalMemberId = matched.id;
+      }
+    }
+
+    if (!finalDepositorName || !amount) {
       return NextResponse.json(
         { success: false, error: 'Depositor Name and Amount are required fields' },
         { status: 400 }
@@ -317,22 +394,13 @@ export async function POST(request: Request) {
     const depositDate = date ? new Date(date) : new Date();
     const customId = await generateDepositId(depositDate);
 
-    // 2. Resolve Member if memberId or member name provided
-    let finalMemberId: number | null = memberId ? Number(memberId) : null;
-    if (!finalMemberId && depositorName) {
-      const matched = await prisma.member.findFirst({
-        where: { fullName: { contains: depositorName.trim(), mode: 'insensitive' } },
-      });
-      if (matched) finalMemberId = matched.id;
-    }
-
-    // 3. Save Deposit & Perform Financial Integration
+    // 2. Save Deposit & Perform Financial Integration
     const created = await prisma.$transaction(async (tx) => {
       const newDeposit = await tx.deposit.create({
         data: {
           customId,
           date: depositDate,
-          depositorName: depositorName.trim(),
+          depositorName: finalDepositorName,
           amount: numAmount,
           transactionType: transactionType || 'Member Deposit',
           customTransactionType: customTransactionType || null,
@@ -347,7 +415,7 @@ export async function POST(request: Request) {
           loanId: loanId || null,
           projectId: projectId || null,
           investmentId: investmentId || null,
-          reconciliationStatus: reconciliationStatus || 'Unreconciled',
+          reconciliationStatus: isAdmin ? (reconciliationStatus || 'Unreconciled') : 'Unreconciled',
           attachmentUrl: attachmentUrl || null,
           attachmentName: attachmentName || null,
           createdByUser: author,
@@ -374,12 +442,12 @@ export async function POST(request: Request) {
       return newDeposit;
     });
 
-    // 4. Audit Trail Entry
+    // 3. Audit Trail Entry
     await createAuditLog({
       model: 'Deposits',
       action: 'Added',
       recordId: created.id,
-      userEmail: userEmail || 'admin@dreamloom.co.ke',
+      userEmail: effectiveEmail,
       userName: author,
       member: created.depositorName,
       oldValues: {},
@@ -407,6 +475,13 @@ export async function POST(request: Request) {
 // PUT /api/deposits
 export async function PUT(request: Request) {
   try {
+    const user = getSessionUser(request);
+    if (!user || !isUserAdmin(user)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Administrator privileges required to edit deposit records.' },
+        { status: 403 }
+      );
+    }
     const body = await request.json();
     const {
       id,
@@ -555,6 +630,13 @@ export async function PUT(request: Request) {
 // DELETE /api/deposits
 export async function DELETE(request: Request) {
   try {
+    const user = getSessionUser(request);
+    if (!user || !isUserAdmin(user)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Administrator privileges required to delete deposit records.' },
+        { status: 403 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const userEmail = searchParams.get('userEmail') || 'admin@dreamloom.co.ke';

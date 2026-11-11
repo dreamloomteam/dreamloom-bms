@@ -229,22 +229,7 @@ export default function Home() {
         .catch(err => console.warn('Could not fetch server penalties:', err));
 
       // 4. Deposits Register Persistence
-      const savedDeposits = localStorage.getItem('dreamloom_deposits');
-      if (savedDeposits) {
-        try {
-          const parsed = JSON.parse(savedDeposits);
-          if (Array.isArray(parsed) && parsed.length > 0) setDeposits(parsed);
-        } catch (e) { console.warn('Saved deposits parse failed:', e); }
-      }
-      fetch('/api/deposits')
-        .then(r => r.json())
-        .then(res => {
-          if (res.success && Array.isArray(res.data)) {
-            setDeposits(res.data);
-            localStorage.setItem('dreamloom_deposits', JSON.stringify(res.data));
-          }
-        })
-        .catch(err => console.warn('Could not fetch server deposits:', err));
+      // 3. Deposits (Strictly protected for Administrator Simon Memia Wanjiru - synchronized via admin effect)
 
       // 5. Login Logs & Audit Logs are handled in an admin-protected effect
 
@@ -410,7 +395,6 @@ export default function Home() {
     const email = currentUser.email?.toLowerCase().trim() || '';
     const role = (currentUser.role || '').toLowerCase();
     return (
-      email === 'kamera@dreamloom.co.ke' ||
       email === 'simon@dreamloom.co.ke' ||
       email === 'elijah@dreamloom.co.ke' ||
       email === 'michael@dreamloom.co.ke' ||
@@ -420,13 +404,17 @@ export default function Home() {
     );
   }, [currentUser]);
 
-  // Fetch sensitive audit logs strictly for authenticated Administrators
+  // Fetch sensitive audit logs & deposits strictly for authenticated Administrators
   useEffect(() => {
     if (!isAdmin) {
       setLoginLogs([]);
       setEditLogs([]);
+      setDeposits([]);
+      try { localStorage.removeItem('dreamloom_deposits'); } catch (e) {}
       return;
     }
+
+    refreshDeposits();
 
     fetch('/api/login-logs')
       .then(r => r.json())
@@ -729,8 +717,8 @@ export default function Home() {
       fullName: 'Simon Memia Wanjiru',
       nationalId: '32242103',
       phone: '0719545283',
-      role: 'Director / Member',
-      email: 'kamera@dreamloom.co.ke',
+      role: 'Director / Super Admin',
+      email: 'simon@dreamloom.co.ke',
       totalContribution: 65050.00,
       activeLoans: 13200.00,
       netBalance: 51850.00,
@@ -1823,8 +1811,12 @@ export default function Home() {
     }
   };
 
-  // Real-time Database Deposits Synchronization
+  // Real-time Database Deposits Synchronization (Admin Only)
   const refreshDeposits = async () => {
+    if (!isAdmin) {
+      setDeposits([]);
+      return;
+    }
     try {
       setDepositsLoading(true);
       const res = await fetch('/api/deposits').then(r => r.json());
@@ -4370,7 +4362,7 @@ export default function Home() {
                 </div>
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Authorized Data Editors</label>
-                  <input type="text" readOnly value="Simon Memia Wanjiru (kamera@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 font-medium" />
+                  <input type="text" readOnly value="Simon Memia Wanjiru (simon@dreamloom.co.ke) & Elijah Waitara Gichari (elijah@dreamloom.co.ke)" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 font-medium" />
                 </div>
               </div>
             </div>
@@ -4397,14 +4389,14 @@ export default function Home() {
                 <div className="p-4 bg-[#F2F9F5] border border-emerald-900/10 rounded-xl space-y-2">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Super Administrator</p>
                   <p className="text-sm font-bold text-slate-900">Simon Memia Wanjiru (Director)</p>
-                  <p className="text-xs font-mono text-slate-600">kamera@dreamloom.co.ke</p>
+                  <p className="text-xs font-mono text-slate-600">simon@dreamloom.co.ke</p>
                 </div>
               </div>
 
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs space-y-1.5 text-emerald-900 font-mono">
                 <p>System Version: 2.1 Reconciled Multi-Role High-Performance Dashboard</p>
                 <p>Company: Dreamloom Holding Limited</p>
-                <p>Permissions: Data modification restricted strictly to Simon Memia (kamera@dreamloom.co.ke) &amp; Elijah Waitara</p>
+                <p>Permissions: Data modification restricted strictly to Simon Memia (simon@dreamloom.co.ke) &amp; Elijah Waitara</p>
               </div>
             </div>
           )}
@@ -5443,7 +5435,7 @@ export default function Home() {
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       {authorizedUsers.map((user, idx) => {
                         const avatar = getMemberAvatar(user.name);
-                        const isSuper = user.email === 'kamera@dreamloom.co.ke' || user.email === 'simon@dreamloom.co.ke';
+                        const isSuper = user.email === 'simon@dreamloom.co.ke';
                         const isTreasurer = user.email === 'elijah@dreamloom.co.ke';
                         const isAlt = idx % 2 === 1;
                         return (

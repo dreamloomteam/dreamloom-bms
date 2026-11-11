@@ -5,7 +5,6 @@ export const MEMBER_AVATARS: Record<string, string> = {
   'simon': '/members/member-1.jpg',
   'simon memia': '/members/member-1.jpg',
   'simon memia wanjiru': '/members/member-1.jpg',
-  'kamera@dreamloom.co.ke': '/members/member-1.jpg',
   'simon@dreamloom.co.ke': '/members/member-1.jpg',
 
   // Member 2: David Wainaina Kinyua

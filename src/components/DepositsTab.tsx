@@ -19,6 +19,7 @@ import {
   parseDateToMonthYear
 } from '@/lib/dateUtils';
 import * as XLSX from 'xlsx';
+import { isUserAdmin } from '@/lib/session';
 
 export interface DepositRecord {
   id: number;
@@ -132,6 +133,9 @@ export default function DepositsTab({
   const [reversingDeposit, setReversingDeposit] = useState<DepositRecord | null>(null);
   const [reversalReasonInput, setReversalReasonInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedSuccess, setSubmittedSuccess] = useState(false);
+
+  const isAdmin = isUserAdmin(currentUser);
 
   // Form State
   const initialForm = {
@@ -152,6 +156,46 @@ export default function DepositsTab({
   };
   const [formData, setFormData] = useState(initialForm);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  // Identify the logged in member record
+  const loggedInMemberRecord = useMemo(() => {
+    if (!currentUser) return null;
+    const myName = (currentUser.fullName || currentUser.name || '').toLowerCase().trim();
+    const myEmail = (currentUser.email || '').toLowerCase().trim();
+    return members.find(
+      (m) =>
+        m.fullName?.toLowerCase().trim() === myName ||
+        m.email?.toLowerCase().trim() === myEmail ||
+        (currentUser.nationalId && m.nationalId === currentUser.nationalId)
+    );
+  }, [currentUser, members]);
+
+  // Prepopulate member form when non-admin logs in
+  useEffect(() => {
+    if (!isAdmin && currentUser) {
+      const myName = currentUser.fullName || currentUser.name || '';
+      setFormData((prev) => ({
+        ...prev,
+        depositorName: myName,
+        memberId: loggedInMemberRecord ? String(loggedInMemberRecord.id) : prev.memberId,
+      }));
+    }
+  }, [isAdmin, currentUser, loggedInMemberRecord]);
+
+  // Member's own active loans for repayment allocation
+  const memberLoans = useMemo(() => {
+    if (!currentUser) return [];
+    const myName = (currentUser.fullName || currentUser.name || '').toLowerCase().trim();
+    const myFirst = (currentUser.name || '').toLowerCase().trim().split(' ')[0];
+    return loans.filter((l) => {
+      if (l.status !== 'Active') return false;
+      const borrower = (l.borrower || '').toLowerCase().trim();
+      if (loggedInMemberRecord && l.memberId === loggedInMemberRecord.id) return true;
+      if (borrower === myName) return true;
+      if (myFirst && borrower.includes(myFirst)) return true;
+      return false;
+    });
+  }, [loans, currentUser, loggedInMemberRecord]);
 
   // Check duplicate reference in real time
   useEffect(() => {
@@ -517,6 +561,451 @@ export default function DepositsTab({
   const handleExportPDF = () => {
     window.print();
   };
+
+  // Member-Specific Deposit Submission Handler
+  const handleMemberSubmitDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(formData.amount);
+    if (!formData.amount || isNaN(amt) || amt <= 0) {
+      alert('Validation Error: AMOUNT DEPOSITED (KES) is mandatory and must be a valid positive amount greater than zero.');
+      return;
+    }
+    if (duplicateWarning) {
+      alert('Cannot save: A duplicate reference number was detected. Please verify reference.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const myName = currentUser?.fullName || currentUser?.name || 'Verified Member';
+      const payload: any = {
+        userEmail: currentUser?.email,
+        userName: myName,
+        depositorName: myName,
+        date: formData.date,
+        amount: amt,
+        transactionType: formData.transactionType,
+        customTransactionType: formData.transactionType === 'Other' ? formData.customTransactionType : null,
+        reason: formData.reason.trim(),
+        reference: formData.reference.trim() || null,
+        paymentMethod: formData.paymentMethod,
+        receivingAccount: formData.receivingAccount,
+        memberId: loggedInMemberRecord ? loggedInMemberRecord.id : null,
+        allocationType: formData.allocationType,
+        allocationRef: formData.allocationRef || null,
+        attachmentName: formData.attachmentName || null,
+        attachmentUrl: formData.attachmentUrl || null,
+      };
+
+      if (formData.allocationType === 'Loan' && formData.allocationRef) {
+        payload.loanId = formData.allocationRef;
+      } else if (formData.allocationType === 'Project' && formData.allocationRef) {
+        payload.projectId = formData.allocationRef;
+      } else if (formData.allocationType === 'Investment' && formData.allocationRef) {
+        payload.investmentId = formData.allocationRef;
+      }
+
+      const res = await fetch('/api/deposits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json());
+
+      if (!res.success) {
+        alert(res.error || 'Failed to submit deposit entry');
+        return;
+      }
+
+      // Success! Reset form and show prominent confirmation message
+      setFormData({
+        ...initialForm,
+        depositorName: myName,
+        memberId: loggedInMemberRecord ? String(loggedInMemberRecord.id) : '',
+      });
+      setSubmittedSuccess(true);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      alert('Error submitting deposit: ' + (err.message || 'Network error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // =========================================================================
+  // TASK 1: DEPOSIT PAGE – MEMBER VIEW
+  // When any ordinary member logs into Dreamloom Financial and opens the Deposit tab:
+  // - Display ONLY the Deposit Entry screen.
+  // - Do not display the full Deposit Register.
+  // - Do not display other members' deposits.
+  // - Do not display financial summaries, transaction histories, reconciliation
+  //   information or administrative controls.
+  // - Members must only be able to submit their own deposit entries.
+  // - Prominently display confirmation message upon save:
+  //     YOUR DEPOSIT RECEIVED SUCCESSFULLY
+  //     THANKYOU FOR TRUSTING DREAMLOOM HOLDING LIMITED
+  // =========================================================================
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto pb-12">
+        {/* Member Header Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#064E3B] via-[#0A5C36] to-[#2E9E5B] p-6 md:p-8 text-white shadow-xl">
+          <div className="absolute -right-20 -bottom-24 w-80 h-80 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                <Landmark className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">Deposit Entry</h1>
+                <p className="text-xs md:text-sm text-emerald-100 font-medium mt-0.5">Dreamloom Holding Limited Treasury Inflow & Direct Ledger Submission</p>
+              </div>
+            </div>
+
+            <div className="bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl px-4 py-2 text-xs text-emerald-100 flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-pulse" />
+              <div>
+                <span className="font-bold text-white block">{currentUser?.fullName || currentUser?.name || 'Verified Member'}</span>
+                <span className="text-[11px] opacity-90">{currentUser?.email}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* PROMINENT CONFIRMATION MESSAGE ON SUCCESSFUL SAVE */}
+        {submittedSuccess && (
+          <div className="bg-emerald-50 border-2 border-emerald-500 rounded-3xl p-8 shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-[#0A5C36] text-white rounded-full flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#0A5C36] tracking-tight uppercase">
+                YOUR DEPOSIT RECEIVED SUCCESSFULLY
+              </h2>
+              <p className="text-base sm:text-lg font-black text-emerald-900 uppercase tracking-wide">
+                THANKYOU FOR TRUSTING DREAMLOOM HOLDING LIMITED
+              </p>
+            </div>
+            <p className="text-xs text-slate-600 max-w-md mx-auto">
+              Your deposit transaction has been permanently saved to the official Dreamloom company records.
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmittedSuccess(false);
+                  setFormData({
+                    ...initialForm,
+                    depositorName: currentUser?.fullName || currentUser?.name || '',
+                    memberId: loggedInMemberRecord ? String(loggedInMemberRecord.id) : '',
+                  });
+                }}
+                className="px-6 py-2.5 bg-[#0A5C36] hover:bg-[#064E3B] text-white font-bold text-xs rounded-xl shadow transition cursor-pointer"
+              >
+                Submit Another Deposit Entry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* DEPOSIT ENTRY SCREEN */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 text-slate-900">
+          <div className="pb-4 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0A5C36]">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Deposit Entry Form</h3>
+                <p className="text-xs text-slate-500">Official company inflow recording and automatic ledger assignment</p>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1">
+              Member Portal
+            </span>
+          </div>
+
+          <form onSubmit={handleMemberSubmitDeposit} className="space-y-4">
+            {/* Row 1: Depositor Name (LOCKED to logged-in member) & Date */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Depositor Name / Member Identity <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={currentUser?.fullName || currentUser?.name || ''}
+                    className="w-full bg-slate-100 border border-slate-300 text-slate-800 rounded-xl px-3 py-2 text-xs font-bold cursor-not-allowed select-none"
+                  />
+                  <div className="absolute right-3 top-2 flex items-center gap-1 text-[11px] font-semibold text-emerald-800 select-none">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Locked</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Locked to your verified member profile. Submissions under another member are prohibited.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Deposit Date <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono font-medium focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Highlighted Mandatory AMOUNT DEPOSITED (KES) */}
+            <div className="bg-emerald-50/70 p-4 rounded-2xl border-2 border-emerald-500/40 shadow-sm space-y-1.5">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <label className="text-xs font-black uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                  <Coins className="w-4 h-4 text-[#0A5C36]" /> AMOUNT DEPOSITED (KES) <span className="text-rose-600 font-bold">* MANDATORY</span>
+                </label>
+                <span className="text-[10px] text-emerald-800 font-mono font-medium">Whole numbers & decimals accepted</span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3.5 top-2.5 text-sm font-bold font-mono text-[#0A5C36] select-none">KES</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0.01"
+                  required
+                  placeholder="0.00"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  className="w-full bg-white border border-emerald-300 rounded-xl pl-14 pr-4 py-2.5 text-base text-slate-900 font-mono font-black tracking-tight focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Must be greater than zero. Recorded persistently to official company database.
+              </p>
+            </div>
+
+            {/* Row 2: Transaction Type & Payment Method */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Transaction Type <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.transactionType}
+                  onChange={(e) => setFormData({ ...formData, transactionType: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {TRANSACTION_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Payment Method <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.paymentMethod}
+                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                  {PAYMENT_METHODS.map((pm) => (
+                    <option key={pm} value={pm}>{pm}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Optional Custom Type if 'Other' */}
+            {formData.transactionType === 'Other' && (
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Custom Transaction Classification
+                </label>
+                <input
+                  type="text"
+                  placeholder="Specify classification (e.g. Grant, Equipment Sale, Refund)..."
+                  value={formData.customTransactionType}
+                  onChange={(e) => setFormData({ ...formData, customTransactionType: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+
+            {/* Row 3: Receiving Account */}
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Receiving Company Account <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={formData.receivingAccount}
+                onChange={(e) => setFormData({ ...formData, receivingAccount: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500 cursor-pointer"
+              >
+                {RECEIVING_ACCOUNTS.map((acc) => (
+                  <option key={acc} value={acc}>{acc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Row 4: External Reference & Duplicate Warning */}
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Reference Number (M-Pesa / Bank Ref / Receipt Slip)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. QK89123456 or EQ-TXN-9981"
+                value={formData.reference}
+                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-mono uppercase font-bold focus:outline-none focus:border-emerald-500"
+              />
+              {duplicateWarning && (
+                <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-start gap-1.5 font-sans">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                  <span>{duplicateWarning}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Row 5: Reason / Description */}
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Reason / Description <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                required
+                rows={2}
+                placeholder="Explain the purpose of this deposit..."
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Row 6: Financial Allocation (Filtered to Member's own active loans) */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#0A5C36]">
+                <ShieldAlert className="w-3.5 h-3.5" /> Financial Integration & Allocation (Optional)
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium block mb-1">Allocate To Module:</label>
+                  <select
+                    value={formData.allocationType}
+                    onChange={(e) => setFormData({ ...formData, allocationType: e.target.value, allocationRef: '' })}
+                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="None">None (Unallocated Inflow)</option>
+                    <option value="Contribution">Monthly Contribution</option>
+                    <option value="Loan">Loan Repayment</option>
+                    <option value="Project">Project Funding</option>
+                    <option value="Investment">Investment Return</option>
+                    <option value="Land">Land Purchase (Mawega)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-slate-600 font-medium block mb-1">Target Identifier / Reference:</label>
+                  {formData.allocationType === 'Loan' ? (
+                    <select
+                      value={formData.allocationRef}
+                      onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Your Active Loan --</option>
+                      {memberLoans.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.id} - {l.borrower} (Bal: KES {Number(l.balance || 0).toLocaleString()})
+                        </option>
+                      ))}
+                      {memberLoans.length === 0 && (
+                        <option disabled value="">No active loans found under your account</option>
+                      )}
+                    </select>
+                  ) : formData.allocationType === 'Contribution' ? (
+                    <select
+                      value={formData.allocationRef}
+                      onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Month / Cycle --</option>
+                      {ALL_MONTHS.map((m) => (
+                        <option key={m} value={`${m} 2026`}>{m} 2026</option>
+                      ))}
+                    </select>
+                  ) : formData.allocationType === 'Project' ? (
+                    <select
+                      value={formData.allocationRef}
+                      onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Project --</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.name}>{p.name} ({p.id})</option>
+                      ))}
+                    </select>
+                  ) : formData.allocationType === 'Investment' ? (
+                    <select
+                      value={formData.allocationRef}
+                      onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="">-- Select Investment Asset --</option>
+                      {investments.map((inv) => (
+                        <option key={inv.id} value={inv.asset}>{inv.asset} ({inv.type})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Optional parcel or note..."
+                      value={formData.allocationRef}
+                      onChange={(e) => setFormData({ ...formData, allocationRef: e.target.value })}
+                      className="w-full bg-white border border-slate-200 text-slate-900 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 7: Attachment Reference / Name */}
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Attachment Reference (Bank Slip / M-Pesa Confirmation Screenshot)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. MPesa_Confirmation_QK89123456.png or Bank_Slip_Scan.pdf"
+                value={formData.attachmentName}
+                onChange={(e) => setFormData({ ...formData, attachmentName: e.target.value })}
+                className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Submit Button (Disables during submit to prevent duplicate submissions) */}
+            <div className="pt-3 border-t border-slate-200 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting || !!duplicateWarning}
+                className="w-full sm:w-auto px-6 py-3 bg-[#0A5C36] hover:bg-[#047857] disabled:opacity-50 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Check className="w-4 h-4" />
+                {isSubmitting ? 'Recording Deposit...' : 'Submit Deposit Entry'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

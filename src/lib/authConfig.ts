@@ -10,22 +10,13 @@ export interface AuthorizedUser {
 
 export const AUTHORIZED_USERS: AuthorizedUser[] = [
   {
-    email: 'kamera@dreamloom.co.ke',
-    password: 'Simon@%322',
-    name: 'Simon Memia',
-    fullName: 'Simon Memia Wanjiru',
-    nationalId: '32242103',
-    phone: '0719545283',
-    role: 'Director / Super Admin',
-  },
-  {
     email: 'simon@dreamloom.co.ke',
     password: 'Simon@%322',
     name: 'Simon Memia',
     fullName: 'Simon Memia Wanjiru',
     nationalId: '32242103',
     phone: '0719545283',
-    role: 'Director / Member',
+    role: 'Director / Super Admin',
   },
   {
     email: 'david@dreamloom.co.ke',
