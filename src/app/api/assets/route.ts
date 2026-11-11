@@ -6,6 +6,12 @@ import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
 export async function GET() {
   try {
     await ensureDatabaseSchema();
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "cost" DOUBLE PRECISION DEFAULT 0.0`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "custodian" TEXT DEFAULT 'Dreamloom Trustees'`);
+    } catch (e) {
+      console.warn('Asset schema ensure caught:', e);
+    }
     const assets = await prisma.asset.findMany({
       orderBy: { id: 'asc' },
     });

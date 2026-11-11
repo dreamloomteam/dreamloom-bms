@@ -6,6 +6,27 @@ import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
 export async function GET() {
   try {
     await ensureDatabaseSchema();
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Inventory" (
+          "id" TEXT NOT NULL,
+          "sku" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "location" TEXT NOT NULL DEFAULT 'Executive Safe',
+          "quantity" INTEGER NOT NULL DEFAULT 0,
+          "reorderLevel" INTEGER NOT NULL DEFAULT 0,
+          "unitValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "totalValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "status" TEXT NOT NULL DEFAULT 'In Stock',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "Inventory_pkey" PRIMARY KEY ("id")
+        )
+      `);
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Inventory_sku_key" ON "Inventory"("sku")`);
+    } catch (e) {
+      console.warn('Inventory schema ensure caught:', e);
+    }
     const items = await prisma.inventory.findMany({
       orderBy: { sku: 'asc' },
     });

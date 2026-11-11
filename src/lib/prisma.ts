@@ -115,39 +115,54 @@ export async function ensureDatabaseSchema(): Promise<void> {
       CREATE UNIQUE INDEX IF NOT EXISTS "PageAppearance_user_page_idx" ON "PageAppearance" ("userId", "pageKey")
     `);
 
-    // 4c. Create Asset & Inventory tables idempotently
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "Asset" (
-        "id" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "category" TEXT NOT NULL,
-        "valuation" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-        "cost" DOUBLE PRECISION DEFAULT 0.0,
-        "location" TEXT NOT NULL DEFAULT 'Nairobi',
-        "custodian" TEXT DEFAULT 'Dreamloom Trustees',
-        "status" TEXT NOT NULL DEFAULT 'Active',
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "Asset_pkey" PRIMARY KEY ("id")
-      );
-      ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "cost" DOUBLE PRECISION DEFAULT 0.0;
-      ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "custodian" TEXT DEFAULT 'Dreamloom Trustees';
+    // 4c. Create Asset & Inventory tables and columns idempotently
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Asset" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "valuation" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "cost" DOUBLE PRECISION DEFAULT 0.0,
+          "location" TEXT NOT NULL DEFAULT 'Nairobi',
+          "custodian" TEXT DEFAULT 'Dreamloom Trustees',
+          "status" TEXT NOT NULL DEFAULT 'Active',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "Asset_pkey" PRIMARY KEY ("id")
+        )
+      `);
+    } catch (e) { console.warn('Asset table create notice:', e); }
 
-      CREATE TABLE IF NOT EXISTS "Inventory" (
-        "id" TEXT NOT NULL,
-        "sku" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "category" TEXT NOT NULL,
-        "location" TEXT NOT NULL DEFAULT 'Executive Safe',
-        "quantity" INTEGER NOT NULL DEFAULT 0,
-        "reorderLevel" INTEGER NOT NULL DEFAULT 0,
-        "unitValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-        "totalValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-        "status" TEXT NOT NULL DEFAULT 'In Stock',
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "Inventory_pkey" PRIMARY KEY ("id")
-      );
-      CREATE UNIQUE INDEX IF NOT EXISTS "Inventory_sku_key" ON "Inventory"("sku");
-    `);
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "cost" DOUBLE PRECISION DEFAULT 0.0`);
+    } catch (e) { console.warn('Asset cost column notice:', e); }
+
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Asset" ADD COLUMN IF NOT EXISTS "custodian" TEXT DEFAULT 'Dreamloom Trustees'`);
+    } catch (e) { console.warn('Asset custodian column notice:', e); }
+
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Inventory" (
+          "id" TEXT NOT NULL,
+          "sku" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "location" TEXT NOT NULL DEFAULT 'Executive Safe',
+          "quantity" INTEGER NOT NULL DEFAULT 0,
+          "reorderLevel" INTEGER NOT NULL DEFAULT 0,
+          "unitValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "totalValue" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "status" TEXT NOT NULL DEFAULT 'In Stock',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "Inventory_pkey" PRIMARY KEY ("id")
+        )
+      `);
+    } catch (e) { console.warn('Inventory table create notice:', e); }
+
+    try {
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Inventory_sku_key" ON "Inventory"("sku")`);
+    } catch (e) { console.warn('Inventory sku index notice:', e); }
 
     // Seed default assets if empty
     try {
