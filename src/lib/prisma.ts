@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { initialContributions } from './initialData';
 import { normalizeMonthYear } from './dateUtils';
+import { OFFICIAL_LOAN_PORTFOLIO } from './officialLoanPortfolio';
+import { toUTCMidnight } from './loanCalculator';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -70,7 +72,8 @@ export async function ensureDatabaseSchema(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "allocationPolicy" TEXT NOT NULL DEFAULT 'Interest First',
         ADD COLUMN IF NOT EXISTS "purpose" TEXT DEFAULT 'Personal / Business Development',
         ADD COLUMN IF NOT EXISTS "approvalRef" TEXT,
-        ADD COLUMN IF NOT EXISTS "remarks" TEXT;
+        ADD COLUMN IF NOT EXISTS "remarks" TEXT,
+        ADD COLUMN IF NOT EXISTS "completedPeriods" INTEGER;
     `);
 
     // 4. Create LoanRepayment table idempotently
@@ -243,51 +246,8 @@ export async function ensureDatabaseSchema(): Promise<void> {
       console.error('Error ensuring CNT-016 contribution record:', e);
     }
 
-    // 6. Ensure official loans are present if Loan table is empty
-    const loanCount = await prisma.loan.count();
-    if (loanCount === 0) {
-      const { initialLoans } = await import('./initialData');
-      const members = await prisma.member.findMany();
-      for (const l of initialLoans) {
-        const borrowerName = (l as any).borrower || (l as any).member || '';
-        const memberObj = members.find(
-          m =>
-            m.fullName.toLowerCase().trim() === borrowerName.toLowerCase().trim() ||
-            m.fullName.toLowerCase().includes(borrowerName.toLowerCase().trim())
-        );
-        if (!memberObj) continue;
-        const isSettled = l.status === 'Settled';
-        const totalPayable = Number((l as any).totalLoan ?? l.principal + l.interest);
-        const rate = l.principal > 0 ? Math.round((l.interest / l.principal) * 100 * 100) / 100 : 10.0;
-        const issueDt = new Date(l.issueDate + ' UTC');
-        const clearedDt =
-          l.clearedDate && l.clearedDate !== '-' ? new Date(l.clearedDate + ' UTC') : null;
-
-        await prisma.loan.create({
-          data: {
-            id: l.id,
-            memberId: memberObj.id,
-            issueDate: isNaN(issueDt.getTime()) ? new Date('2026-01-14T00:00:00.000Z') : issueDt,
-            principal: l.principal,
-            interest: l.interest,
-            totalPayable,
-            paidAmount: l.paid,
-            principalPaid: isSettled ? l.principal : 0,
-            interestPaid: isSettled ? l.interest : 0,
-            interestRate: rate !== undefined && rate !== null ? rate : 10.0,
-            interestMethod: 'Simple',
-            compoundingFrequency: 'Monthly',
-            durationMonths: 6,
-            repaymentTerms: 'Monthly Anniversary',
-            allocationPolicy: 'Interest First',
-            purpose: 'Member Credit Facility',
-            approvalRef: `APR-${l.id}`,
-            status: l.status,
-            clearedDate: clearedDt && !isNaN(clearedDt.getTime()) ? clearedDt : null
-          }
-        });
-      }
-    }
+    // 6. STRICT OFFICIAL LOAN PORTFOLIO SYNC (Exact 14 Records from PDF/Excel)
+    await syncOfficialLoansDataset();
 
     // 7. Ensure unique constraint & performance indexes exist idempotently
     const indexQueries = [
@@ -307,6 +267,109 @@ export async function ensureDatabaseSchema(): Promise<void> {
     globalForPrisma.schemaEnsured = true;
   } catch (err) {
     console.error('Warning during ensureDatabaseSchema:', err);
+  }
+}
+
+/**
+ * Synchronizes the Loan Portfolio table to contain strictly the 14 official loan records from PDF/Excel.
+ * Completely replaces existing loans and loan repayments with the authoritative historical records.
+ * Preserves all exact figures, decimal values, issue dates (02/07/2026 for L1076), and settlement dates.
+ */
+export async function syncOfficialLoansDataset(force: boolean = false): Promise<void> {
+  try {
+    const existingLoans = await prisma.loan.findMany({
+      select: {
+        id: true,
+        status: true,
+        principal: true,
+        interest: true,
+        totalPayable: true,
+        completedPeriods: true
+      }
+    });
+    const officialIds = new Set(OFFICIAL_LOAN_PORTFOLIO.map(l => l.id.toLowerCase()));
+
+    // Check if exactly 14 records exist and their key figures match
+    let isExact14 =
+      existingLoans.length === 14 &&
+      existingLoans.every(l => officialIds.has(l.id.toLowerCase()));
+
+    if (isExact14 && !force) {
+      for (const item of OFFICIAL_LOAN_PORTFOLIO) {
+        const found = existingLoans.find(el => el.id.toLowerCase() === item.id.toLowerCase());
+        if (
+          !found ||
+          found.status !== item.status ||
+          Math.abs(found.principal - item.principal) > 0.01 ||
+          Math.abs(found.interest - item.interestAccrued) > 0.01 ||
+          Math.abs(found.totalPayable - item.totalLoanAmount) > 0.01
+        ) {
+          isExact14 = false;
+          break;
+        }
+      }
+    }
+
+    if (!isExact14 || force) {
+      console.log('[Official Loans Sync] Replacing Loan Portfolio dataset with the 14 official records from PDF...');
+
+      // 1. Remove all existing repayments and loans
+      await prisma.loanRepayment.deleteMany({});
+      await prisma.loan.deleteMany({});
+
+      // 2. Insert the 14 official records in exact descending order of issue date
+      for (const item of OFFICIAL_LOAN_PORTFOLIO) {
+        const issueDateUTC = toUTCMidnight(item.issueDateISO);
+        const settlementDateUTC = item.settlementDateISO ? toUTCMidnight(item.settlementDateISO) : null;
+
+        await prisma.loan.create({
+          data: {
+            id: item.id,
+            memberId: item.memberId,
+            issueDate: issueDateUTC,
+            principal: item.principal,
+            interest: item.interestAccrued,
+            totalPayable: item.totalLoanAmount,
+            paidAmount: item.totalPaid,
+            principalPaid: item.principalRepaid,
+            interestPaid: item.interestPaid,
+            interestRate: item.monthlyInterestRate,
+            interestMethod: item.interestMethod,
+            compoundingFrequency: 'Monthly',
+            durationMonths: item.durationMonths,
+            repaymentTerms: 'Monthly Anniversary',
+            allocationPolicy: 'Interest First',
+            purpose: item.purpose,
+            approvalRef: item.approvalRef,
+            remarks: item.remarks,
+            status: item.status,
+            clearedDate: settlementDateUTC,
+            completedPeriods: item.completedPeriods
+          }
+        });
+
+        if (item.totalPaid > 0) {
+          await prisma.loanRepayment.create({
+            data: {
+              loanId: item.id,
+              memberId: item.memberId,
+              paymentDate: settlementDateUTC || issueDateUTC,
+              paymentDateStr: item.settlementDateStr || item.issueDateStr,
+              amount: item.totalPaid,
+              interestAllocated: item.interestPaid,
+              principalAllocated: item.principalRepaid,
+              paymentMethod: 'M-Pesa',
+              reference: `SET-${item.id}`,
+              remarks: 'Official Historical Settlement',
+              recordedBy: 'Official Records'
+            }
+          });
+        }
+      }
+      console.log('[Official Loans Sync] Successfully replaced loan portfolio with 14 official records.');
+    }
+  } catch (err) {
+    console.error('Error during syncOfficialLoansDataset:', err);
   }
 }
 

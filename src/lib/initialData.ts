@@ -121,200 +121,39 @@ export const initialMembers = [
   }
 ];
 
-export const initialLoans = [
-  {
-    "id": "L001",
-    "issueDate": "2026-01-14",
-    "borrower": "Simon Memia Wanjiru",
-    "principal": 6000,
-    "interest": 900,
-    "totalLoan": 6900,
-    "paid": 6900,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "2026-02-14"
-  },
-  {
-    "id": "L002",
-    "issueDate": "2026-02-14",
-    "borrower": "David Wainaina Kinyua",
-    "principal": 1500,
-    "interest": 225,
-    "totalLoan": 1725,
-    "paid": 1725,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L003",
-    "issueDate": "2026-04-15",
-    "borrower": "Daniel Kamau Njiriri",
-    "principal": 10000,
-    "interest": 1500,
-    "totalLoan": 11500,
-    "paid": 11500,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "2026-04-22"
-  },
-  {
-    "id": "L004",
-    "issueDate": "2026-02-14",
-    "borrower": "Simon Memia Wanjiru",
-    "principal": 6000,
-    "interest": 900,
-    "totalLoan": 6900,
-    "paid": 6900,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L004-B",
-    "issueDate": "2026-05-14",
-    "borrower": "Samuel Kamau Nguuro",
-    "principal": 6000,
-    "interest": 900,
-    "totalLoan": 6900,
-    "paid": 6900,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L005",
-    "issueDate": "2026-05-14",
-    "borrower": "Simon Memia Wanjiru",
-    "principal": 12000,
-    "interest": 1800,
-    "totalLoan": 13800,
-    "paid": 13800,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L006",
-    "issueDate": "2026-05-14",
-    "borrower": "Daniel Kamau Njiriri",
-    "principal": 10000,
-    "interest": 1500,
-    "totalLoan": 11500,
-    "paid": 11500,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L007",
-    "issueDate": "2026-08-05",
-    "borrower": "David Wainaina Kinyua",
-    "principal": 1500,
-    "interest": 150,
-    "totalLoan": 1650,
-    "paid": 1650,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L008",
-    "issueDate": "2026-06-04",
-    "borrower": "David Wainaina Kinyua",
-    "principal": 4000,
-    "interest": 400,
-    "totalLoan": 4400,
-    "paid": 4400,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L009",
-    "issueDate": "2026-07-05",
-    "borrower": "Samuel Kamau Nguuro",
-    "principal": 6000,
-    "interest": 600,
-    "totalLoan": 6600,
-    "paid": 6600,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L010",
-    "issueDate": "2026-10-01",
-    "borrower": "Beatrice Njoki Muthoni",
-    "principal": 15000,
-    "interest": 1500,
-    "totalLoan": 16500,
-    "paid": 0,
-    "balance": 16500,
-    "status": "Active",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L011",
-    "issueDate": "2026-08-14",
-    "borrower": "Daniel Kamau Njiriri",
-    "principal": 9000,
-    "interest": 900,
-    "totalLoan": 9900,
-    "paid": 9900,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "2026-10-31"
-  },
-  {
-    "id": "L012",
-    "issueDate": "2026-08-14",
-    "borrower": "Elijah Waitara Gichari",
-    "principal": 6000,
-    "interest": 600,
-    "totalLoan": 6600,
-    "paid": 6600,
-    "balance": 0,
-    "status": "Settled",
-    "clearedDate": "2026-10-31"
-  },
-  {
-    "id": "L013",
-    "issueDate": "2026-08-14",
-    "borrower": "Simon Memia Wanjiru",
-    "principal": 3000,
-    "interest": 300,
-    "totalLoan": 3300,
-    "paid": 0,
-    "balance": 3300,
-    "status": "Active",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L014",
-    "issueDate": "2026-11-02",
-    "borrower": "David Wainaina Kinyua",
-    "principal": 4000,
-    "interest": 400,
-    "totalLoan": 4400,
-    "paid": 0,
-    "balance": 4400,
-    "status": "Active",
-    "clearedDate": "-"
-  },
-  {
-    "id": "L015",
-    "issueDate": "2026-10-28",
-    "borrower": "David Wainaina Kinyua",
-    "principal": 4500,
-    "interest": 450,
-    "totalLoan": 4950,
-    "paid": 0,
-    "balance": 4950,
-    "status": "Active",
-    "clearedDate": "-"
-  }
-];
+import { OFFICIAL_LOAN_PORTFOLIO } from './officialLoanPortfolio';
+
+export const initialLoans = OFFICIAL_LOAN_PORTFOLIO.map(l => ({
+  id: l.id,
+  issueDate: l.issueDateStr,
+  issueDateISO: l.issueDateISO,
+  borrower: l.memberName,
+  memberName: l.memberName,
+  memberId: l.memberId,
+  principal: l.principal,
+  interestRate: l.monthlyInterestRate,
+  interestMethod: l.interestMethod,
+  completedPeriods: l.completedPeriods,
+  interest: l.interestAccrued,
+  totalInterestAccrued: l.interestAccrued,
+  totalLoan: l.totalLoanAmount,
+  totalLoanAmount: l.totalLoanAmount,
+  totalPayable: l.totalLoanAmount,
+  interestPaid: l.interestPaid,
+  principalRepaid: l.principalRepaid,
+  principalPaid: l.principalRepaid,
+  paid: l.totalPaid,
+  paidAmount: l.totalPaid,
+  totalAmountPaid: l.totalPaid,
+  balance: l.outstandingBalance,
+  totalOutstandingBalance: l.outstandingBalance,
+  status: l.status,
+  clearedDate: l.settlementDateStr || '-',
+  settlementDate: l.settlementDateStr || '-',
+  approvalRef: l.approvalRef,
+  purpose: l.purpose,
+  remarks: l.remarks
+}));
 
 export const initialContributions = [
   {

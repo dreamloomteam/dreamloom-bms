@@ -127,6 +127,7 @@ model Loan {
   remarks              String?
   status               String          @default("Active")
   clearedDate          DateTime?
+  completedPeriods     Int?
   repayments           LoanRepayment[]
 
   @@index([memberId])

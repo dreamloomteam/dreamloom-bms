@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
+import { prisma, ensureDatabaseSchema, syncOfficialLoansDataset } from '@/lib/prisma';
 import {
   calculateLoanProfile,
   toUTCMidnight,
@@ -7,6 +7,7 @@ import {
 } from '@/lib/loanCalculator';
 import { ALL_MONTHS, MONTH_ABBRS } from '@/lib/dateUtils';
 import { createAuditLog, isAuthorizedEditor, resolveEditorName } from '@/lib/audit';
+import { getOfficialLoan } from '@/lib/officialLoanPortfolio';
 
 function enrichLoanForResponse(loan: any, asOfDate?: Date | string | null) {
   const memberName = loan.member?.fullName || loan.borrower || 'Member';
@@ -108,6 +109,7 @@ function resolveAsOfDateFromParams(searchParams: URLSearchParams): Date | null {
 export async function GET(request: Request) {
   try {
     await ensureDatabaseSchema();
+    await syncOfficialLoansDataset();
     const { searchParams } = new URL(request.url);
     const asOfDate = resolveAsOfDateFromParams(searchParams);
     const filterMemberId = searchParams.get('memberId');
@@ -122,9 +124,9 @@ export async function GET(request: Request) {
       orderBy: { issueDate: 'desc' }
     });
 
-    // Synchronize authoritative computed values back into PostgreSQL for loans with repayments
+    // Synchronize authoritative computed values back into PostgreSQL for temporary/new loans only
     for (const l of loans) {
-      if (l.status === 'Cancelled') continue;
+      if (l.status === 'Cancelled' || getOfficialLoan(l.id)) continue;
       const profile = calculateLoanProfile(
         { ...l, memberName: l.member?.fullName, repayments: l.repayments || [] },
         asOfDate
@@ -176,6 +178,14 @@ export async function GET(request: Request) {
         enriched = enriched.filter(l => l.memberId === mId);
       }
     }
+
+    // Sort strictly by issueDate descending (newest first)
+    enriched.sort((a, b) => {
+      const timeA = toUTCMidnight(a.issueDate).getTime();
+      const timeB = toUTCMidnight(b.issueDate).getTime();
+      return timeB - timeA;
+    });
+
     return NextResponse.json(enriched);
   } catch (error) {
     console.error('Failed to fetch loans:', error);

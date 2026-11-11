@@ -9,6 +9,7 @@
  */
 
 import { MONTH_ABBRS } from './dateUtils';
+import { getOfficialLoan } from './officialLoanPortfolio';
 
 export type InterestMethod = 'Simple' | 'Reducing Balance' | 'Compound';
 export type AllocationPolicy = 'Interest First' | 'Principal First' | 'Proportional';
@@ -46,6 +47,7 @@ export interface LoanInput {
   interestMethod?: string;
   compoundingFrequency?: string;
   durationMonths?: number;
+  completedPeriods?: number | null;
   repaymentTerms?: string | null;
   allocationPolicy?: string;
   purpose?: string | null;
@@ -89,7 +91,7 @@ export interface CalculatedLoanProfile {
   purpose: string;
   approvalRef: string;
   remarks: string;
-  completedPeriods: number;
+  completedPeriods: number | null;
   totalInterestAccrued: number;
   interestPaid: number;
   unpaidInterest: number;
@@ -130,6 +132,14 @@ export function toUTCMidnight(input: Date | string | null | undefined): Date {
   const iso = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (iso) {
     return new Date(Date.UTC(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, parseInt(iso[3], 10)));
+  }
+  // Match DD/MM/YYYY or DD-MM-YYYY (numeric British/Kenyan format)
+  const dmyNum = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyNum) {
+    const day = parseInt(dmyNum[1], 10);
+    const month = parseInt(dmyNum[2], 10) - 1;
+    const year = parseInt(dmyNum[3], 10);
+    return new Date(Date.UTC(year, month, day));
   }
   // Match DD-MMM-YYYY or DD MMM YYYY
   const dmy = str.match(/^(\d{1,2})[-\s]([A-Za-z]{3,})[-\s](\d{4})/);
@@ -279,6 +289,72 @@ export function calculateLoanProfile(
   loan: LoanInput & { asOfDate?: Date | string | null },
   asOfDateInput?: Date | string | null
 ): CalculatedLoanProfile {
+  // Check if loan is in the Official 14 Loan Portfolio — STRICT NO RECALCULATION
+  const official = getOfficialLoan(loan.id);
+  if (official) {
+    const isSettled = official.status === 'Settled';
+    const issueDateUTC = toUTCMidnight(official.issueDateISO);
+    const settlementDateUTC = official.settlementDateISO ? toUTCMidnight(official.settlementDateISO) : null;
+
+    const enrichedRepayments: Array<
+      LoanRepaymentInput & {
+        computedInterestAllocated: number;
+        computedPrincipalAllocated: number;
+        runningBalanceAfter: number;
+      }
+    > = [];
+
+    if (official.totalPaid > 0) {
+      enrichedRepayments.push({
+        id: `REP-${official.id}`,
+        loanId: official.id,
+        memberId: official.memberId,
+        paymentDate: settlementDateUTC || issueDateUTC,
+        paymentDateStr: official.settlementDateStr || official.issueDateStr,
+        amount: official.totalPaid,
+        interestAllocated: official.interestPaid,
+        principalAllocated: official.principalRepaid,
+        computedInterestAllocated: official.interestPaid,
+        computedPrincipalAllocated: official.principalRepaid,
+        runningBalanceAfter: 0,
+        paymentMethod: 'M-Pesa',
+        reference: `HIST-${official.id}`,
+        remarks: 'Official Historical Settlement'
+      });
+    }
+
+    return {
+      id: official.id,
+      memberId: official.memberId,
+      memberName: official.memberName,
+      issueDate: official.issueDateStr,
+      issueDateFormatted: formatDisplayDate(issueDateUTC),
+      originalPrincipal: official.principal,
+      monthlyInterestRate: official.monthlyInterestRate,
+      interestMethod: official.interestMethod as InterestMethod,
+      compoundingFrequency: 'Monthly',
+      loanDuration: official.durationMonths,
+      repaymentTerms: 'Monthly Anniversary',
+      allocationPolicy: 'Interest First',
+      purpose: official.purpose,
+      approvalRef: official.approvalRef,
+      remarks: official.remarks,
+      completedPeriods: official.completedPeriods,
+      totalInterestAccrued: official.interestAccrued,
+      interestPaid: official.interestPaid,
+      unpaidInterest: isSettled ? 0 : official.interestAccrued,
+      principalRepaid: official.principalRepaid,
+      remainingPrincipal: isSettled ? 0 : official.principal,
+      totalLoanAmount: official.totalLoanAmount,
+      totalAmountPaid: official.totalPaid,
+      totalOutstandingBalance: official.outstandingBalance,
+      status: official.status,
+      settlementDate: official.settlementDateStr || '-',
+      schedule: [],
+      repayments: enrichedRepayments
+    };
+  }
+
   const issueDate = toUTCMidnight(loan.issueDate);
   const effectiveAsOf = asOfDateInput || loan.asOfDate;
   const rawAsOfDate = effectiveAsOf ? toUTCMidnight(effectiveAsOf) : toUTCMidnight(new Date());

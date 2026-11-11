@@ -40,7 +40,8 @@ import {
   CalculatedLoanProfile,
   InterestMethod,
   AllocationPolicy,
-  roundCurrency
+  roundCurrency,
+  toUTCMidnight
 } from '@/lib/loanCalculator';
 import { ALL_MONTHS, AVAILABLE_YEARS, getEATISODate } from '@/lib/dateUtils';
 import { getMemberAvatar } from '@/lib/memberAvatars';
@@ -323,9 +324,9 @@ export default function LoanPortfolioTab({
         return false;
       }
       if (filterYear !== 'All' || filterMonth !== 'All') {
-        const [yStr, mStr] = l.issueDate.split('-');
-        const yNum = parseInt(yStr, 10);
-        const mIdx = parseInt(mStr, 10) - 1;
+        const d = toUTCMidnight(l.issueDate);
+        const yNum = d.getUTCFullYear();
+        const mIdx = d.getUTCMonth();
         if (filterYear !== 'All' && yNum !== parseInt(filterYear, 10)) return false;
         if (filterMonth !== 'All' && ALL_MONTHS[mIdx]?.toLowerCase() !== filterMonth.toLowerCase()) {
           return false;
@@ -337,7 +338,9 @@ export default function LoanPortfolioTab({
     return [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortBy === 'issueDate') {
-        cmp = a.issueDate.localeCompare(b.issueDate);
+        const dateA = toUTCMidnight(a.issueDate).getTime();
+        const dateB = toUTCMidnight(b.issueDate).getTime();
+        cmp = dateA - dateB;
       } else if (sortBy === 'principal') {
         cmp = a.originalPrincipal - b.originalPrincipal;
       } else if (sortBy === 'interest') {
@@ -1631,7 +1634,9 @@ export default function LoanPortfolioTab({
                   8. Completed Interest Periods
                 </span>
                 <span className="text-sky-700 font-extrabold mt-1 block">
-                  {activeSelectedLoan.completedPeriods} Completed Period(s)
+                  {activeSelectedLoan.completedPeriods != null
+                    ? `${activeSelectedLoan.completedPeriods} Completed Period(s)`
+                    : '-'}
                 </span>
               </div>
               <div className="bg-[#F2F9F5] border border-emerald-900/10 p-3.5 rounded-xl">

@@ -177,6 +177,7 @@ export default function Home() {
               totalLoan: Number(l.totalLoan ?? l.totalPayable ?? l.totalLoanAmount) || 0,
               paid: Number(l.paid ?? l.paidAmount ?? l.totalAmountPaid) || 0,
               balance: Number(l.balance ?? l.totalOutstandingBalance) || 0,
+              completedPeriods: l.completedPeriods !== undefined ? l.completedPeriods : null,
               status: l.status || 'Active',
               clearedDate: l.clearedDate && l.clearedDate !== '-' ? String(l.clearedDate).slice(0, 10) : (l.settlementDate || '-')
             }));
@@ -839,31 +840,8 @@ export default function Home() {
   // 3. Official Operational Expenses & Payouts Log (PDF Pages 9 & 10 - 35 Records totaling KES 381,746.42)
   const [expenses, setExpenses] = useState<any[]>(initialExpenses);
 
-  // 4. Official Loans Register (PDF Pages 7 & 8 - L001 to L019) with Settlement Date Tracking
-  const [loans, setLoans] = useState<any[]>([
-    // Settled Loans
-    { id: 'L001', issueDate: '15th Jan 2026', borrower: 'Simon Memia Wanjiru', principal: 6000.00, interest: 900.00, totalLoan: 6900.00, paid: 6900.00, balance: 0.00, status: 'Settled', clearedDate: '15th Feb 2026' },
-    { id: 'L002', issueDate: '15th Feb 2026', borrower: 'David Wainaina Kinyua', principal: 1500.00, interest: 225.00, totalLoan: 1725.00, paid: 1725.00, balance: 0.00, status: 'Settled', clearedDate: '15th Mar 2026' },
-    { id: 'L003', issueDate: '16th April 2026', borrower: 'Daniel Kamau Njiriri', principal: 10000.00, interest: 1500.00, totalLoan: 11500.00, paid: 11500.00, balance: 0.00, status: 'Settled', clearedDate: '16th May 2026' },
-    { id: 'L004', issueDate: '15th Feb 2026', borrower: 'Simon Memia Wanjiru', principal: 6000.00, interest: 900.00, totalLoan: 6900.00, paid: 6900.00, balance: 0.00, status: 'Settled', clearedDate: '15th Mar 2026' },
-    { id: 'L005', issueDate: '15th May 2026', borrower: 'Samuel Kamau Nguuro', principal: 6000.00, interest: 900.00, totalLoan: 6900.00, paid: 6900.00, balance: 0.00, status: 'Settled', clearedDate: '15th Jun 2026' },
-    { id: 'L006', issueDate: '15th May 2026', borrower: 'Simon Memia Wanjiru', principal: 12000.00, interest: 1800.00, totalLoan: 13800.00, paid: 13800.00, balance: 0.00, status: 'Settled', clearedDate: '15th Jun 2026' },
-    { id: 'L007', issueDate: '15th May 2026', borrower: 'Daniel Kamau Njiriri', principal: 10000.00, interest: 1500.00, totalLoan: 11500.00, paid: 11500.00, balance: 0.00, status: 'Settled', clearedDate: '15th Jun 2026' },
-    { id: 'L008', issueDate: '6th August 2026', borrower: 'David Wainaina Kinyua', principal: 1500.00, interest: 150.00, totalLoan: 1650.00, paid: 1650.00, balance: 0.00, status: 'Settled', clearedDate: '06th Sep 2026' },
-    { id: 'L009', issueDate: '5th June 2026', borrower: 'David Wainaina Kinyua', principal: 4000.00, interest: 400.00, totalLoan: 4400.00, paid: 4400.00, balance: 0.00, status: 'Settled', clearedDate: '05th Jul 2026' },
-    { id: 'L010', issueDate: '6th July 2026', borrower: 'Samuel Kamau Nguuro', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 6600.00, balance: 0.00, status: 'Settled', clearedDate: '06th Aug 2026' },
-
-    // Active Loans
-    { id: 'L011', issueDate: '15th August 2026', borrower: 'Simon Memia Wanjiru', principal: 12000.00, interest: 1200.00, totalLoan: 13200.00, paid: 0.00, balance: 13200.00, status: 'Active', clearedDate: '-' },
-    { id: 'L012', issueDate: 'August 2026', borrower: 'Elijah Waitara Gichari', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-    { id: 'L013', issueDate: '00th July 2026', borrower: 'Daniel Kamau Njiriri', principal: 9000.00, interest: 900.00, totalLoan: 9900.00, paid: 0.00, balance: 9900.00, status: 'Active', clearedDate: '-' },
-    { id: 'L014', issueDate: '18th June 2026', borrower: 'Beatrice Njoki Muthoni', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-    { id: 'L015', issueDate: '18th July 2026', borrower: 'Beatrice Njoki Muthoni', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-    { id: 'L016', issueDate: '18th August 2026', borrower: 'Beatrice Njoki Muthoni', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-    { id: 'L017', issueDate: 'August 2026', borrower: 'Daniel Kamau Njiriri', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-    { id: 'L018', issueDate: '02-Oct-2026', borrower: 'Beatrice Njoki Muthoni', principal: 15000.00, interest: 1500.00, totalLoan: 16500.00, paid: 0.00, balance: 16500.00, status: 'Active', clearedDate: '-' },
-    { id: 'L019', issueDate: 'October 2026', borrower: 'Beatrice Njoki Muthoni', principal: 6000.00, interest: 600.00, totalLoan: 6600.00, paid: 0.00, balance: 6600.00, status: 'Active', clearedDate: '-' },
-  ]);
+  // 4. Official Loans Register (Exact 14 Records from PDF/Excel - Sorted by Issue Date Descending)
+  const [loans, setLoans] = useState<any[]>(initialLoans);
 
   // 5. Official Fines & Penalties Log (PDF Page 15 - 14 Records)
   const [fines, setFines] = useState<any[]>(initialFines);
@@ -1698,6 +1676,7 @@ export default function Home() {
           totalLoan: Number(l.totalLoan ?? l.totalPayable ?? l.totalLoanAmount) || 0,
           paid: Number(l.paid ?? l.paidAmount ?? l.totalAmountPaid) || 0,
           balance: Number(l.balance ?? l.totalOutstandingBalance) || 0,
+          completedPeriods: l.completedPeriods !== undefined ? l.completedPeriods : null,
           status: l.status || 'Active',
           clearedDate: l.clearedDate && l.clearedDate !== '-' ? String(l.clearedDate).slice(0, 10) : (l.settlementDate || '-')
         }));
