@@ -89,8 +89,10 @@ export async function POST(request: NextRequest) {
   try {
     await ensureDatabaseSchema();
     await ensureAppearanceTable();
-    const userId = getUserIdFromRequest(request);
     const body = await request.json();
+    const userId = (body.userId && typeof body.userId === 'string' && body.userId.trim() !== '')
+      ? body.userId.toLowerCase().trim()
+      : getUserIdFromRequest(request);
     const { action = 'save', pageKey, settings, fromPageKey } = body;
 
     if (!pageKey && action !== 'reset_all') {
