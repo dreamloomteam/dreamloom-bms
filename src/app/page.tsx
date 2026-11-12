@@ -10,7 +10,7 @@ import {
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, ArrowLeft, Clock, CheckCircle2, UserCheck, ShieldAlert,
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle,
-  Palette, Sparkles, Copy, Sliders
+  Palette, Sparkles, Copy, Sliders, FileSpreadsheet
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
@@ -1243,6 +1243,44 @@ export default function Home() {
     }
     return list;
   }, [activeSelectedLog]);
+
+  // =========================================================================
+  // COMPLETE PROJECT EXCEL BACKUP HANDLER (SUPER ADMIN ONLY)
+  // =========================================================================
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [excelExportNotification, setExcelExportNotification] = useState<string | null>(null);
+
+  const handleDownloadCompleteProjectExcel = async () => {
+    if (!isAdmin) {
+      alert('Access Denied: Only Super Administrator Simon Memia Wanjiru is authorized to download the complete project backup.');
+      return;
+    }
+    setIsExportingExcel(true);
+    setExcelExportNotification(null);
+    try {
+      const res = await fetch('/api/export-excel');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to generate Excel export');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'DREAMLOOM_HOLDING_LIMITED_COMPLETE_PROJECT_BACKUP.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setExcelExportNotification('COMPLETE PROJECT EXCEL BACKUP DOWNLOADED SUCCESSFULLY');
+      setTimeout(() => setExcelExportNotification(null), 8000);
+    } catch (err: any) {
+      console.error('Excel download failed:', err);
+      alert('Download error: ' + (err.message || 'Unable to download complete project Excel.'));
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
 
   // =========================================================================
   // AUTOMATED & REACTIVE FINANCIAL CALCULATIONS
@@ -5197,6 +5235,60 @@ export default function Home() {
                 <p>System Version: 2.1 Reconciled Multi-Role High-Performance Dashboard</p>
                 <p>Company: Dreamloom Holding Limited</p>
                 <p>Permissions: Data modification restricted strictly to Simon Memia (simon@dreamloom.co.ke) &amp; Elijah Waitara</p>
+              </div>
+
+              {/* MASTER EXCEL BACKUP DOWNLOAD CARD */}
+              <div className="p-5 bg-gradient-to-br from-emerald-50/80 to-white border-2 border-emerald-600/30 rounded-2xl shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-900/10 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#0A5C36] text-white flex items-center justify-center shadow-md shadow-emerald-950/20 shrink-0">
+                      <FileSpreadsheet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">Complete Project Master Excel Backup</h3>
+                      <p className="text-xs text-slate-600">Full financial backup workbook (.xlsx) containing all 20 modules &amp; historical records</p>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 w-fit shrink-0">
+                    <CheckCircle2 className="w-3 h-3 text-[#0A5C36]" />
+                    20 Worksheets • Genuine XLSX
+                  </span>
+                </div>
+
+                <div className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
+                  <p className="font-semibold text-slate-800">Included authoritative module worksheets:</p>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Dashboard Summary • Member Directory (7 Members) • Contributions (156 Records) • Historical Contributions • Loan Portfolio (14 Loans) • Loan Repayments • Active Loans • Settled Loans • Fines &amp; Penalties • Deposits Register • Expenses • Investments • Projects • Suppliers • Inventory • Assets • Documents Register • Member Balances &amp; Dues • Login Activity • Edit Log Summary
+                  </p>
+                </div>
+
+                {excelExportNotification && (
+                  <div className="p-3 bg-emerald-100/90 border border-emerald-400 rounded-xl text-xs font-bold text-emerald-950 flex items-center gap-2.5 shadow-sm animate-fade-in">
+                    <CheckCircle className="w-4 h-4 text-[#0A5C36] shrink-0" />
+                    <span>{excelExportNotification}</span>
+                  </div>
+                )}
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDownloadCompleteProjectExcel}
+                    disabled={isExportingExcel}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 bg-[#0A5C36] hover:bg-[#064E3B] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-emerald-950/20 hover:shadow-lg hover:shadow-emerald-950/30 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isExportingExcel ? (
+                      <>
+                        <RotateCw className="w-4 h-4 animate-spin" />
+                        <span>Generating Complete Excel Workbook...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>DOWNLOAD COMPLETE PROJECT EXCEL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
