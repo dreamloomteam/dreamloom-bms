@@ -139,7 +139,9 @@ export async function generateDreamloomProjectExcel(data: ProjectDataPayload): P
 
   // Normalize contributions
   const contribsList = (data.contributions || []).map((c: any) => {
-    const memberName = c.memberName || c.member?.fullName || (typeof c.member === 'string' ? c.member : '') || 'Dreamloom Member';
+    const memberName = typeof c.memberName === 'string'
+      ? c.memberName
+      : (c.member?.fullName || (typeof c.member === 'string' ? c.member : 'Dreamloom Member'));
     const nationalId = c.member?.nationalId || membersList.find(m => m.fullName === memberName)?.nationalId || '';
     return {
       id: c.id,
@@ -165,7 +167,9 @@ export async function generateDreamloomProjectExcel(data: ProjectDataPayload): P
 
   // Normalize loans
   const loansList = (data.loans || []).map((l: any) => {
-    const memberName = l.memberName || l.borrower || l.member?.fullName || 'Member';
+    const memberName = typeof l.memberName === 'string'
+      ? l.memberName
+      : (typeof l.borrower === 'string' ? l.borrower : (l.member?.fullName || 'Member'));
     const nationalId = l.member?.nationalId || membersList.find(m => m.fullName === memberName)?.nationalId || '';
     return {
       id: l.id,
@@ -215,8 +219,10 @@ export async function generateDreamloomProjectExcel(data: ProjectDataPayload): P
 
   // Normalize penalties
   const penaltiesList = (data.penalties || []).map((p: any) => {
-    const memberName = p.memberName || p.member || p.memberObj?.fullName || 'Member';
-    const nationalId = p.memberObj?.nationalId || membersList.find(m => m.fullName === memberName)?.nationalId || '';
+    const memberName = typeof p.memberName === 'string'
+      ? p.memberName
+      : (p.member?.fullName || p.memberObj?.fullName || (typeof p.member === 'string' ? p.member : 'Member'));
+    const nationalId = p.memberObj?.nationalId || p.member?.nationalId || membersList.find(m => m.fullName === memberName)?.nationalId || '';
     return {
       id: p.dbId || p.id,
       memberName,
@@ -359,15 +365,16 @@ export async function generateDreamloomProjectExcel(data: ProjectDataPayload): P
 
   // Member Balances and Unsettled Dues Matrix
   const memberMatrix = membersList.map((m) => {
-    const memberContribs = contribsList.filter(c => c.memberName.toLowerCase().trim() === m.fullName.toLowerCase().trim());
+    const mName = String(m.fullName || '').toLowerCase().trim();
+    const memberContribs = contribsList.filter(c => String(c.memberName || '').toLowerCase().trim() === mName);
     const paidContrib = memberContribs.reduce((sum, c) => sum + c.amount, 0);
     const unsettledContrib = memberContribs.reduce((sum, c) => sum + c.unsettled, 0);
 
-    const memberPenalties = penaltiesList.filter(p => p.memberName.toLowerCase().trim() === m.fullName.toLowerCase().trim());
+    const memberPenalties = penaltiesList.filter(p => String(p.memberName || '').toLowerCase().trim() === mName);
     const unpaidPenalties = memberPenalties.reduce((sum, p) => sum + p.remainingBalance, 0);
 
     const memberActiveLoans = activeLoans
-      .filter(l => l.memberName.toLowerCase().trim() === m.fullName.toLowerCase().trim())
+      .filter(l => String(l.memberName || '').toLowerCase().trim() === mName)
       .reduce((sum, l) => sum + l.totalOutstandingBalance, 0);
 
     const netBalance = paidContrib - memberActiveLoans;
