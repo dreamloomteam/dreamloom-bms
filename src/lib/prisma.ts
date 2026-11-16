@@ -398,11 +398,11 @@ export async function ensureDatabaseSchema(): Promise<void> {
       console.error('Error ensuring CNT-016 contribution record:', e);
     }
 
-    // 6. STRICT OFFICIAL LOAN PORTFOLIO SYNC (Exact 14 Records from PDF/Excel)
+    // 6. STRICT OFFICIAL LOAN PORTFOLIO SYNC (Only if loans table is empty or explicitly forced)
     await syncOfficialLoansDataset();
 
-    // 7. Ensure unique constraint & performance indexes exist idempotently
-    const indexQueries = [
+    // 7. Ensure unique constraint & performance indexes and LoginLog columns exist idempotently
+    const ddlQueries = [
       `CREATE UNIQUE INDEX IF NOT EXISTS "Contribution_memberId_month_year_key" ON "Contribution"("memberId", "month", "year")`,
       `CREATE INDEX IF NOT EXISTS "Contribution_month_year_idx" ON "Contribution"("month", "year")`,
       `CREATE INDEX IF NOT EXISTS "ContributionPayment_contributionId_idx" ON "ContributionPayment"("contributionId")`,
@@ -410,10 +410,19 @@ export async function ensureDatabaseSchema(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS "Loan_memberId_idx" ON "Loan"("memberId")`,
       `CREATE INDEX IF NOT EXISTS "Loan_status_idx" ON "Loan"("status")`,
       `CREATE INDEX IF NOT EXISTS "LoanRepayment_loanId_idx" ON "LoanRepayment"("loanId")`,
-      `CREATE INDEX IF NOT EXISTS "LoanRepayment_memberId_idx" ON "LoanRepayment"("memberId")`
+      `CREATE INDEX IF NOT EXISTS "LoanRepayment_memberId_idx" ON "LoanRepayment"("memberId")`,
+      `ALTER TABLE "LoginLog" ADD COLUMN IF NOT EXISTS "fullName" TEXT`,
+      `ALTER TABLE "LoginLog" ADD COLUMN IF NOT EXISTS "action" TEXT DEFAULT 'LOGIN'`,
+      `ALTER TABLE "LoginLog" ADD COLUMN IF NOT EXISTS "sessionRef" TEXT`,
+      `CREATE INDEX IF NOT EXISTS "LoginLog_createdAt_idx" ON "LoginLog"("createdAt")`,
+      `CREATE INDEX IF NOT EXISTS "LoginLog_email_idx" ON "LoginLog"("email")`
     ];
-    for (const q of indexQueries) {
-      await prisma.$executeRawUnsafe(q);
+    for (const q of ddlQueries) {
+      try {
+        await prisma.$executeRawUnsafe(q);
+      } catch (ddlErr) {
+        console.warn('Idempotent DDL warning:', ddlErr);
+      }
     }
 
     globalForPrisma.schemaEnsured = true;
@@ -424,50 +433,23 @@ export async function ensureDatabaseSchema(): Promise<void> {
 
 /**
  * Synchronizes the Loan Portfolio table to contain strictly the 14 official loan records from PDF/Excel.
- * Completely replaces existing loans and loan repayments with the authoritative historical records.
- * Preserves all exact figures, decimal values, issue dates (02/07/2026 for L1076), and settlement dates.
+ * Only executes if the database has zero loans or when explicitly forced.
+ * Strictly preserves all user edits, newly disbursed loans, and safe cancellations.
  */
 export async function syncOfficialLoansDataset(force: boolean = false): Promise<void> {
   try {
-    const existingLoans = await prisma.loan.findMany({
-      select: {
-        id: true,
-        status: true,
-        principal: true,
-        interest: true,
-        totalPayable: true,
-        completedPeriods: true
-      }
-    });
-    const officialIds = new Set(OFFICIAL_LOAN_PORTFOLIO.map(l => l.id.toLowerCase()));
+    const existingLoanCount = await prisma.loan.count();
 
-    // Check if exactly 14 records exist and their key figures match
-    let isExact14 =
-      existingLoans.length === 14 &&
-      existingLoans.every(l => officialIds.has(l.id.toLowerCase()));
-
-    if (isExact14 && !force) {
-      for (const item of OFFICIAL_LOAN_PORTFOLIO) {
-        const found = existingLoans.find(el => el.id.toLowerCase() === item.id.toLowerCase());
-        if (
-          !found ||
-          found.status !== item.status ||
-          Math.abs(found.principal - item.principal) > 0.01 ||
-          Math.abs(found.interest - item.interestAccrued) > 0.01 ||
-          Math.abs(found.totalPayable - item.totalLoanAmount) > 0.01
-        ) {
-          isExact14 = false;
-          break;
-        }
-      }
+    // If loans already exist and not forced, NEVER delete or overwrite existing records!
+    if (existingLoanCount > 0 && !force) {
+      return;
     }
 
-    if (!isExact14 || force) {
-      console.log('[Official Loans Sync] Replacing Loan Portfolio dataset with the 14 official records from PDF...');
+    console.log('[Official Loans Sync] Seeding Loan Portfolio dataset with the 14 official records from PDF...');
 
-      // 1. Remove all existing repayments and loans
-      await prisma.loanRepayment.deleteMany({});
-      await prisma.loan.deleteMany({});
+    // 1. Remove all existing repayments and loans (only on empty DB or forced reseed)
+    await prisma.loanRepayment.deleteMany({});
+    await prisma.loan.deleteMany({});
 
       // 2. Insert the 14 official records in exact descending order of issue date
       for (const item of OFFICIAL_LOAN_PORTFOLIO) {
@@ -519,7 +501,6 @@ export async function syncOfficialLoansDataset(force: boolean = false): Promise<
         }
       }
       console.log('[Official Loans Sync] Successfully replaced loan portfolio with 14 official records.');
-    }
   } catch (err) {
     console.error('Error during syncOfficialLoansDataset:', err);
   }

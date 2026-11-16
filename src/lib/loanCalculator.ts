@@ -289,11 +289,21 @@ export function calculateLoanProfile(
   loan: LoanInput & { asOfDate?: Date | string | null },
   asOfDateInput?: Date | string | null
 ): CalculatedLoanProfile {
-  // Check if loan is in the Official 14 Loan Portfolio — STRICT NO RECALCULATION
+  // Check if loan is in the Official 14 Loan Portfolio — STRICT NO RECALCULATION UNLESS USER EXPLICITLY EDITED
   const official = getOfficialLoan(loan.id);
-  if (official) {
-    const isSettled = official.status === 'Settled';
-    const issueDateUTC = toUTCMidnight(official.issueDateISO);
+  const isCancelled = loan.status === 'Cancelled';
+  const hasUserEditedFinancials =
+    official &&
+    ((loan.principal !== undefined && Math.abs(Number(loan.principal) - official.principal) > 0.01) ||
+      (loan.interestRate !== undefined &&
+        loan.interestRate !== null &&
+        Math.abs(Number(loan.interestRate) - official.monthlyInterestRate) > 0.01) ||
+      (loan.interestMethod && loan.interestMethod !== official.interestMethod));
+
+  if (official && !hasUserEditedFinancials) {
+    const isSettled = isCancelled ? false : (loan.status === 'Settled' || official.status === 'Settled');
+    const finalStatus = (isCancelled ? 'Cancelled' : (loan.status || official.status)) as LoanComputedStatus;
+    const issueDateUTC = loan.issueDate ? toUTCMidnight(loan.issueDate) : toUTCMidnight(official.issueDateISO);
     const settlementDateUTC = official.settlementDateISO ? toUTCMidnight(official.settlementDateISO) : null;
 
     const enrichedRepayments: Array<
@@ -325,8 +335,8 @@ export function calculateLoanProfile(
 
     return {
       id: official.id,
-      memberId: official.memberId,
-      memberName: official.memberName,
+      memberId: loan.memberId || official.memberId,
+      memberName: loan.memberName || official.memberName,
       issueDate: official.issueDateStr,
       issueDateFormatted: formatDisplayDate(issueDateUTC),
       originalPrincipal: official.principal,
@@ -334,22 +344,22 @@ export function calculateLoanProfile(
       interestMethod: official.interestMethod as InterestMethod,
       compoundingFrequency: 'Monthly',
       loanDuration: official.durationMonths,
-      repaymentTerms: 'Monthly Anniversary',
-      allocationPolicy: 'Interest First',
-      purpose: official.purpose,
-      approvalRef: official.approvalRef,
-      remarks: official.remarks,
+      repaymentTerms: loan.repaymentTerms || 'Monthly Anniversary',
+      allocationPolicy: (loan.allocationPolicy as AllocationPolicy) || 'Interest First',
+      purpose: loan.purpose ?? official.purpose,
+      approvalRef: loan.approvalRef ?? official.approvalRef,
+      remarks: loan.remarks ?? official.remarks,
       completedPeriods: official.completedPeriods,
       totalInterestAccrued: official.interestAccrued,
       interestPaid: official.interestPaid,
-      unpaidInterest: isSettled ? 0 : official.interestAccrued,
+      unpaidInterest: isSettled || isCancelled ? 0 : official.interestAccrued,
       principalRepaid: official.principalRepaid,
-      remainingPrincipal: isSettled ? 0 : official.principal,
+      remainingPrincipal: isSettled || isCancelled ? 0 : official.principal,
       totalLoanAmount: official.totalLoanAmount,
       totalAmountPaid: official.totalPaid,
-      totalOutstandingBalance: official.outstandingBalance,
-      status: official.status,
-      settlementDate: official.settlementDateStr || '-',
+      totalOutstandingBalance: isCancelled ? 0 : official.outstandingBalance,
+      status: finalStatus,
+      settlementDate: isCancelled ? 'Cancelled' : (official.settlementDateStr || '-'),
       schedule: [],
       repayments: enrichedRepayments
     };
@@ -606,7 +616,6 @@ export function calculateLoanProfile(
     }
   }
 
-  const isCancelled = loan.status === 'Cancelled';
   const remainingPrincipal = isCancelled ? 0 : roundCurrency(Math.max(0, originalPrincipal - cumulativePrincipalPaid));
   const unpaidInterest = isCancelled ? 0 : roundCurrency(Math.max(0, cumulativeInterestAccrued - cumulativeInterestPaid));
   const totalLoanAmount = roundCurrency(originalPrincipal + cumulativeInterestAccrued);

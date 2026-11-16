@@ -24,9 +24,13 @@ export async function POST(request: Request) {
     if (!user) {
       // Log failed attempt to PostgreSQL
       try {
+        const sessionRef = `FAIL-${Date.now().toString().slice(-6)}`;
         await prisma.loginLog.create({
           data: {
             email: String(identifier).trim().toLowerCase(),
+            fullName: null,
+            action: 'LOGIN_FAILED',
+            sessionRef,
             success: false,
             ipAddress,
           },
@@ -55,10 +59,14 @@ export async function POST(request: Request) {
       });
       if (dbUser) dbUserId = dbUser.id;
 
+      const sessionRef = `AUTH-${Date.now().toString().slice(-6)}`;
       await prisma.loginLog.create({
         data: {
           userId: dbUserId,
           email: user.email.toLowerCase(),
+          fullName: user.fullName || user.name || null,
+          action: 'LOGIN',
+          sessionRef,
           success: true,
           ipAddress,
         },

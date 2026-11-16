@@ -35,6 +35,9 @@ import {
   getEATDateTimeString,
   getEATCurrentMonthName,
   getEATCurrentYear,
+  formatEATDate,
+  formatEATTime,
+  formatEATDateTime,
   matchesMonthAndYear,
   parseDateToMonthYear,
   getMemberUnsettledForDate,
@@ -457,17 +460,32 @@ export default function Home() {
       .then(r => r.json())
       .then(res => {
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map((l: any, idx: number) => ({
-            id: `AUTH-${String(100 + idx + 1)}`,
-            date: l.createdAt ? String(l.createdAt).slice(0, 10) : '2026-11-02',
-            time: l.createdAt ? String(l.createdAt).slice(11, 19) + ' EAT' : '10:00:00 EAT',
-            user: l.user?.fullName || l.email?.split('@')[0] || 'Simon Memia',
-            role: l.user?.role || 'Director / Member',
-            ip: l.ipAddress || '197.232.84.12',
-            device: 'Safari 17.4 (macOS Sonoma 14.3)',
-            status: l.success ? 'Active (Authorized)' : 'Failed (Denied)',
-            twoFa: l.success ? 'Pass (TOTP Token)' : 'Rejected'
-          }));
+          const mapped = res.data.map((l: any, idx: number) => {
+            const rawDt = l.createdAt ? new Date(l.createdAt) : new Date();
+            const dateStr = l.date || formatEATDate(rawDt);
+            const timeStr = l.time || formatEATTime(rawDt);
+            const timestampStr = l.timestamp || `${dateStr} ${timeStr}`;
+            return {
+              id: l.sessionRef || l.sessionId || `AUTH-${String(100 + idx + 1)}`,
+              date: dateStr,
+              time: timeStr,
+              timestamp: timestampStr,
+              user: l.fullName || l.user || (l.email ? l.email.split('@')[0] : 'Simon Memia'),
+              email: l.email || '',
+              role: l.role || 'Director / Member',
+              action: l.action || (l.success ? 'LOGIN' : 'LOGIN_FAILED'),
+              ip: l.ipAddress || l.ip || '197.232.84.12',
+              device: 'Safari 17.4 (macOS Sonoma 14.3)',
+              status:
+                l.status ||
+                (l.action === 'LOGOUT'
+                  ? 'Logged Out (Completed)'
+                  : l.success
+                  ? 'Active (Authorized)'
+                  : 'Failed (Denied)'),
+              twoFa: l.twoFa || (l.success ? 'Pass (TOTP Token)' : 'Rejected')
+            };
+          });
           setLoginLogs(mapped);
         }
       })
@@ -1667,7 +1685,14 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: currentUser?.email,
+          fullName: currentUser?.fullName || currentUser?.name
+        })
+      });
     } catch (e) {
       console.warn('Logout network error:', e);
     }
@@ -5327,32 +5352,51 @@ export default function Home() {
                   <table className="w-full text-left text-xs text-slate-800">
                     <thead className="bg-[#E6F4EA] border-b border-emerald-900/10 text-slate-700 uppercase text-[11px] font-bold tracking-wider">
                       <tr>
-                        <th className="p-4">Session ID</th>
-                        <th className="p-4">User</th>
-                        <th className="p-4">Role</th>
+                        <th className="p-4">Session Ref</th>
+                        <th className="p-4">Member / User</th>
+                        <th className="p-4 text-center">Action</th>
+                        <th className="p-4">Date (DD/MM/YYYY)</th>
+                        <th className="p-4">Time (EAT)</th>
+                        <th className="p-4">Full Timestamp</th>
                         <th className="p-4">IP Address</th>
-                        <th className="p-4">Timestamp</th>
                         <th className="p-4 text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-mono">
                       {loginLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-slate-400 font-sans font-medium">
+                          <td colSpan={8} className="p-8 text-center text-slate-400 font-sans font-medium">
                             No login session records currently available.
                           </td>
                         </tr>
                       ) : (
                         loginLogs.map((log, idx) => (
-                          <tr key={log.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
+                          <tr key={log.id || idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#F2F9F5]'} hover:bg-emerald-50/70 transition-colors`}>
                             <td className="p-4 text-[#0A5C36] font-bold">{log.id}</td>
-                            <td className="p-4 font-sans text-slate-900 font-bold">{log.user}</td>
-                            <td className="p-4 font-sans text-slate-700 font-medium">{log.role}</td>
-                            <td className="p-4 text-slate-600">{log.ip}</td>
-                            <td className="p-4 text-slate-600 font-medium">{log.timestamp}</td>
+                            <td className="p-4 font-sans">
+                              <span className="text-slate-900 font-bold block">{log.user}</span>
+                              <span className="text-[11px] text-slate-500 font-normal">{log.email || log.role}</span>
+                            </td>
                             <td className="p-4 text-center font-sans">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                log.status.includes('Active') || log.status.includes('Authorized')
+                                log.action === 'LOGOUT'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                  : log.action === 'LOGIN_FAILED' || log.status?.includes('Failed')
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-emerald-50 text-[#0A5C36] border-emerald-200'
+                              }`}>
+                                {log.action || (log.status?.includes('Active') ? 'LOGIN' : 'EVENT')}
+                              </span>
+                            </td>
+                            <td className="p-4 text-slate-900 font-semibold">{log.date || (log.createdAt ? formatEATDate(log.createdAt) : '-')}</td>
+                            <td className="p-4 text-slate-700 font-medium">{log.time || (log.createdAt ? formatEATTime(log.createdAt) : '-')}</td>
+                            <td className="p-4 text-slate-600 font-medium">{log.timestamp || (log.createdAt ? formatEATDateTime(log.createdAt) : '-')}</td>
+                            <td className="p-4 text-slate-600">{log.ip}</td>
+                            <td className="p-4 text-center font-sans">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                log.action === 'LOGOUT'
+                                  ? 'bg-slate-100 text-slate-700 border-slate-300'
+                                  : log.status?.includes('Active') || log.status?.includes('Authorized')
                                   ? 'bg-emerald-50 text-[#0A5C36] border-emerald-200'
                                   : 'bg-rose-50 text-rose-700 border-rose-200'
                               }`}>

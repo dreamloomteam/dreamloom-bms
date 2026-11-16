@@ -472,11 +472,32 @@ export default function LoanPortfolioTab({
     setOpenActionMenuLoanId(null);
     if (loanToEdit) {
       setEditingLoanId(loanToEdit.id);
+      let isoIssueDate = getEATISODate();
+      if (loanToEdit.issueDate) {
+        const raw = String(loanToEdit.issueDate).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+          isoIssueDate = raw;
+        } else {
+          const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+          if (m) {
+            const day = m[1].padStart(2, '0');
+            const month = m[2].padStart(2, '0');
+            const year = m[3];
+            isoIssueDate = `${year}-${month}-${day}`;
+          } else {
+            const parsed = new Date(raw);
+            if (!isNaN(parsed.getTime())) {
+              isoIssueDate = parsed.toISOString().slice(0, 10);
+            }
+          }
+        }
+      }
+
       setLoanForm({
         id: loanToEdit.id,
         memberName: loanToEdit.memberName,
         principal: String(loanToEdit.originalPrincipal),
-        issueDate: loanToEdit.issueDate,
+        issueDate: isoIssueDate,
         interestRate: String(loanToEdit.monthlyInterestRate ?? (loanToEdit as any).interestRate ?? 10),
         interestMethod: loanToEdit.interestMethod,
         compoundingFrequency: loanToEdit.compoundingFrequency || 'Monthly',

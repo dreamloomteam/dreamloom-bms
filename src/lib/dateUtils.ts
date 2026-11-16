@@ -356,3 +356,47 @@ export function normalizeMonthYear(
   };
 }
 
+/**
+ * Formats a Date or date string to DD/MM/YYYY in Nairobi / EAT timezone
+ */
+export function formatEATDate(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(d);
+}
+
+/**
+ * Formats a Date or date string to HH:MM:SS EAT in Nairobi / EAT timezone
+ */
+export function formatEATTime(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(d) + ' EAT';
+}
+
+/**
+ * Formats a Date or date string to "DD/MM/YYYY HH:MM:SS EAT" in Nairobi / EAT timezone
+ */
+export function formatEATDateTime(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return '';
+  const dStr = formatEATDate(d);
+  const tStr = formatEATTime(d);
+  return `${dStr} ${tStr}`;
+}
+
+

@@ -21,13 +21,16 @@ model User {
 }
 
 model LoginLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  user      User?    @relation(fields: [userId], references: [id])
-  email     String?
-  success   Boolean
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id])
+  email      String?
+  fullName   String?
+  action     String?  @default("LOGIN")
+  sessionRef String?
+  success    Boolean
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 }
 
 model EditLog {
