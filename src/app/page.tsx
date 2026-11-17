@@ -3904,6 +3904,7 @@ export default function Home() {
           {activeTab === 'The Plan' && (
             <ThePlanTab
               isAdmin={isAdmin}
+              currentUser={currentUser}
               onOpenAppearance={() => {
                 setPreviewAppearance(pageAppearances['The Plan'] || DEFAULT_PAGE_APPEARANCE);
                 setIsAppearanceDrawerOpen(true);
