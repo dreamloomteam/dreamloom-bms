@@ -10,13 +10,14 @@ import {
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, ArrowLeft, Clock, CheckCircle2, UserCheck, ShieldAlert,
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle,
-  Palette, Sparkles, Copy, Sliders, FileSpreadsheet
+  Palette, Sparkles, Copy, Sliders, FileSpreadsheet, Compass
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
 import LoanPortfolioTab from '@/components/LoanPortfolioTab';
 import ActionsDropdown from '@/components/ActionsDropdown';
 import ContributionsTab from '@/components/ContributionsTab';
+import ThePlanTab from '@/components/ThePlanTab';
 import LoginScreen from '@/components/LoginScreen';
 import AppearanceCustomizerDrawer from '@/components/AppearanceCustomizerDrawer';
 import {
@@ -2925,6 +2926,7 @@ export default function Home() {
     {
       group: 'OPERATIONS & ASSETS',
       items: [
+        { name: 'The Plan', icon: Compass },
         { name: 'Investments', icon: TrendingUp },
         { name: 'Projects', icon: Briefcase },
         { name: 'Suppliers', icon: Truck },
@@ -3263,7 +3265,7 @@ export default function Home() {
           <style dangerouslySetInnerHTML={{ __html: generateAppearanceCss(activePageAppearance) }} />
 
           {/* Top Title Bar with Month / Currency / Export Button */}
-          {activeTab !== 'Loan Portfolio' && (
+          {activeTab !== 'Loan Portfolio' && activeTab !== 'The Plan' && (
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div className="flex flex-wrap items-center gap-3">
                 <div>
@@ -3894,6 +3896,19 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ===================================================================== */}
+          {/* THE PLAN — LONG-TERM STRATEGIC VISION & INVESTMENT PILLARS           */}
+          {/* ===================================================================== */}
+          {activeTab === 'The Plan' && (
+            <ThePlanTab
+              isAdmin={isAdmin}
+              onOpenAppearance={() => {
+                setPreviewAppearance(pageAppearances['The Plan'] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
+            />
           )}
 
           {/* ===================================================================== */}

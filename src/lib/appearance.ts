@@ -279,6 +279,7 @@ export const DEFAULT_PAGE_APPEARANCE: PageAppearanceSettings = PRESET_THEMES['Dr
 
 export const ALL_PAGE_KEYS = [
   'Overview',
+  'The Plan',
   'Member Directory',
   'Contributions',
   'Deposits',
