@@ -407,10 +407,21 @@ export default function ThePlanTab({ isAdmin = false, onOpenAppearance }: ThePla
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      <style>{`
+        #dashboard-content-area .the-plan-banner h1,
+        #dashboard-content-area .the-plan-banner h2,
+        #dashboard-content-area .the-plan-banner h3,
+        #dashboard-content-area .the-plan-section-header h2,
+        #dashboard-content-area .the-plan-section-header h3,
+        #dashboard-content-area .the-plan-footer h2,
+        #dashboard-content-area .the-plan-footer h3 {
+          color: #FFFFFF !important;
+        }
+      `}</style>
       {/* ===================================================================== */}
       {/* 1. TOP HEADER & VISION INTRODUCTION                                   */}
       {/* ===================================================================== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064E3B] via-[#0A5C36] to-[#043325] text-white p-6 sm:p-10 shadow-xl border border-emerald-500/20">
+      <div className="the-plan-banner relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064E3B] via-[#0A5C36] to-[#043325] text-white p-6 sm:p-10 shadow-xl border border-emerald-500/20">
         {/* Subtle background decorative shapes */}
         <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-emerald-400/10 blur-3xl pointer-events-none" />
         <div className="absolute right-1/3 -bottom-20 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
@@ -541,7 +552,7 @@ export default function ThePlanTab({ isAdmin = false, onOpenAppearance }: ThePla
               className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden scroll-mt-24 transition-all hover:shadow-md"
             >
               {/* Section Header Card */}
-              <div className={`p-6 sm:p-8 bg-gradient-to-r ${section.bannerBg} text-white`}>
+              <div className={`the-plan-section-header p-6 sm:p-8 bg-gradient-to-r ${section.bannerBg} text-white`}>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[11px] font-black uppercase tracking-wider text-emerald-100">
                     <SectionIcon className="w-3.5 h-3.5" />
@@ -694,7 +705,7 @@ export default function ThePlanTab({ isAdmin = false, onOpenAppearance }: ThePla
       {/* ===================================================================== */}
       {/* 4. CLOSING VISION STATEMENT & INSPIRATIONAL BANNER                    */}
       {/* ===================================================================== */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064E3B] via-[#0A5C36] to-[#03261B] text-white p-8 sm:p-12 text-center shadow-xl border border-emerald-500/30 space-y-4">
+      <div className="the-plan-footer relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064E3B] via-[#0A5C36] to-[#03261B] text-white p-8 sm:p-12 text-center shadow-xl border border-emerald-500/30 space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-black tracking-widest text-emerald-300 uppercase">
           <Sparkles className="w-4 h-4 text-emerald-300" />
           <span>DREAMLOOM HOLDING LIMITED</span>
