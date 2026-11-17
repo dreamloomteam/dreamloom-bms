@@ -304,3 +304,18 @@ model Deposit {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
+
+model ThePlanImage {
+  id        String   @id
+  projectId String
+  title     String
+  caption   String   @default("")
+  tag       String?  @default("")
+  src       String
+  isCover   Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}

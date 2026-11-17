@@ -37,6 +37,7 @@ import {
   ThePlanProjectKey,
   PlanPhotoItem
 } from '@/lib/thePlanData';
+import { upload } from '@vercel/blob/client';
 
 interface ThePlanTabProps {
   isAdmin?: boolean;
@@ -243,6 +244,7 @@ export default function ThePlanTab({
   });
 
   // Modal Form Inputs
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formFileBase64, setFormFileBase64] = useState<string | null>(null);
   const [formFileName, setFormFileName] = useState<string>('');
   const [formPreviewUrl, setFormPreviewUrl] = useState<string>('');
@@ -350,6 +352,7 @@ export default function ThePlanTab({
       mode: 'upload',
       projectId
     });
+    setSelectedFile(null);
     setFormFileBase64(null);
     setFormFileName('');
     setFormPreviewUrl('');
@@ -368,6 +371,7 @@ export default function ThePlanTab({
       photoId: photo.id,
       existingPhoto: photo
     });
+    setSelectedFile(null);
     setFormFileBase64(null);
     setFormFileName('');
     setFormPreviewUrl(photo.src);
@@ -387,6 +391,7 @@ export default function ThePlanTab({
       photoId: photo.id,
       existingPhoto: photo
     });
+    setSelectedFile(null);
     setFormFileBase64(null);
     setFormFileName('');
     setFormPreviewUrl(photo.src);
@@ -419,6 +424,7 @@ export default function ThePlanTab({
     }
 
     setFormError(null);
+    setSelectedFile(file);
     setFormFileName(file.name);
 
     // Default title from filename if empty
@@ -485,6 +491,23 @@ export default function ThePlanTab({
     setFormError(null);
 
     try {
+      let uploadedBlobUrl: string | undefined = undefined;
+
+      // 1. Attempt secure client-side upload via @vercel/blob/client if a file was chosen
+      if (selectedFile && modalState.mode !== 'edit') {
+        try {
+          const blobResult = await upload(formFileName || selectedFile.name, selectedFile, {
+            access: 'public',
+            handleUploadUrl: '/api/the-plan/blob-upload',
+          });
+          if (blobResult && blobResult.url) {
+            uploadedBlobUrl = blobResult.url;
+          }
+        } catch (blobErr: any) {
+          console.warn('Direct Vercel Blob client upload skipped/falling back:', blobErr?.message);
+        }
+      }
+
       const payload: any = {
         action: modalState.mode === 'edit' ? 'edit-details' : modalState.mode,
         projectId: modalState.projectId,
@@ -493,7 +516,8 @@ export default function ThePlanTab({
         caption: formCaption,
         tag: formTag,
         isCover: formIsCover,
-        fileBase64: formFileBase64,
+        blobUrl: uploadedBlobUrl,
+        fileBase64: uploadedBlobUrl ? undefined : formFileBase64,
         fileName: formFileName,
         userEmail: 'simon@dreamloom.co.ke',
         userName: 'Simon Memia Wanjiru'

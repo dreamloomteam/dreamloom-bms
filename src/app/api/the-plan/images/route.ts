@@ -1,81 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { prisma } from '@/lib/prisma';
+import { put, del } from '@vercel/blob';
 import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin } from '@/lib/session';
 import { createAuditLog } from '@/lib/audit';
 import {
-  DEFAULT_PLAN_PHOTOS,
   PROJECT_NAMES,
   ThePlanProjectKey,
-  PlanPhotoItem,
+  PlanPhotoItem
 } from '@/lib/thePlanData';
-
-const MANIFEST_PATH = path.join(process.cwd(), 'public', 'images', 'the-plan', 'manifest.json');
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'images', 'the-plan', 'uploads');
-
-function ensureDirectories() {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-}
-
-async function ensurePlanImagesTable() {
-  try {
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "ThePlanImage" (
-        "id" TEXT NOT NULL,
-        "projectId" TEXT NOT NULL,
-        "title" TEXT NOT NULL,
-        "caption" TEXT NOT NULL,
-        "tag" TEXT,
-        "src" TEXT NOT NULL,
-        "isCover" BOOLEAN NOT NULL DEFAULT false,
-        "sortOrder" INTEGER NOT NULL DEFAULT 0,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "ThePlanImage_pkey" PRIMARY KEY ("id")
-      );
-    `);
-  } catch (e) {
-    // Database table check is non-blocking for filesystem manifest fallback
-  }
-}
-
-function loadManifest(): Record<ThePlanProjectKey, PlanPhotoItem[]> {
-  ensureDirectories();
-  try {
-    if (fs.existsSync(MANIFEST_PATH)) {
-      const data = fs.readFileSync(MANIFEST_PATH, 'utf-8');
-      const parsed = JSON.parse(data);
-      // Validate that all 8 keys exist
-      const complete: Record<ThePlanProjectKey, PlanPhotoItem[]> = { ...DEFAULT_PLAN_PHOTOS };
-      for (const k of Object.keys(DEFAULT_PLAN_PHOTOS) as ThePlanProjectKey[]) {
-        if (Array.isArray(parsed[k])) {
-          complete[k] = parsed[k];
-        }
-      }
-      return complete;
-    }
-  } catch (e) {
-    console.warn('Error loading manifest from disk:', e);
-  }
-  // Initialize and write default manifest
-  saveManifest(DEFAULT_PLAN_PHOTOS);
-  return { ...DEFAULT_PLAN_PHOTOS };
-}
-
-function saveManifest(data: Record<ThePlanProjectKey, PlanPhotoItem[]>) {
-  ensureDirectories();
-  try {
-    fs.writeFileSync(MANIFEST_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Error saving manifest to disk:', e);
-  }
-}
+import {
+  getAllProjectPhotos,
+  upsertProjectPhoto,
+  deleteProjectPhoto,
+  reorderProjectPhotos
+} from '@/lib/thePlanDb';
 
 function verifyAdmin(request: NextRequest, bodyUserEmail?: string): boolean {
-  // 1. Check HTTP-only session cookie
   try {
     const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
     if (token) {
@@ -86,7 +25,6 @@ function verifyAdmin(request: NextRequest, bodyUserEmail?: string): boolean {
     }
   } catch (e) {}
 
-  // 2. Check authorization header or body parameter if from authorized client
   if (bodyUserEmail) {
     const clean = bodyUserEmail.toLowerCase().trim();
     if (clean === 'simon@dreamloom.co.ke') {
@@ -97,12 +35,71 @@ function verifyAdmin(request: NextRequest, bodyUserEmail?: string): boolean {
   return false;
 }
 
-// =============================================================================
-// GET /api/the-plan/images — Fetch current photo mappings for all 8 projects
-// =============================================================================
-export async function GET(request: NextRequest) {
+// Helper to store image in Vercel Blob (or fallback to permanent data URL if token missing in local dev)
+async function storeBlobImage(
+  base64String: string,
+  fileName: string,
+  projectId: string
+): Promise<string> {
+  const match = base64String.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+  let ext = 'jpg';
+  let buffer: Buffer;
+
+  if (match) {
+    const rawExt = match[1].toLowerCase();
+    ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
+    buffer = Buffer.from(match[2], 'base64');
+  } else {
+    buffer = Buffer.from(base64String, 'base64');
+    if (fileName && fileName.includes('.')) {
+      ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
+    }
+  }
+
+  // Validate size (10 MB maximum)
+  if (buffer.length > 10 * 1024 * 1024) {
+    throw new Error('Image exceeds 10 MB maximum limit.');
+  }
+
+  const safeName = `the-plan/${projectId}/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+  // If Vercel Blob token is configured (Production, Preview, or configured locally)
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const blob = await put(safeName, buffer, {
+      access: 'public',
+      contentType,
+    });
+    return blob.url;
+  }
+
+  // In offline or local development without BLOB token, return data URI directly for DB storage
+  // (ZERO filesystem writes, completely safe on Vercel read-only runtime!)
+  const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+// Safely delete a Blob URL if hosted on Vercel Blob
+async function cleanOldBlob(url?: string | null) {
+  if (!url || typeof url !== 'string') return;
+  if (!url.includes('blob.vercel-storage.com') && !url.includes('.public.blob.vercel-storage.com')) {
+    return; // Don't attempt to delete legacy static paths or data URIs
+  }
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
+
   try {
-    const photosMap = loadManifest();
+    await del(url);
+  } catch (error) {
+    console.warn('Could not clean old Vercel Blob (non-blocking):', (error as Error).message);
+  }
+}
+
+// =============================================================================
+// GET /api/the-plan/images — Fetch current project photographs from Database
+// =============================================================================
+export async function GET() {
+  try {
+    const photosMap = await getAllProjectPhotos();
     return NextResponse.json({
       success: true,
       data: photosMap,
@@ -117,8 +114,7 @@ export async function GET(request: NextRequest) {
 }
 
 // =============================================================================
-// POST /api/the-plan/images — Manage project photos (Admin only)
-// Supported actions: 'upload' | 'replace' | 'delete' | 'set-cover' | 'reorder' | 'edit-details'
+// POST /api/the-plan/images — Manage project photos in PostgreSQL & Vercel Blob
 // =============================================================================
 export async function POST(request: NextRequest) {
   try {
@@ -133,10 +129,9 @@ export async function POST(request: NextRequest) {
       isCover,
       fileBase64,
       fileName,
+      blobUrl,
       direction,
-      newOrderIds,
       userEmail,
-      userName,
     } = body;
 
     // 1. Strict Server-Side Security Enforcement
@@ -161,63 +156,32 @@ export async function POST(request: NextRequest) {
 
     const key = projectId as ThePlanProjectKey;
     const projectName = PROJECT_NAMES[key];
-    const photosMap = loadManifest();
+    const photosMap = await getAllProjectPhotos();
     const currentList: PlanPhotoItem[] = [...(photosMap[key] || [])];
-
-    ensureDirectories();
-
-    // Helper to process base64 file and write to uploads
-    const saveImageFile = (base64String: string, originalName?: string): string => {
-      // Validate data URL format
-      const match = base64String.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
-      let ext = 'jpg';
-      let buffer: Buffer;
-
-      if (match) {
-        const rawExt = match[1].toLowerCase();
-        ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
-        buffer = Buffer.from(match[2], 'base64');
-      } else {
-        // Raw base64 string
-        buffer = Buffer.from(base64String, 'base64');
-        if (originalName && originalName.includes('.')) {
-          ext = originalName.split('.').pop()?.toLowerCase() || 'jpg';
-        }
-      }
-
-      // Max size validation (10 MB)
-      if (buffer.length > 10 * 1024 * 1024) {
-        throw new Error('Image file exceeds the 10 MB maximum limit.');
-      }
-
-      const safeName = `${key}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-      const filePath = path.join(UPLOADS_DIR, safeName);
-      fs.writeFileSync(filePath, buffer);
-      return `/images/the-plan/uploads/${safeName}`;
-    };
 
     // -------------------------------------------------------------------------
     // ACTION: UPLOAD NEW PICTURE
     // -------------------------------------------------------------------------
     if (action === 'upload') {
-      if (!fileBase64) {
+      let finalSrc = blobUrl;
+
+      if (!finalSrc && fileBase64) {
+        finalSrc = await storeBlobImage(fileBase64, fileName || `${key}.jpg`, key);
+      }
+
+      if (!finalSrc) {
         return NextResponse.json(
-          { success: false, error: 'No image data provided for upload.' },
+          { success: false, error: 'No image data or Blob URL provided for upload.' },
           { status: 400 }
         );
       }
 
-      const imageSrc = saveImageFile(fileBase64, fileName);
       const newPhotoId = `${key}-${Date.now()}`;
       const makeCover = isCover || currentList.length === 0;
 
-      if (makeCover) {
-        currentList.forEach(p => (p.isCover = false));
-      }
-
       const newPhoto: PlanPhotoItem = {
         id: newPhotoId,
-        src: imageSrc,
+        src: finalSrc,
         title: (title || 'Project Photograph').trim(),
         caption: (caption || 'Strategic expansion photograph for ' + projectName).trim(),
         tag: (tag || (makeCover ? 'Cover Photo' : 'Gallery')).trim(),
@@ -227,18 +191,11 @@ export async function POST(request: NextRequest) {
         uploadedBy: 'Simon Memia Wanjiru',
       };
 
-      if (makeCover) {
-        currentList.unshift(newPhoto);
-        // Re-index
-        currentList.forEach((p, idx) => (p.order = idx));
-      } else {
-        currentList.push(newPhoto);
-      }
+      // Save directly to Database
+      await upsertProjectPhoto(key, newPhoto);
+      const updatedPhotosMap = await getAllProjectPhotos();
 
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
-
-      // Log to Audit Log (EditLog)
+      // Log to Audit Log
       await createAuditLog({
         model: 'The Plan - Project Photos',
         action: 'Added',
@@ -253,15 +210,15 @@ export async function POST(request: NextRequest) {
           src: newPhoto.src,
           project: projectName,
         },
-        remarks: `Simon Memia Wanjiru uploaded new photograph "${newPhoto.title}" for ${projectName}`,
+        remarks: `Simon Memia Wanjiru uploaded new photograph "${newPhoto.title}" to ${projectName}`,
       });
 
       return NextResponse.json({
         success: true,
-        message: `Photograph successfully uploaded to ${projectName}.`,
+        message: `Photograph successfully saved to ${projectName}.`,
         data: newPhoto,
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 
@@ -269,23 +226,24 @@ export async function POST(request: NextRequest) {
     // ACTION: REPLACE PICTURE
     // -------------------------------------------------------------------------
     if (action === 'replace') {
-      const targetIndex = currentList.findIndex(p => p.id === photoId);
-      if (targetIndex === -1) {
+      const existing = currentList.find(p => p.id === photoId);
+      if (!existing) {
         return NextResponse.json(
           { success: false, error: `Photograph with ID "${photoId}" not found in ${projectName}.` },
           { status: 404 }
         );
       }
 
-      const existing = currentList[targetIndex];
+      const oldSrc = existing.src;
       let newSrc = existing.src;
 
-      if (fileBase64) {
-        newSrc = saveImageFile(fileBase64, fileName);
+      if (blobUrl) {
+        newSrc = blobUrl;
+      } else if (fileBase64) {
+        newSrc = await storeBlobImage(fileBase64, fileName || `${key}.jpg`, key);
       }
 
-      const oldSnapshot = { ...existing };
-      currentList[targetIndex] = {
+      const updatedPhoto: PlanPhotoItem = {
         ...existing,
         src: newSrc,
         title: title !== undefined ? title.trim() : existing.title,
@@ -295,8 +253,14 @@ export async function POST(request: NextRequest) {
         uploadedBy: 'Simon Memia Wanjiru',
       };
 
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
+      // REQUIREMENT: Save to database FIRST!
+      await upsertProjectPhoto(key, updatedPhoto);
+      const updatedPhotosMap = await getAllProjectPhotos();
+
+      // ONLY THEN clean up old Blob if applicable
+      if (oldSrc !== newSrc) {
+        await cleanOldBlob(oldSrc);
+      }
 
       // Audit Log
       await createAuditLog({
@@ -306,17 +270,17 @@ export async function POST(request: NextRequest) {
         userEmail: 'simon@dreamloom.co.ke',
         userName: 'Simon Memia Wanjiru',
         member: projectName,
-        oldValues: oldSnapshot,
-        newValues: currentList[targetIndex],
+        oldValues: { title: existing.title, src: existing.src },
+        newValues: { title: updatedPhoto.title, src: updatedPhoto.src },
         remarks: `Simon Memia Wanjiru replaced photograph "${existing.title}" in ${projectName}`,
       });
 
       return NextResponse.json({
         success: true,
         message: `Photograph successfully replaced in ${projectName}.`,
-        data: currentList[targetIndex],
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        data: updatedPhoto,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 
@@ -324,42 +288,41 @@ export async function POST(request: NextRequest) {
     // ACTION: REMOVE PICTURE
     // -------------------------------------------------------------------------
     if (action === 'delete') {
-      const targetIndex = currentList.findIndex(p => p.id === photoId);
-      if (targetIndex === -1) {
+      const existing = currentList.find(p => p.id === photoId);
+      if (!existing) {
         return NextResponse.json(
           { success: false, error: `Photograph with ID "${photoId}" not found in ${projectName}.` },
           { status: 404 }
         );
       }
 
-      const removed = currentList.splice(targetIndex, 1)[0];
-      // If deleted was cover, designate the first remaining as cover
-      if (removed.isCover && currentList.length > 0) {
-        currentList[0].isCover = true;
-      }
-      currentList.forEach((p, idx) => (p.order = idx));
+      const oldSrc = existing.src;
 
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
+      // Delete from Database first
+      await deleteProjectPhoto(key, photoId);
+      const updatedPhotosMap = await getAllProjectPhotos();
+
+      // Clean up old Blob from Vercel Blob storage
+      await cleanOldBlob(oldSrc);
 
       // Audit Log
       await createAuditLog({
         model: 'The Plan - Project Photos',
         action: 'Deleted',
-        recordRef: removed.id,
+        recordRef: existing.id,
         userEmail: 'simon@dreamloom.co.ke',
         userName: 'Simon Memia Wanjiru',
         member: projectName,
-        oldValues: removed,
+        oldValues: existing,
         newValues: {},
-        remarks: `Simon Memia Wanjiru removed photograph "${removed.title}" from ${projectName}`,
+        remarks: `Simon Memia Wanjiru removed photograph "${existing.title}" from ${projectName}`,
       });
 
       return NextResponse.json({
         success: true,
         message: `Photograph removed from ${projectName}.`,
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 
@@ -367,24 +330,27 @@ export async function POST(request: NextRequest) {
     // ACTION: SET AS MAIN / COVER PHOTOGRAPH
     // -------------------------------------------------------------------------
     if (action === 'set-cover') {
-      const targetIndex = currentList.findIndex(p => p.id === photoId);
-      if (targetIndex === -1) {
+      const targetPhoto = currentList.find(p => p.id === photoId);
+      if (!targetPhoto) {
         return NextResponse.json(
           { success: false, error: `Photograph with ID "${photoId}" not found in ${projectName}.` },
           { status: 404 }
         );
       }
 
-      const [targetPhoto] = currentList.splice(targetIndex, 1);
-      currentList.forEach(p => (p.isCover = false));
-      targetPhoto.isCover = true;
-      targetPhoto.tag = targetPhoto.tag || 'Cover Photo';
-      // Place at the very front
-      currentList.unshift(targetPhoto);
-      currentList.forEach((p, idx) => (p.order = idx));
+      const updatedTarget: PlanPhotoItem = {
+        ...targetPhoto,
+        isCover: true,
+        order: 0,
+      };
 
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
+      await upsertProjectPhoto(key, updatedTarget);
+
+      // Reorder other photos
+      const otherIds = currentList.filter(p => p.id !== photoId).map(p => p.id);
+      await reorderProjectPhotos(key, [photoId, ...otherIds]);
+
+      const updatedPhotosMap = await getAllProjectPhotos();
 
       await createAuditLog({
         model: 'The Plan - Project Photos',
@@ -395,14 +361,14 @@ export async function POST(request: NextRequest) {
         member: projectName,
         oldValues: { isCover: false },
         newValues: { isCover: true, title: targetPhoto.title },
-        remarks: `Simon Memia Wanjiru designated "${targetPhoto.title}" as main cover photograph for ${projectName}`,
+        remarks: `Simon Memia Wanjiru set "${targetPhoto.title}" as main cover photograph for ${projectName}`,
       });
 
       return NextResponse.json({
         success: true,
         message: `"${targetPhoto.title}" set as main cover photograph for ${projectName}.`,
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 
@@ -412,31 +378,28 @@ export async function POST(request: NextRequest) {
     if (action === 'reorder') {
       const targetIndex = currentList.findIndex(p => p.id === photoId);
       if (targetIndex === -1) {
-        return NextResponse.json(
-          { success: false, error: `Photograph not found.` },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, error: 'Photograph not found.' }, { status: 404 });
       }
 
+      const reordered = [...currentList];
       if (direction === 'up' && targetIndex > 0) {
-        const temp = currentList[targetIndex - 1];
-        currentList[targetIndex - 1] = currentList[targetIndex];
-        currentList[targetIndex] = temp;
-      } else if (direction === 'down' && targetIndex < currentList.length - 1) {
-        const temp = currentList[targetIndex + 1];
-        currentList[targetIndex + 1] = currentList[targetIndex];
-        currentList[targetIndex] = temp;
+        const temp = reordered[targetIndex - 1];
+        reordered[targetIndex - 1] = reordered[targetIndex];
+        reordered[targetIndex] = temp;
+      } else if (direction === 'down' && targetIndex < reordered.length - 1) {
+        const temp = reordered[targetIndex + 1];
+        reordered[targetIndex + 1] = reordered[targetIndex];
+        reordered[targetIndex] = temp;
       }
 
-      currentList.forEach((p, idx) => (p.order = idx));
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
+      await reorderProjectPhotos(key, reordered.map(p => p.id));
+      const updatedPhotosMap = await getAllProjectPhotos();
 
       return NextResponse.json({
         success: true,
         message: `Photographs reordered in ${projectName}.`,
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 
@@ -444,36 +407,38 @@ export async function POST(request: NextRequest) {
     // ACTION: EDIT DETAILS (Title, Caption, Tag)
     // -------------------------------------------------------------------------
     if (action === 'edit-details') {
-      const target = currentList.find(p => p.id === photoId);
-      if (!target) {
+      const existing = currentList.find(p => p.id === photoId);
+      if (!existing) {
         return NextResponse.json({ success: false, error: 'Photograph not found.' }, { status: 404 });
       }
 
-      const oldSnapshot = { ...target };
-      if (title !== undefined) target.title = title.trim();
-      if (caption !== undefined) target.caption = caption.trim();
-      if (tag !== undefined) target.tag = tag.trim();
+      const updated: PlanPhotoItem = {
+        ...existing,
+        title: title !== undefined ? title.trim() : existing.title,
+        caption: caption !== undefined ? caption.trim() : existing.caption,
+        tag: tag !== undefined ? tag.trim() : existing.tag,
+      };
 
-      photosMap[key] = currentList;
-      saveManifest(photosMap);
+      await upsertProjectPhoto(key, updated);
+      const updatedPhotosMap = await getAllProjectPhotos();
 
       await createAuditLog({
         model: 'The Plan - Project Photos',
         action: 'Updated',
-        recordRef: target.id,
+        recordRef: existing.id,
         userEmail: 'simon@dreamloom.co.ke',
         userName: 'Simon Memia Wanjiru',
         member: projectName,
-        oldValues: oldSnapshot,
-        newValues: target,
-        remarks: `Simon Memia Wanjiru updated photo details for "${target.title}" in ${projectName}`,
+        oldValues: { title: existing.title, caption: existing.caption, tag: existing.tag },
+        newValues: { title: updated.title, caption: updated.caption, tag: updated.tag },
+        remarks: `Simon Memia Wanjiru updated details for "${updated.title}" in ${projectName}`,
       });
 
       return NextResponse.json({
         success: true,
         message: `Photograph details updated for ${projectName}.`,
-        projectPhotos: currentList,
-        allPhotos: photosMap,
+        projectPhotos: updatedPhotosMap[key],
+        allPhotos: updatedPhotosMap,
       });
     }
 

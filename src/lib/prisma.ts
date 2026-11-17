@@ -164,6 +164,28 @@ export async function ensureDatabaseSchema(): Promise<void> {
       await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Inventory_sku_key" ON "Inventory"("sku")`);
     } catch (e) { console.warn('Inventory sku index notice:', e); }
 
+    // 4d. Create ThePlanImage table idempotently for permanent Vercel Blob and Plan page images
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "ThePlanImage" (
+          "id" TEXT NOT NULL,
+          "projectId" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "caption" TEXT NOT NULL DEFAULT '',
+          "tag" TEXT DEFAULT '',
+          "src" TEXT NOT NULL,
+          "isCover" BOOLEAN NOT NULL DEFAULT false,
+          "sortOrder" INTEGER NOT NULL DEFAULT 0,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "ThePlanImage_pkey" PRIMARY KEY ("id")
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS "ThePlanImage_projectId_idx" ON "ThePlanImage"("projectId")
+      `);
+    } catch (e) { console.warn('ThePlanImage table create notice:', e); }
+
     // Seed default assets if empty
     try {
       const assetCount = await prisma.asset.count();
