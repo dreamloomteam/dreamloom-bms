@@ -1886,7 +1886,7 @@ export default function Home() {
   const refreshExpenses = async () => {
     try {
       const res = await fetch('/api/expenses').then(r => r.json());
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         const mapped = res.data.map((e: any, idx: number) => ({
           id: `EXP-${String(idx + 1).padStart(2, '0')}`,
           dbId: e.id,
@@ -2025,6 +2025,10 @@ export default function Home() {
       } else if (mode === 'Inventory') {
         endpoint = `/api/inventory?id=${encodeURIComponent(String(item.id))}&sku=${encodeURIComponent(String(item.sku || ''))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
         refreshFn = refreshInventory;
+      } else if (mode === 'Expenses') {
+        const delId = item.dbId || item.id;
+        endpoint = `/api/expenses?id=${encodeURIComponent(String(delId))}&dbId=${encodeURIComponent(String(item.dbId || ''))}&customId=${encodeURIComponent(String(item.id || ''))}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+        refreshFn = refreshExpenses;
       } else {
         return;
       }
@@ -2033,6 +2037,13 @@ export default function Home() {
       if (!res.success) {
         alert('Delete failed: ' + (res.error || 'Server error.'));
         return;
+      }
+      if (mode === 'Expenses') {
+        setExpenses(prev => {
+          const next = prev.filter(i => i.id !== item.id && (item.dbId ? i.dbId !== item.dbId : true));
+          try { localStorage.setItem('dreamloom_expenses', JSON.stringify(next)); } catch (e) {}
+          return next;
+        });
       }
       await refreshFn();
       await refreshAuditLogs();
@@ -2482,13 +2493,18 @@ export default function Home() {
       } else if (modalMode === 'Expenses') {
         const targetExp = expenses.find(exp => exp.id === editingId);
         const delId = targetExp?.dbId || editingId;
-        const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(delId))}&userEmail=${encodeURIComponent(userEmail)}`, {
+        const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(delId))}&dbId=${encodeURIComponent(String(targetExp?.dbId || ''))}&customId=${encodeURIComponent(String(editingId || ''))}&userEmail=${encodeURIComponent(userEmail)}`, {
           method: 'DELETE'
         }).then(r => r.json());
         if (!res.success) {
           alert('Delete failed: ' + (res.error || 'Server error occurred while deleting expense voucher.'));
           return;
         }
+        setExpenses(prev => {
+          const next = prev.filter(item => item.id !== editingId && (targetExp?.dbId ? item.dbId !== targetExp.dbId : true));
+          try { localStorage.setItem('dreamloom_expenses', JSON.stringify(next)); } catch (e) {}
+          return next;
+        });
         await refreshExpenses();
         deleteSuccess = true;
       } else if (modalMode === 'Member Directory') {
@@ -4574,17 +4590,41 @@ export default function Home() {
                                     icon: <Trash2 className="w-4 h-4 text-rose-600" />,
                                     danger: true,
                                     onClick: async () => {
-                                      const confirmDel = window.confirm(`Delete expense record "${exp.description}"?`);
+                                      const confirmDel = window.confirm(`Are you sure you want to permanently delete expense record "${exp.description}"? This action cannot be undone.`);
                                       if (!confirmDel) return;
                                       try {
-                                        const res = await fetch(`/api/expenses?id=${encodeURIComponent(String(exp.id))}&userEmail=${encodeURIComponent(currentUser?.email || 'simon@dreamloom.co.ke')}`, {
+                                        const userEmail = currentUser?.email || 'simon@dreamloom.co.ke';
+                                        const targetDbId = exp.dbId || (typeof exp.id === 'number' ? exp.id : (!isNaN(Number(exp.id)) ? Number(exp.id) : null));
+                                        const query = new URLSearchParams();
+                                        if (targetDbId) query.set('id', String(targetDbId));
+                                        else query.set('id', String(exp.id));
+                                        if (exp.dbId) query.set('dbId', String(exp.dbId));
+                                        if (exp.id) query.set('customId', String(exp.id));
+                                        query.set('userEmail', userEmail);
+
+                                        const res = await fetch(`/api/expenses?${query.toString()}`, {
                                           method: 'DELETE'
                                         });
-                                        if (res.ok) {
-                                          setExpenses(prev => prev.filter(item => item.id !== exp.id));
-                                          setToastMessage('Expense deleted.');
+                                        const data = await res.json();
+                                        if (!res.ok || !data.success) {
+                                          alert('Delete failed: ' + (data.error || 'Server error occurred while deleting expense record.'));
+                                          return;
                                         }
-                                      } catch (e) {}
+
+                                        // 1. Immediately remove from local state and update localStorage
+                                        setExpenses(prev => {
+                                          const next = prev.filter(item => item.id !== exp.id && (exp.dbId ? item.dbId !== exp.dbId : true));
+                                          try { localStorage.setItem('dreamloom_expenses', JSON.stringify(next)); } catch (e) {}
+                                          return next;
+                                        });
+
+                                        // 2. Synchronize with database and audit logs
+                                        await refreshExpenses();
+                                        await refreshAuditLogs();
+                                        setToastMessage(`Expense voucher "${exp.description}" deleted successfully.`);
+                                      } catch (err: any) {
+                                        alert('Error deleting expense record: ' + err.message);
+                                      }
                                     }
                                   }
                                 ]}

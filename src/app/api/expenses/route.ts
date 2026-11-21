@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAuthorizedEditor, createAuditLog } from '@/lib/audit';
+import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/session';
 
 // GET /api/expenses
 export async function GET() {
@@ -131,33 +132,77 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const rawId = searchParams.get('id');
-    const userEmail = searchParams.get('userEmail');
+    const rawDbId = searchParams.get('dbId');
+    const rawCustomId = searchParams.get('customId');
+    let userEmail = searchParams.get('userEmail');
+
+    // Also check session cookie if userEmail is missing
+    if (!userEmail) {
+      try {
+        const cookieHeader = request.headers.get('cookie') || '';
+        const match = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+        if (match) {
+          const payload = verifySessionToken(match[1]);
+          if (payload?.email) {
+            userEmail = payload.email;
+          }
+        }
+      } catch (e) {}
+    }
 
     if (!isAuthorizedEditor(userEmail)) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Only authorized directors can delete expenses.' }, { status: 403 });
     }
 
-    const numId = rawId ? (isNaN(Number(rawId)) ? parseInt(rawId.replace(/\D/g, ''), 10) : Number(rawId)) : null;
-    if (!numId || isNaN(numId)) {
-      return NextResponse.json({ success: false, error: 'Valid Expense ID is required' }, { status: 400 });
+    let prevExpense = null;
+
+    // 1. Direct lookup by explicit dbId if numeric
+    const explicitDbId = rawDbId ? Number(rawDbId) : null;
+    if (explicitDbId && !isNaN(explicitDbId)) {
+      prevExpense = await prisma.expense.findUnique({
+        where: { id: explicitDbId },
+      });
     }
 
-    const prevExpense = await prisma.expense.findUnique({
-      where: { id: numId },
-    });
+    // 2. Direct lookup by rawId if numeric
+    if (!prevExpense && rawId && !isNaN(Number(rawId))) {
+      prevExpense = await prisma.expense.findUnique({
+        where: { id: Number(rawId) },
+      });
+    }
+
+    // 3. Fallback: Parse digits from rawId or rawCustomId (e.g. "EXP-35")
+    const numId = rawId ? (isNaN(Number(rawId)) ? parseInt(rawId.replace(/\D/g, ''), 10) : Number(rawId)) : null;
+    if (!prevExpense && numId && !isNaN(numId)) {
+      prevExpense = await prisma.expense.findUnique({
+        where: { id: numId },
+      });
+    }
+
+    // 4. Index-based fallback if formatted as "EXP-XX" (1-indexed based on newest-first ordering)
+    const formattedId = rawCustomId || (rawId && String(rawId).toUpperCase().startsWith('EXP-') ? String(rawId) : null);
+    if (!prevExpense && formattedId) {
+      const allExpenses = await prisma.expense.findMany({
+        orderBy: { expenseDate: 'desc' },
+      });
+      const expIndex = parseInt(formattedId.replace(/\D/g, ''), 10) - 1;
+      if (expIndex >= 0 && expIndex < allExpenses.length) {
+        prevExpense = allExpenses[expIndex];
+      }
+    }
 
     if (!prevExpense) {
       return NextResponse.json({ success: false, error: 'Expense record not found' }, { status: 404 });
     }
 
-    await prisma.expense.delete({ where: { id: numId } });
+    await prisma.expense.delete({ where: { id: prevExpense.id } });
 
     await createAuditLog({
       model: 'Expenses',
       action: 'Deleted',
       recordId: prevExpense.id,
       userEmail,
-      member: prevExpense.referenceDetails || prevExpense.description || `Expense #${numId}`,
+      member: prevExpense.referenceDetails || prevExpense.description || `Expense #${prevExpense.id}`,
       oldValues: {
         'Description': prevExpense.description,
         'Expense Amount': `KSh ${Number(prevExpense.amount).toLocaleString()}`,
@@ -167,10 +212,10 @@ export async function DELETE(request: Request) {
       newValues: {
         'Record Status': 'Expense Record Deleted (No new active record)',
       },
-      remarks: `Deleted expense voucher #${numId}`,
+      remarks: `Deleted expense voucher #${prevExpense.id} ("${prevExpense.description}")`,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deletedId: prevExpense.id });
   } catch (error) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
