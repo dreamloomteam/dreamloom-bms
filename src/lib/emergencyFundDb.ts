@@ -1,6 +1,6 @@
 import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/audit';
-import { isUserAdmin } from '@/lib/session';
+import { isUserAdmin, SessionPayload } from '@/lib/session';
 
 export interface EmergencyFundStats {
   totalAllocations: number;
@@ -1041,6 +1041,122 @@ export async function reverseFundAllocation(
   });
 
   return updatedAllocation;
+}
+
+/**
+ * Safely removes all development test and dummy records from the Emergency & Welfare Fund tables.
+ * Preserves all genuine member allocations and company records.
+ */
+export async function cleanupEmergencyFundTestData(user: SessionPayload) {
+  if (!isUserAdmin(user)) {
+    throw new Error('Unauthorized. Only Super Administrators can perform test data cleanup.');
+  }
+
+  // 1. Remove dummy EmergencyLoanRepayment records
+  const repaymentsResult = await prisma.emergencyLoanRepayment.deleteMany({
+    where: {
+      OR: [
+        { loanId: { in: ['EWF-L001', 'EWF-L002'] } },
+        { reference: { startsWith: 'MPESA-REP-SETTLED' } }
+      ]
+    }
+  });
+
+  // 2. Remove dummy EmergencyLoan records
+  const loansResult = await prisma.emergencyLoan.deleteMany({
+    where: {
+      OR: [
+        { id: { in: ['EWF-L001', 'EWF-L002'] } },
+        { applicationId: { in: ['EAPP-1001', 'EAPP-1002', 'EAPP-1003', 'EAPP-1004', 'EAPP-1005'] } }
+      ]
+    }
+  });
+
+  // 3. Remove dummy EmergencyLoanApproval records
+  const approvalsResult = await prisma.emergencyLoanApproval.deleteMany({
+    where: {
+      applicationId: { in: ['EAPP-1001', 'EAPP-1002', 'EAPP-1003', 'EAPP-1004', 'EAPP-1005'] }
+    }
+  });
+
+  // 4. Remove dummy EmergencyLoanApplication records
+  const applicationsResult = await prisma.emergencyLoanApplication.deleteMany({
+    where: {
+      id: { in: ['EAPP-1001', 'EAPP-1002', 'EAPP-1003', 'EAPP-1004', 'EAPP-1005'] }
+    }
+  });
+
+  // 5. Remove test EmergencyFundTransaction records
+  const transactionsResult = await prisma.emergencyFundTransaction.deleteMany({
+    where: {
+      OR: [
+        { id: { in: [
+          'TXN-REV-ALC-88-1355',
+          'TXN-REV-ALC-88-8865',
+          'TXN-REV-TXN-DISB-EWF-L001-3189',
+          'TXN-DISB-EWF-L001',
+          'TXN-REP-EWF-L001-1-INT',
+          'TXN-REP-EWF-L001-1-PRN',
+          'TXN-DISB-EWF-L002'
+        ] } },
+        { referenceId: { in: ['EWF-L001', 'EWF-L002', 'EAPP-1001', 'EAPP-1002', 'EAPP-1003', 'EAPP-1004', 'EAPP-1005'] } },
+        { description: { contains: 'Audit testing: Authorized test reversal' } },
+        { paymentReference: { in: ['DISB-EWF-L001', 'DISB-EWF-L002', 'MPESA-REP-SETTLED-001'] } }
+      ]
+    }
+  });
+
+  // 6. Restore Allocation ALC-88 (David Wainaina Kinyua, September 2026) to its genuine state
+  let restoredAllocationsCount = 0;
+  const alc88 = await prisma.emergencyFundAllocation.findUnique({ where: { id: 88 } });
+  if (alc88) {
+    await prisma.emergencyFundAllocation.update({
+      where: { id: 88 },
+      data: {
+        amount: 1000.0,
+        status: 'Allocated',
+        notes: 'Auto-allocated from KSh 6,000 contribution (CNT-089)'
+      }
+    });
+    restoredAllocationsCount = 1;
+  }
+
+  // 7. Clean up test EditLog records
+  const editLogsResult = await prisma.editLog.deleteMany({
+    where: {
+      OR: [
+        { model: { in: ['EmergencyLoan', 'EmergencyLoanApplication', 'EmergencyLoanRepayment', 'EmergencyFundTransaction'] } },
+        { changes: { contains: 'Audit testing: Authorized test reversal' } },
+        { changes: { contains: 'EWF-L001' } },
+        { changes: { contains: 'EWF-L002' } },
+        { changes: { contains: 'EAPP-100' } }
+      ]
+    }
+  });
+
+  // 8. Record genuine cleanup audit entry
+  await createAuditLog({
+    userEmail: user.email,
+    userName: user.fullName || user.email || 'Admin',
+    action: 'Deleted',
+    model: 'EmergencyFund',
+    member: 'System Administration',
+    recordRef: 'CLEANUP-2026-11-23',
+    oldValues: {},
+    newValues: { status: 'Cleaned' },
+    reason: 'Executive instruction: permanent removal of all development test and demo data',
+    remarks: `Cleaned up ${applicationsResult.count} dummy applications, ${loansResult.count} dummy loans, ${repaymentsResult.count} test repayments, ${transactionsResult.count} test transactions, and restored ALC-88.`
+  });
+
+  return {
+    deletedRepayments: repaymentsResult.count,
+    deletedLoans: loansResult.count,
+    deletedApprovals: approvalsResult.count,
+    deletedApplications: applicationsResult.count,
+    deletedTransactions: transactionsResult.count,
+    deletedAuditLogs: editLogsResult.count,
+    restoredAllocations: restoredAllocationsCount
+  };
 }
 
 function getMonthIndex(month: string): number {

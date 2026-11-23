@@ -8,7 +8,8 @@ import {
   disburseEmergencyLoan,
   recordEmergencyLoanRepayment,
   reverseFundTransaction,
-  reverseFundAllocation
+  reverseFundAllocation,
+  cleanupEmergencyFundTestData
 } from '@/lib/emergencyFundDb';
 import { syncAllContributionsToEmergencyFund } from '@/lib/syncService';
 import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin, SessionPayload } from '@/lib/session';
@@ -133,6 +134,15 @@ export async function POST(request: Request) {
           success: true,
           count,
           message: `Successfully synchronized ${count} member contributions with Emergency & Welfare Fund.`
+        });
+      }
+
+      case 'cleanup_test_data': {
+        const summary = await cleanupEmergencyFundTestData(user);
+        return NextResponse.json({
+          success: true,
+          data: summary,
+          message: 'All development and testing records successfully removed from Emergency & Welfare Fund tables.'
         });
       }
 
