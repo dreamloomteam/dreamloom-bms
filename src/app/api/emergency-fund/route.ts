@@ -7,8 +7,10 @@ import {
   approveEmergencyLoanApplication,
   disburseEmergencyLoan,
   recordEmergencyLoanRepayment,
-  reverseFundTransaction
+  reverseFundTransaction,
+  reverseFundAllocation
 } from '@/lib/emergencyFundDb';
+import { syncAllContributionsToEmergencyFund } from '@/lib/syncService';
 import { SESSION_COOKIE_NAME, verifySessionToken, isUserAdmin, SessionPayload } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -113,6 +115,24 @@ export async function POST(request: Request) {
           success: true,
           data: result,
           message: `Transaction reversed successfully.`
+        });
+      }
+
+      case 'reverse_allocation': {
+        const result = await reverseFundAllocation(body.data, user);
+        return NextResponse.json({
+          success: true,
+          data: result,
+          message: `Allocation ALC-${result.id} reversed successfully.`
+        });
+      }
+
+      case 'sync_all_contributions': {
+        const count = await syncAllContributionsToEmergencyFund(user.email, user.fullName);
+        return NextResponse.json({
+          success: true,
+          count,
+          message: `Successfully synchronized ${count} member contributions with Emergency & Welfare Fund.`
         });
       }
 

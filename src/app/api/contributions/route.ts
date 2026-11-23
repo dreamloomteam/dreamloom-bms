@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma, ensureDatabaseSchema } from '@/lib/prisma';
-import { syncContributionToPenalty } from '@/lib/syncService';
+import { syncContributionToPenalty, syncContributionToEmergencyFund, calculateContributionFundSplit } from '@/lib/syncService';
 import { normalizeMonthYear, ALL_MONTHS } from '@/lib/dateUtils';
 import { createAuditLog, isAuthorizedEditor, resolveEditorName } from '@/lib/audit';
 
@@ -76,6 +76,8 @@ function formatContributionRecord(c: any) {
     lastPayment?.paymentDate ||
     (paidAmt > 0 ? norm.defaultDateStr : '');
 
+  const fundSplit = calculateContributionFundSplit(paidAmt, expectedAmt);
+
   return {
     ...c,
     memberName: resolvedMemberName,
@@ -94,7 +96,12 @@ function formatContributionRecord(c: any) {
     bankRef: c.bankRef || lastPayment?.bankRef || '',
     paymentReference,
     status,
-    payments
+    payments,
+    generalFundsAmount: fundSplit.generalAmount,
+    emergencyFundAmount: fundSplit.emergencyAmount,
+    outstandingEmergency: fundSplit.outstandingEmergency,
+    isFundReconciled: fundSplit.isReconciled,
+    fundDifference: fundSplit.difference
   };
 }
 
@@ -317,6 +324,10 @@ export async function POST(request: Request) {
         }
 
         await syncContributionToPenalty(saved.id);
+        await syncContributionToEmergencyFund(saved.id, {
+          userEmail: authUser,
+          userName: resolveEditorName(authUser)
+        });
         savedRecords.push(formatContributionRecord(saved));
       }
 
@@ -544,6 +555,10 @@ export async function POST(request: Request) {
       });
 
       await syncContributionToPenalty(updated.id);
+      await syncContributionToEmergencyFund(updated.id, {
+        userEmail: authUser,
+        userName: resolveEditorName(authUser)
+      });
 
       const newSnapshot = buildContribAuditSnapshot(updated);
       await createAuditLog({
@@ -867,6 +882,10 @@ export async function POST(request: Request) {
     });
 
     await syncContributionToPenalty(savedRecord.id);
+    await syncContributionToEmergencyFund(savedRecord.id, {
+      userEmail: authUser,
+      userName: resolveEditorName(authUser)
+    });
 
     const formattedRefreshed = formatContributionRecord(refreshed);
     return NextResponse.json({ ...formattedRefreshed, success: true, data: formattedRefreshed }, { status: 201 });
@@ -968,6 +987,10 @@ export async function PUT(request: Request) {
         });
 
         await syncContributionToPenalty(updatedParent.id);
+        await syncContributionToEmergencyFund(updatedParent.id, {
+          userEmail: authUser,
+          userName: resolveEditorName(authUser)
+        });
 
         await createAuditLog({
           model: 'ContributionPayment',
@@ -1279,6 +1302,10 @@ export async function PUT(request: Request) {
     });
 
     await syncContributionToPenalty(updated.id);
+    await syncContributionToEmergencyFund(updated.id, {
+      userEmail: authUser,
+      userName: resolveEditorName(authUser)
+    });
 
     const formattedUpdated = formatContributionRecord(refreshed);
     return NextResponse.json({ ...formattedUpdated, success: true, data: formattedUpdated });
@@ -1362,6 +1389,12 @@ export async function DELETE(request: Request) {
         });
 
         await syncContributionToPenalty(updatedParent.id);
+        await syncContributionToEmergencyFund(updatedParent.id, {
+          userEmail: authUser,
+          userName: resolveEditorName(authUser),
+          isReversal: Number(updatedParent.amount) === 0,
+          reversalReason: reason || 'Instalment payment reversed'
+        });
 
         await createAuditLog({
           model: 'Contribution',
@@ -1485,6 +1518,12 @@ export async function DELETE(request: Request) {
       });
 
       await syncContributionToPenalty(updated.id);
+      await syncContributionToEmergencyFund(updated.id, {
+        userEmail: authUser,
+        userName: resolveEditorName(authUser),
+        isReversal: true,
+        reversalReason: reason || 'Payments reversed to Unpaid'
+      });
 
       await createAuditLog({
         model: 'Contribution',
@@ -1524,6 +1563,16 @@ export async function DELETE(request: Request) {
           monthYear: existing.monthYear,
           status: { in: ['Unpaid', 'UNPAID'] }
         }
+      });
+      const normDel = normalizeMonthYear(existing.month, existing.year, existing.monthYear);
+      await prisma.emergencyFundAllocation.updateMany({
+        where: { memberId: existing.memberId, month: normDel.monthName, year: normDel.year },
+        data: { status: 'Reversed', amount: 0, notes: `Reversed: Contribution record ${existing.customId || existing.id} deleted` }
+      });
+      const delTxnId = `TXN-ALC-${normDel.year}${normDel.monthName.substring(0, 3).toUpperCase()}-M00${existing.memberId}`;
+      await prisma.emergencyFundTransaction.updateMany({
+        where: { id: delTxnId },
+        data: { isReversed: true, reversedAt: new Date(), reversalReason: `Contribution record ${existing.customId || existing.id} deleted` }
       });
     }
 

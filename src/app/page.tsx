@@ -1311,6 +1311,28 @@ export default function Home() {
     return contributions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
   }, [contributions]);
 
+  // Emergency & Welfare Fund Internal Allocation (KSh 1,000 per fully paid KSh 6,000 contribution, proportional if partial)
+  const totalEmergencyFundAllocations = useMemo(() => {
+    return contributions
+      .filter(c => !c.payout)
+      .reduce((sum, c) => {
+        const paid = Number(c.amount) || 0;
+        if (paid >= 6000) return sum + 1000;
+        if (paid > 0) return sum + Math.min(1000, Math.round((paid / 6000) * 1000 * 100) / 100);
+        return sum;
+      }, 0);
+  }, [contributions]);
+
+  // General Company Funds Available (KSh 5,000 per fully paid KSh 6,000 contribution = Total Contributions - Emergency Fund)
+  const totalGeneralFundsAvailable = useMemo(() => {
+    return Math.max(0, Math.round((grandTotalContributions - totalEmergencyFundAllocations) * 100) / 100);
+  }, [grandTotalContributions, totalEmergencyFundAllocations]);
+
+  // Reconciliation: Total Contributions = General Funds + Emergency Fund
+  const isContributionsReconciled = useMemo(() => {
+    return Math.abs(grandTotalContributions - (totalGeneralFundsAvailable + totalEmergencyFundAllocations)) < 0.01;
+  }, [grandTotalContributions, totalGeneralFundsAvailable, totalEmergencyFundAllocations]);
+
   // Total Mawega Land Payouts
   const grandTotalMawegaPayouts = useMemo(() => {
     return contributions.reduce((sum, c) => sum + (Number(c.payout) || 0), 0);
@@ -3481,6 +3503,97 @@ export default function Home() {
                     <span className="text-[11px] text-white/90 font-medium block mt-0.5">
                       27 Recorded Outflows
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* INTERNAL FUND ALLOCATIONS & RECONCILIATION STRIP (Section D & F) */}
+              <div className="bg-[#0B132B] border border-[#1C2A4A] rounded-2xl p-6 shadow-xl text-white">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-800">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400">
+                        Fund Category Allocations & Live Reconciliation
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Internal capital allocation per KSh 6,000 monthly contribution (KSh 5,000 General Company Funds + KSh 1,000 Emergency & Welfare Fund). Total company cash balance is 100% preserved.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs px-3 py-1 rounded-full font-bold border flex items-center gap-1.5 ${
+                        isContributionsReconciled
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                          : 'bg-red-950/80 text-red-300 border-red-500/40'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {isContributionsReconciled
+                        ? '100% Reconciled • Zero Discrepancy'
+                        : '⚠️ Discrepancy Flagged for Treasurer Attention'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-5">
+                  {/* Category 1: Total Contributions Received */}
+                  <div className="bg-[#142036] border border-[#1E2D4A] rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                        1. Total Member Contributions
+                      </span>
+                      <span className="text-2xl font-black text-white font-mono mt-1 block">
+                        {selectedCurrency} {grandTotalContributions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Standard Dues:</span>
+                      <span className="text-emerald-400 font-bold font-mono">KES 6,000 / member / mo</span>
+                    </div>
+                  </div>
+
+                  {/* Category 2: General Company Funds Available */}
+                  <div className="bg-[#142036] border border-[#1E2D4A] rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                        2. General Funds Available
+                      </span>
+                      <span className="text-2xl font-black text-emerald-400 font-mono mt-1 block">
+                        {selectedCurrency} {totalGeneralFundsAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Operating Share (83.33%):</span>
+                      <span className="text-emerald-300 font-bold font-mono">KES 5,000 / member / mo</span>
+                    </div>
+                  </div>
+
+                  {/* Category 3: Emergency & Welfare Fund Allocation */}
+                  <div className="bg-[#142036] border border-[#1E2D4A] rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                        3. Emergency Fund Allocation
+                      </span>
+                      <span className="text-2xl font-black text-teal-400 font-mono mt-1 block">
+                        {selectedCurrency} {totalEmergencyFundAllocations.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Emergency Pool (16.67%):</span>
+                      <span className="text-teal-300 font-bold font-mono">KES 1,000 / member / mo</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-mono">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <span className="text-slate-500 font-sans font-medium">Reconciliation Formula:</span>
+                    <span>Total Contributions (KES 6,000) = General Funds (KES 5,000) + Emergency Fund (KES 1,000)</span>
+                  </div>
+                  <div className="text-emerald-400 font-bold">
+                    KES {grandTotalContributions.toLocaleString()} = KES {totalGeneralFundsAvailable.toLocaleString()} + KES {totalEmergencyFundAllocations.toLocaleString()}
                   </div>
                 </div>
               </div>

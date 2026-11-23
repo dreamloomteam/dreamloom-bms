@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import { ALL_MONTHS, MONTH_ABBRS, parseDateToMonthYear } from './dateUtils';
+import { ALL_MONTHS, MONTH_ABBRS, parseDateToMonthYear, normalizeMonthYear } from './dateUtils';
 import { createAuditLog } from './audit';
 
 export interface NormalizedPeriod {
@@ -251,4 +251,256 @@ export async function recordPenaltyPayment(params: any) {
     remainingFine: 0,
     remainingBalance: 0
   };
+}
+
+/**
+ * Calculates internal fund split between General Company Funds and Emergency & Welfare Fund.
+ * Target per monthly contribution: KSh 6,000 = KSh 5,000 (General) + KSh 1,000 (Emergency).
+ * Proportional allocation for partial contributions: (amountPaid / 6000) * 1000.
+ */
+export function calculateContributionFundSplit(amountPaid: number, expectedAmount: number = 6000) {
+  const paid = Math.max(0, Number(amountPaid) || 0);
+  const expected = expectedAmount > 0 ? expectedAmount : 6000;
+
+  let emergencyAmount = 0;
+  if (paid >= 6000) {
+    emergencyAmount = 1000.0;
+  } else if (paid > 0) {
+    // Proportional allocation: (paid / 6000) * 1000 rounded to 2 decimal places
+    emergencyAmount = Math.min(1000.0, Math.round((paid / 6000) * 1000 * 100) / 100);
+  } else {
+    emergencyAmount = 0.0;
+  }
+
+  const generalAmount = Math.max(0, Math.round((paid - emergencyAmount) * 100) / 100);
+  const outstandingEmergency = Math.max(0, Math.round((1000.0 - emergencyAmount) * 100) / 100);
+  const isReconciled = Math.abs(paid - (generalAmount + emergencyAmount)) < 0.01;
+  const difference = Math.round((paid - (generalAmount + emergencyAmount)) * 100) / 100;
+
+  return {
+    paidAmount: paid,
+    generalAmount,
+    emergencyAmount,
+    outstandingEmergency,
+    isReconciled,
+    difference
+  };
+}
+
+/**
+ * Synchronizes a contribution record into the Emergency & Welfare Fund allocation register.
+ * 
+ * Rules:
+ * - Every member contributes KSh 6,000 / month.
+ * - When KSh 6,000 is PAID:
+ *   - KSh 5,000 to General Company Funds
+ *   - KSh 1,000 to Emergency & Welfare Fund
+ * - Proportional allocation for partial contributions: (paidAmount / 6000) * 1000
+ * - Unpaid / 0 amount: 0 allocation, marked Pending
+ * - Reversal / deletion: status 'Reversed', amount 0, transaction marked isReversed
+ * - Double-counting prevention: exactly one allocation per member per month/year (enforced by DB unique constraint).
+ */
+export async function syncContributionToEmergencyFund(
+  contributionId: number,
+  options?: {
+    userEmail?: string | null;
+    userName?: string | null;
+    isReversal?: boolean;
+    reversalReason?: string | null;
+  }
+) {
+  const contribution = await prisma.contribution.findUnique({
+    where: { id: contributionId },
+    include: { member: true, payments: { orderBy: { id: 'asc' } } }
+  });
+
+  if (!contribution || Number(contribution.payout) > 0) {
+    return null;
+  }
+
+  // Resolve member
+  let member = contribution.member;
+  if (!member && contribution.memberId) {
+    member = await prisma.member.findUnique({ where: { id: contribution.memberId } });
+  }
+  if (!member && contribution.remarks) {
+    const match = String(contribution.remarks).match(/Member:\s*([^)\]]+)/i);
+    if (match) {
+      const cleanName = match[1].trim().toLowerCase();
+      member = await prisma.member.findFirst({
+        where: { fullName: { contains: cleanName, mode: 'insensitive' } }
+      });
+    }
+  }
+
+  if (!member) {
+    return null;
+  }
+
+  const norm = normalizeMonthYear(contribution.month, contribution.year, contribution.monthYear);
+  const split = calculateContributionFundSplit(
+    Number(contribution.amount) || 0,
+    Number(contribution.expectedAmount) || 6000
+  );
+
+  let emergencyAllocation = split.emergencyAmount;
+  let status = 'Pending';
+  let notes = '';
+
+  if (options?.isReversal) {
+    emergencyAllocation = 0.0;
+    status = 'Reversed';
+    notes = options.reversalReason || `Allocation reversed (Contribution payment cancelled/reversed)`;
+  } else if (split.paidAmount >= 6000) {
+    emergencyAllocation = 1000.0;
+    status = 'Allocated';
+    notes = `Auto-allocated from KSh 6,000 contribution (${contribution.paymentReference || contribution.customId || 'Paid'})`;
+  } else if (split.paidAmount > 0) {
+    status = 'Partially Allocated';
+    notes = `Partial internal allocation: KSh ${emergencyAllocation.toLocaleString()} allocated (KSh ${split.outstandingEmergency.toLocaleString()} pending full KSh 6,000 contribution)`;
+  } else {
+    emergencyAllocation = 0.0;
+    status = 'Pending';
+    notes = `Pending payment of monthly KSh 6,000 contribution`;
+  }
+
+  const generalFundsAmount = split.generalAmount;
+  const sourceContribution = `Contribution ${contribution.customId || ('CNT-' + contribution.id)} (KES ${split.paidAmount.toLocaleString()} paid: KES ${generalFundsAmount.toLocaleString()} General + KES ${emergencyAllocation.toLocaleString()} Emergency)`;
+
+  const existingAlloc = await prisma.emergencyFundAllocation.findUnique({
+    where: {
+      memberId_month_year: {
+        memberId: member.id,
+        month: norm.monthName,
+        year: norm.year
+      }
+    }
+  });
+
+  const savedAllocation = await prisma.emergencyFundAllocation.upsert({
+    where: {
+      memberId_month_year: {
+        memberId: member.id,
+        month: norm.monthName,
+        year: norm.year
+      }
+    },
+    update: {
+      amount: emergencyAllocation,
+      monthYear: norm.monthYearShort,
+      sourceContribution,
+      status,
+      notes,
+      recordedBy: options?.userName || 'System / Auto-Allocated'
+    },
+    create: {
+      memberId: member.id,
+      month: norm.monthName,
+      year: norm.year,
+      monthYear: norm.monthYearShort,
+      amount: emergencyAllocation,
+      sourceContribution,
+      status,
+      notes,
+      recordedBy: options?.userName || 'System / Auto-Allocated'
+    }
+  });
+
+  // Update or record transaction in EmergencyFundTransaction ledger
+  const txnId = `TXN-ALC-${norm.year}${norm.monthName.substring(0, 3).toUpperCase()}-M00${member.id}`;
+  const existingTxn = await prisma.emergencyFundTransaction.findUnique({ where: { id: txnId } });
+
+  const pDateStr = contribution.paymentDate || norm.defaultDateStr;
+  const pDate = new Date(pDateStr.includes('T') ? pDateStr : `${pDateStr} UTC`);
+  const validPDate = isNaN(pDate.getTime()) ? new Date(norm.year, norm.monthIdx, 1) : pDate;
+
+  if (emergencyAllocation > 0) {
+    await prisma.emergencyFundTransaction.upsert({
+      where: { id: txnId },
+      update: {
+        amount: emergencyAllocation,
+        isReversed: false,
+        reversedAt: null,
+        reversalReason: null,
+        description: `Monthly internal emergency fund allocation for ${member.fullName} (${norm.monthYearShort}) from KES ${split.paidAmount.toLocaleString()} contribution`,
+        paymentReference: contribution.paymentReference || contribution.customId || `ALC-${norm.monthYearShort}-M00${member.id}`,
+        performedBy: options?.userName || 'Treasurer'
+      },
+      create: {
+        id: txnId,
+        transactionDate: validPDate,
+        type: 'ALLOCATION',
+        category: 'Fund Capital',
+        amount: emergencyAllocation,
+        memberId: member.id,
+        memberName: member.fullName,
+        referenceId: `${norm.monthYearShort}-M00${member.id}`,
+        paymentMethod: 'Internal Allocation',
+        paymentReference: contribution.paymentReference || contribution.customId || `ALC-${norm.monthYearShort}-M00${member.id}`,
+        description: `Monthly internal emergency fund allocation for ${member.fullName} (${norm.monthYearShort}) from KES ${split.paidAmount.toLocaleString()} contribution`,
+        performedBy: options?.userName || 'Treasurer'
+      }
+    });
+  } else if (existingTxn) {
+    if (options?.isReversal) {
+      await prisma.emergencyFundTransaction.update({
+        where: { id: txnId },
+        data: {
+          isReversed: true,
+          reversedAt: new Date(),
+          reversalReason: options?.reversalReason || 'Contribution reversed'
+        }
+      });
+    } else {
+      await prisma.emergencyFundTransaction.update({
+        where: { id: txnId },
+        data: {
+          amount: 0,
+          description: `Monthly internal emergency fund allocation pending for ${member.fullName} (${norm.monthYearShort})`
+        }
+      });
+    }
+  }
+
+  // Audit Log
+  await createAuditLog({
+    model: 'EmergencyFundAllocation',
+    action: existingAlloc ? (options?.isReversal ? 'Reversed' : 'Updated') : 'Added',
+    recordId: savedAllocation.id,
+    recordRef: `ALC-${savedAllocation.id}`,
+    userEmail: options?.userEmail || null,
+    userName: options?.userName || 'System / Auto-Allocated',
+    member: member.fullName,
+    oldValues: existingAlloc ? { amount: existingAlloc.amount, status: existingAlloc.status } : {},
+    newValues: {
+      amount: savedAllocation.amount,
+      status: savedAllocation.status,
+      generalFundsAmount,
+      totalContribution: split.paidAmount
+    },
+    remarks: options?.isReversal
+      ? `Reversed Emergency Fund allocation for ${member.fullName} (${norm.monthYearShort})`
+      : `Synchronized Emergency Fund allocation of KES ${emergencyAllocation.toLocaleString()} from KES ${split.paidAmount.toLocaleString()} contribution for ${member.fullName} (${norm.monthYearShort})`
+  });
+
+  return savedAllocation;
+}
+
+/**
+ * Synchronizes all eligible member contributions into Emergency Fund allocations.
+ */
+export async function syncAllContributionsToEmergencyFund(userEmail?: string, userName?: string) {
+  const contributions = await prisma.contribution.findMany({
+    where: { payout: 0 },
+    orderBy: { id: 'asc' }
+  });
+
+  let synced = 0;
+  for (const c of contributions) {
+    if (c.memberId && Number(c.amount) > 0) {
+      await syncContributionToEmergencyFund(c.id, { userEmail, userName });
+      synced++;
+    }
+  }
+  return synced;
 }

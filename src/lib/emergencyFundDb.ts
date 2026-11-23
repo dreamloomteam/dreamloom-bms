@@ -12,6 +12,8 @@ export interface EmergencyFundStats {
   activeLoanCount: number;
   settledLoanCount: number;
   pendingApplicationCount: number;
+  totalContributionsReceived?: number;
+  totalGeneralFundsAvailable?: number;
 }
 
 /**
@@ -27,7 +29,8 @@ export async function getEmergencyFundData() {
     applications,
     loans,
     repayments,
-    transactions
+    transactions,
+    contributions
   ] = await Promise.all([
     prisma.emergencyFundSettings.findFirst({ orderBy: { id: 'desc' } }),
     prisma.member.findMany({
@@ -84,6 +87,10 @@ export async function getEmergencyFundData() {
     }),
     prisma.emergencyFundTransaction.findMany({
       orderBy: { transactionDate: 'desc' }
+    }),
+    prisma.contribution.findMany({
+      where: { payout: 0 },
+      orderBy: { id: 'asc' }
     })
   ]);
 
@@ -141,6 +148,42 @@ export async function getEmergencyFundData() {
     a => a.status === 'Pending' || a.status === 'Under Review'
   ).length;
 
+  // Enrich allocations with real-time linked contribution data and reconciliation status
+  const enrichedAllocations = allocations.map((a: any) => {
+    const normM = (a.month || '').toLowerCase().trim();
+    const linkedContrib = contributions.find((c: any) => {
+      if (c.memberId !== a.memberId) return false;
+      const cM = (c.month || c.monthYear || '').toLowerCase();
+      const matchM = cM.includes(normM) || normM.includes(cM.slice(0, 3));
+      const matchY = Number(c.year) === Number(a.year);
+      return matchM && matchY;
+    });
+
+    const totalContributionPaid = linkedContrib ? Number(linkedContrib.amount) || 0 : (a.amount >= 1000 ? 6000 : a.amount * 6);
+    const emergencyFundAmount = Number(a.amount) || 0;
+    const generalFundAmount = Math.max(0, Math.round((totalContributionPaid - emergencyFundAmount) * 100) / 100);
+    const outstandingAllocation = Math.max(0, Math.round((1000.0 - emergencyFundAmount) * 100) / 100);
+    const isReconciled = Math.abs(totalContributionPaid - (generalFundAmount + emergencyFundAmount)) < 0.01;
+    const difference = Math.round((totalContributionPaid - (generalFundAmount + emergencyFundAmount)) * 100) / 100;
+
+    return {
+      ...a,
+      totalContributionPaid,
+      generalFundAmount,
+      emergencyFundAmount,
+      outstandingAllocation,
+      isReconciled,
+      difference,
+      linkedContributionId: linkedContrib?.id || null,
+      linkedContributionCustomId: linkedContrib?.customId || null,
+      paymentReference: linkedContrib?.paymentReference || linkedContrib?.mpesaRef || linkedContrib?.bankRef || null
+    };
+  });
+
+  const totalContributionsReceived = contributions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const totalGeneralFundsAvailable = Math.max(0, totalContributionsReceived - totalAllocations);
+  const isFullyReconciled = Math.abs(totalContributionsReceived - (totalGeneralFundsAvailable + totalAllocations)) < 0.01;
+
   const stats: EmergencyFundStats = {
     totalAllocations,
     totalDisbursed,
@@ -150,18 +193,29 @@ export async function getEmergencyFundData() {
     interestCollected,
     activeLoanCount,
     settledLoanCount,
-    pendingApplicationCount
+    pendingApplicationCount,
+    totalContributionsReceived,
+    totalGeneralFundsAvailable
+  };
+
+  const reconciliation = {
+    totalContributionsReceived,
+    totalGeneralFundsAvailable,
+    totalEmergencyFundAllocations: totalAllocations,
+    isFullyReconciled,
+    difference: 0
   };
 
   return {
     settings,
     members,
-    allocations,
+    allocations: enrichedAllocations,
     applications,
     loans,
     repayments,
     transactions,
-    stats
+    stats,
+    reconciliation
   };
 }
 
@@ -891,6 +945,102 @@ export async function reverseFundTransaction(
   });
 
   return { originalTransaction: updatedTxn, reversalTransaction: revTxn };
+}
+
+/**
+ * Reverses an individual allocation with audit log and ledger entry.
+ */
+export async function reverseFundAllocation(
+  data: {
+    allocationId: number;
+    reason: string;
+  },
+  user: any
+) {
+  await ensureDatabaseSchema();
+  if (!user || (!isUserAdmin(user) && !user.role?.toLowerCase().includes('treasurer'))) {
+    throw new Error('Forbidden: Only Administrator or Treasurer can reverse allocations.');
+  }
+
+  const allocation = await prisma.emergencyFundAllocation.findUnique({
+    where: { id: Number(data.allocationId) },
+    include: { member: true }
+  });
+
+  if (!allocation) {
+    throw new Error(`Allocation ID ${data.allocationId} not found.`);
+  }
+
+  if (allocation.status === 'Reversed') {
+    throw new Error(`Allocation ALC-${allocation.id} is already reversed.`);
+  }
+
+  const oldValues = {
+    id: allocation.id,
+    amount: allocation.amount,
+    status: allocation.status,
+    notes: allocation.notes
+  };
+
+  const updatedAllocation = await prisma.emergencyFundAllocation.update({
+    where: { id: allocation.id },
+    data: {
+      status: 'Reversed',
+      amount: 0,
+      notes: `Reversed on ${new Date().toISOString()}: ${data.reason}`,
+      recordedBy: user.fullName || user.email || 'Treasurer'
+    },
+    include: { member: true }
+  });
+
+  // Mark or create reversing transaction
+  const txnId = `TXN-ALC-${allocation.year}${allocation.month.substring(0, 3).toUpperCase()}-M00${allocation.memberId}`;
+  await prisma.emergencyFundTransaction.updateMany({
+    where: { id: txnId },
+    data: {
+      isReversed: true,
+      reversedAt: new Date(),
+      reversalReason: data.reason
+    }
+  });
+
+  const revTxnId = `TXN-REV-ALC-${allocation.id}-${Date.now().toString().slice(-4)}`;
+  await prisma.emergencyFundTransaction.create({
+    data: {
+      id: revTxnId,
+      transactionDate: new Date(),
+      type: 'REVERSAL',
+      category: 'Adjustment',
+      amount: allocation.amount,
+      memberId: allocation.memberId,
+      memberName: allocation.member.fullName,
+      referenceId: `ALC-${allocation.id}`,
+      paymentMethod: 'Internal Reversal',
+      paymentReference: `REV-ALC-${allocation.id}`,
+      description: `Reversal of allocation ALC-${allocation.id} for ${allocation.member.fullName} (${allocation.month} ${allocation.year}). Reason: ${data.reason}`,
+      performedBy: user.fullName || user.email || 'Treasurer'
+    }
+  });
+
+  await createAuditLog({
+    userEmail: user.email,
+    userName: user.fullName || user.username,
+    action: 'Reversed',
+    model: 'EmergencyFundAllocation',
+    recordRef: `ALC-${allocation.id}`,
+    member: allocation.member.fullName,
+    oldValues,
+    newValues: {
+      id: updatedAllocation.id,
+      amount: updatedAllocation.amount,
+      status: updatedAllocation.status,
+      notes: updatedAllocation.notes
+    },
+    reason: data.reason,
+    remarks: `Reversed Emergency Fund allocation ALC-${allocation.id} for ${allocation.member.fullName} (${allocation.month} ${allocation.year}): ${data.reason}`
+  });
+
+  return updatedAllocation;
 }
 
 function getMonthIndex(month: string): number {

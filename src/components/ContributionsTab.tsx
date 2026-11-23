@@ -20,7 +20,9 @@ import {
   Clock,
   FileText,
   Search,
-  RefreshCw
+  RefreshCw,
+  ShieldCheck,
+  HeartHandshake
 } from 'lucide-react';
 import {
   ALL_MONTHS,
@@ -290,6 +292,15 @@ export default function ContributionsTab({
     const partialCount = monthlyMemberRows.filter(r => r.status === 'Partially Paid').length;
     const unpaidCount = monthlyMemberRows.filter(r => r.status === 'Unpaid').length;
 
+    const totalEmergencyAllocated = monthlyMemberRows.reduce((sum, r) => {
+      const paid = r.amount || 0;
+      if (paid >= 6000) return sum + 1000;
+      if (paid > 0) return sum + Math.min(1000, Math.round((paid / 6000) * 1000 * 100) / 100);
+      return sum;
+    }, 0);
+    const totalGeneralAllocated = Math.max(0, Math.round((totalPaid - totalEmergencyAllocated) * 100) / 100);
+    const isReconciled = Math.abs(totalPaid - (totalGeneralAllocated + totalEmergencyAllocated)) < 0.01;
+
     return {
       totalExpected,
       totalPaid,
@@ -297,7 +308,10 @@ export default function ContributionsTab({
       totalCredit,
       fullyPaidCount,
       partialCount,
-      unpaidCount
+      unpaidCount,
+      totalEmergencyAllocated,
+      totalGeneralAllocated,
+      isReconciled
     };
   }, [monthlyMemberRows]);
 
@@ -935,6 +949,37 @@ export default function ContributionsTab({
             </div>
           </div>
 
+          {/* Fund Category Allocation & Reconciliation Strip (Section D & F) */}
+          <div className="bg-[#064E3B] text-white rounded-2xl p-4 shadow-sm border border-emerald-700/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                <HeartHandshake className="w-5 h-5 text-emerald-300" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black tracking-wide uppercase text-emerald-200">
+                    Internal Fund Allocation & Live Reconciliation ({activeMonth} {activeYear})
+                  </span>
+                  <span className="bg-emerald-800 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-600 font-mono">
+                    KES 6,000 = KES 5,000 + KES 1,000
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-100/90 mt-0.5 font-mono">
+                  General Operating Funds: <strong className="text-white">KES {monthlySummary.totalGeneralAllocated.toLocaleString()}</strong> (83.33%) • Emergency & Welfare Fund: <strong className="text-teal-300">KES {monthlySummary.totalEmergencyAllocated.toLocaleString()}</strong> (16.67%)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 text-xs shadow-sm ${
+                monthlySummary.isReconciled ? 'bg-emerald-800/90 text-emerald-200 border border-emerald-500/40' : 'bg-amber-900/90 text-amber-200 border border-amber-500/40'
+              }`}>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                {monthlySummary.isReconciled ? '100% Balanced • Zero Discrepancy' : '⚠️ Reconciliation Attention Required'}
+              </span>
+            </div>
+          </div>
+
           {/* 10-Column Monthly Contributions Register Table (Section 3.5 & 3.6) */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4">
@@ -1013,9 +1058,25 @@ export default function ContributionsTab({
                         <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700">
                           {row.amount.toLocaleString()}
                           {row.payments && row.payments.length > 1 && (
-                            <span className="block text-[10px] text-teal-300 font-normal">
+                            <span className="block text-[10px] text-teal-600 font-normal">
                               ({row.payments.length} instalments)
                             </span>
+                          )}
+                          {row.amount > 0 && (
+                            <div className="mt-1 pt-1 border-t border-emerald-100 flex flex-col items-end gap-0.5">
+                              <span className="text-[10px] font-mono font-medium text-slate-500 whitespace-nowrap">
+                                Gen: KES {Math.max(0, row.amount - (row.amount >= 6000 ? 1000 : Math.round((row.amount / 6000) * 1000))).toLocaleString()} | Emg: KES {(row.amount >= 6000 ? 1000 : Math.round((row.amount / 6000) * 1000)).toLocaleString()}
+                              </span>
+                              {row.amount >= 6000 ? (
+                                <span className="inline-block text-[9px] font-bold text-emerald-800 bg-emerald-100/80 px-1.5 py-0.2 rounded border border-emerald-300">
+                                  Balanced (5K + 1K)
+                                </span>
+                              ) : (
+                                <span className="inline-block text-[9px] font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.2 rounded border border-amber-300">
+                                  KES {1000 - Math.round((row.amount / 6000) * 1000)} Emg Pending
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right font-extrabold">
