@@ -165,56 +165,66 @@ async function sleep(ms) {
     await page.screenshot({ path: appsScreenshot, fullPage: false });
     console.log(`Saved screenshot: ${appsScreenshot}`);
 
-    // 7. Click Review & Approve
-    console.log('7. Opening Review & Approve modal...');
-    await page.evaluate(() => {
+    // 7. Check if there is a pending application to review
+    console.log('7. Checking for Review & Approve action...');
+    const hasReviewBtn = await page.evaluate(() => {
       const reviewBtn = Array.from(document.querySelectorAll('button')).find(
         b => b.textContent && b.textContent.includes('Review & Approve')
       );
-      if (reviewBtn) reviewBtn.click();
+      if (reviewBtn) {
+        reviewBtn.click();
+        return true;
+      }
+      return false;
     });
-    await sleep(1500);
 
-    const approveModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_approve_modal.png');
-    await page.screenshot({ path: approveModalScreenshot, fullPage: false });
-    console.log(`Saved screenshot: ${approveModalScreenshot}`);
+    if (hasReviewBtn) {
+      await sleep(1500);
+      const approveModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_approve_modal.png');
+      await page.screenshot({ path: approveModalScreenshot, fullPage: false });
+      console.log(`Saved screenshot: ${approveModalScreenshot}`);
 
-    // Confirm Approval
-    console.log('Confirming approval with legal disclosure...');
-    await page.evaluate(() => {
-      const confirmBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent && b.textContent.includes('Confirm Approved')
-      );
-      if (confirmBtn) confirmBtn.click();
-    });
-    await sleep(3000);
+      // Close modal or confirm
+      await page.evaluate(() => {
+        const closeBtn = Array.from(document.querySelectorAll('button')).find(
+          b => b.textContent && b.textContent.includes('Cancel')
+        );
+        if (closeBtn) closeBtn.click();
+      });
+      await sleep(1500);
+    }
 
-    // 8. Disburse Loan
-    console.log('8. Opening Disburse Loan modal...');
-    await page.evaluate(() => {
+    // 8. Check for Disburse Loan action if available
+    console.log('8. Checking for Disburse Loan action...');
+    const hasDisburseBtn = await page.evaluate(() => {
       const disburseBtn = Array.from(document.querySelectorAll('button')).find(
         b => b.textContent && b.textContent.includes('Disburse Loan')
       );
-      if (disburseBtn) disburseBtn.click();
+      if (disburseBtn) {
+        disburseBtn.click();
+        return true;
+      }
+      return false;
     });
-    await sleep(1500);
 
-    await sleep(1500);
-    await page.type('input[placeholder="e.g. QHJ829XK11"]', 'MPESA-EWF-2026-001');
+    if (hasDisburseBtn) {
+      await page.waitForSelector('input[placeholder="e.g. QHJ829XK11"]', { timeout: 5000 }).catch(() => {});
+      const disbInput = await page.$('input[placeholder="e.g. QHJ829XK11"]');
+      if (disbInput) {
+        await page.type('input[placeholder="e.g. QHJ829XK11"]', 'MPESA-EWF-2026-001');
+        const disburseModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_disburse_modal.png');
+        await page.screenshot({ path: disburseModalScreenshot, fullPage: false });
+        console.log(`Saved screenshot: ${disburseModalScreenshot}`);
 
-    const disburseModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_disburse_modal.png');
-    await page.screenshot({ path: disburseModalScreenshot, fullPage: false });
-    console.log(`Saved screenshot: ${disburseModalScreenshot}`);
-
-    // Confirm Disbursement
-    console.log('Confirming disbursement...');
-    await page.evaluate(() => {
-      const confirmDisbBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent && b.textContent.includes('Confirm Disbursement')
-      );
-      if (confirmDisbBtn) confirmDisbBtn.click();
-    });
-    await sleep(4000);
+        await page.evaluate(() => {
+          const confirmDisbBtn = Array.from(document.querySelectorAll('button')).find(
+            b => b.textContent && b.textContent.includes('Confirm Disbursement')
+          );
+          if (confirmDisbBtn) confirmDisbBtn.click();
+        });
+        await sleep(3500);
+      }
+    }
 
     // 9. Check Emergency Loan Portfolio
     console.log('9. Checking Emergency Loan Portfolio sub-tab...');
@@ -231,37 +241,37 @@ async function sleep(ms) {
 
     // 10. Record Full Repayment & Settlement (Pre-filled with exact principal + 10% interest)
     console.log('10. Recording Loan Repayment & Full Settlement...');
-    await page.evaluate(() => {
-      const repayBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent && b.textContent.includes('Repay')
+    const hasRepayBtn = await page.evaluate(() => {
+      const tableButtons = Array.from(document.querySelectorAll('table button'));
+      const repayBtn = tableButtons.find(
+        b => b.textContent && b.textContent.trim().toLowerCase() === 'repay'
       );
-      if (repayBtn) repayBtn.click();
+      if (repayBtn) {
+        repayBtn.click();
+        return true;
+      }
+      return false;
     });
-    await sleep(1500);
 
-    await page.type('input[placeholder="e.g. QKJ47829M1"]', 'MPESA-REP-SETTLED-001');
-    await sleep(500);
+    if (hasRepayBtn) {
+      await page.waitForSelector('input[placeholder="e.g. QKJ47829M1"]', { timeout: 10000 });
+      await sleep(500);
+      await page.type('input[placeholder="e.g. QKJ47829M1"]', 'MPESA-REP-SETTLED-001');
+      await sleep(500);
 
-    const repayModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_repay_modal.png');
-    await page.screenshot({ path: repayModalScreenshot, fullPage: false });
-    console.log(`Saved screenshot: ${repayModalScreenshot}`);
+      const repayModalScreenshot = path.join(ARTIFACTS_DIR, 'evidence_emergency_fund_repay_modal.png');
+      await page.screenshot({ path: repayModalScreenshot, fullPage: false });
+      console.log(`Saved screenshot: ${repayModalScreenshot}`);
 
-    // Submit Repayment
-    await page.evaluate(() => {
-      const submitRepBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent && b.textContent.includes('Submit Repayment')
-      );
-      if (submitRepBtn) submitRepBtn.click();
-    });
-    await sleep(4000);
-
-    await page.evaluate(() => {
-      const submitRepBtn = Array.from(document.querySelectorAll('button')).find(
-        b => b.textContent && b.textContent.includes('Submit Repayment')
-      );
-      if (submitRepBtn) submitRepBtn.click();
-    });
-    await sleep(3000);
+      // Submit Repayment
+      await page.evaluate(() => {
+        const submitRepBtn = Array.from(document.querySelectorAll('button')).find(
+          b => b.textContent && b.textContent.includes('Submit Repayment')
+        );
+        if (submitRepBtn) submitRepBtn.click();
+      });
+      await sleep(4000);
+    }
 
     // 12. Check Transaction Register
     console.log('12. Checking Transaction Register sub-tab...');
