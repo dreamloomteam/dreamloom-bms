@@ -348,6 +348,15 @@ export async function submitEmergencyLoanApplication(
   const count = await prisma.emergencyLoanApplication.count();
   const appId = `EAPP-${1000 + count + 1}`;
 
+  // Safe proposed repayment date parsing
+  const parsedRepaymentDate = data.proposedRepaymentDate ? new Date(data.proposedRepaymentDate) : new Date();
+  const proposedRepaymentDate =
+    isNaN(parsedRepaymentDate.getTime()) ||
+    parsedRepaymentDate.getFullYear() > 2100 ||
+    parsedRepaymentDate.getFullYear() < 2020
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      : parsedRepaymentDate;
+
   const application = await prisma.emergencyLoanApplication.create({
     data: {
       id: appId,
@@ -355,7 +364,7 @@ export async function submitEmergencyLoanApplication(
       amountRequested,
       reason: data.reason,
       supportingDocs: data.supportingDocs || 'Self-certified by applicant shareholder',
-      proposedRepaymentDate: new Date(data.proposedRepaymentDate),
+      proposedRepaymentDate,
       status: 'Pending',
       currentOutstandingBalance,
       applicantNotes: data.applicantNotes || null,
@@ -545,7 +554,13 @@ export async function disburseEmergencyLoan(
   const count = await prisma.emergencyLoan.count();
   const loanId = `EWF-L${String(count + 1).padStart(3, '0')}`;
 
-  const disbDate = data.disbursementDate ? new Date(data.disbursementDate) : new Date();
+  const parsedDisbDate = data.disbursementDate ? new Date(data.disbursementDate) : new Date();
+  const disbDate =
+    isNaN(parsedDisbDate.getTime()) ||
+    parsedDisbDate.getFullYear() > 2100 ||
+    parsedDisbDate.getFullYear() < 2020
+      ? new Date()
+      : parsedDisbDate;
   const dueDate = new Date(disbDate);
   dueDate.setMonth(dueDate.getMonth() + durationMonths);
 
@@ -672,7 +687,13 @@ export async function recordEmergencyLoanRepayment(
     );
   }
 
-  const repDate = data.repaymentDate ? new Date(data.repaymentDate) : new Date();
+  const parsedRepDate = data.repaymentDate ? new Date(data.repaymentDate) : new Date();
+  const repDate =
+    isNaN(parsedRepDate.getTime()) ||
+    parsedRepDate.getFullYear() > 2100 ||
+    parsedRepDate.getFullYear() < 2020
+      ? new Date()
+      : parsedRepDate;
 
   // New cumulative figures
   const newPrincipalPaid = Math.round((loan.principalPaid + principalPaid) * 100) / 100;
