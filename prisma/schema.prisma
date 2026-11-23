@@ -59,6 +59,10 @@ model Member {
   deposits             Deposit[]
   userId               Int?                  @unique
   user                 User?                 @relation(fields: [userId], references: [id])
+  emergencyAllocations  EmergencyFundAllocation[]
+  emergencyApplications EmergencyLoanApplication[]
+  emergencyLoans        EmergencyLoan[]
+  emergencyRepayments   EmergencyLoanRepayment[]
 }
 
 model Contribution {
@@ -319,3 +323,156 @@ model ThePlanImage {
 
   @@index([projectId])
 }
+
+model EmergencyFundSettings {
+  id                    Int      @id @default(autoincrement())
+  fundName              String   @default("Dreamloom Members' Emergency and Welfare Fund")
+  monthlyAllocation     Float    @default(1000.0)
+  interestRate          Float    @default(10.0)
+  repaymentPeriodMonths Int      @default(1)
+  calculationMethod     String   @default("Simple")
+  updatedBy             String?
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
+}
+
+model EmergencyFundAllocation {
+  id                 Int      @id @default(autoincrement())
+  memberId           Int
+  member             Member   @relation(fields: [memberId], references: [id])
+  month              String
+  year               Int
+  monthYear          String
+  amount             Float    @default(1000.0)
+  sourceContribution String   @default("Internal Allocation (from Monthly KSh 6,000 Contribution)")
+  status             String   @default("Allocated")
+  notes              String?
+  recordedBy         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([memberId, month, year])
+  @@index([month, year])
+  @@index([memberId])
+}
+
+model EmergencyLoanApplication {
+  id                       String                  @id
+  memberId                 Int
+  member                   Member                  @relation(fields: [memberId], references: [id])
+  applicationDate          DateTime                @default(now())
+  amountRequested          Float
+  reason                   String
+  supportingDocs           String?
+  proposedRepaymentDate    DateTime
+  status                   String                  @default("Pending")
+  currentOutstandingBalance Float                  @default(0.0)
+  applicantNotes           String?
+  reviewNotes              String?
+  reviewedBy               String?
+  reviewedAt               DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  loan                     EmergencyLoan?
+  approvals                EmergencyLoanApproval[]
+
+  @@index([memberId])
+  @@index([status])
+}
+
+model EmergencyLoanApproval {
+  id                  Int                      @id @default(autoincrement())
+  applicationId       String
+  application         EmergencyLoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  approverMemberId    Int?
+  approverName        String
+  approverRole        String
+  resolutionReference String
+  legalDisclosure     String
+  decision            String                   @default("Approved")
+  decisionDate        DateTime                 @default(now())
+  conditions          String?
+  signatureRef        String?
+  createdAt           DateTime                 @default(now())
+
+  @@index([applicationId])
+}
+
+model EmergencyLoan {
+  id                 String                   @id
+  applicationId      String?                  @unique
+  application        EmergencyLoanApplication? @relation(fields: [applicationId], references: [id])
+  memberId           Int
+  member             Member                   @relation(fields: [memberId], references: [id])
+  disbursementDate   DateTime                 @default(now())
+  principal          Float
+  interestRate       Float                    @default(10.0)
+  durationMonths     Int                      @default(1)
+  interestAmount     Float
+  totalPayable       Float
+  principalPaid      Float                    @default(0.0)
+  interestPaid       Float                    @default(0.0)
+  totalPaid          Float                    @default(0.0)
+  principalBalance   Float
+  interestBalance    Float
+  totalBalance       Float
+  dueDate            DateTime
+  paymentMethod      String                   @default("M-Pesa")
+  paymentReference   String
+  approvalReference  String
+  status             String                   @default("Active")
+  disbursedBy        String
+  clearedDate        DateTime?
+  remarks            String?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  repayments         EmergencyLoanRepayment[]
+
+  @@index([memberId])
+  @@index([status])
+}
+
+model EmergencyLoanRepayment {
+  id            Int           @id @default(autoincrement())
+  loanId        String
+  loan          EmergencyLoan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  memberId      Int
+  member        Member        @relation(fields: [memberId], references: [id])
+  repaymentDate DateTime      @default(now())
+  amount        Float
+  principalPaid Float         @default(0.0)
+  interestPaid  Float         @default(0.0)
+  paymentMethod String        @default("M-Pesa")
+  reference     String
+  remarks       String?
+  recordedBy    String
+  createdAt     DateTime      @default(now())
+
+  @@index([loanId])
+  @@index([memberId])
+}
+
+model EmergencyFundTransaction {
+  id                    String    @id
+  transactionDate       DateTime  @default(now())
+  type                  String
+  category              String
+  amount                Float
+  memberId              Int?
+  memberName            String?
+  referenceId           String?
+  paymentMethod         String?
+  paymentReference      String?
+  description           String
+  performedBy           String
+  isReversed            Boolean   @default(false)
+  reversedAt            DateTime?
+  reversalReason        String?
+  reversalTransactionId String?
+  createdAt             DateTime  @default(now())
+
+  @@index([type])
+  @@index([memberId])
+  @@index([transactionDate])
+}
+

@@ -284,6 +284,7 @@ export const ALL_PAGE_KEYS = [
   'Contributions',
   'Deposits',
   'Loan Portfolio',
+  'Emergency & Welfare Fund',
   'Fines & Penalties',
   'Expenses',
   'Investments',

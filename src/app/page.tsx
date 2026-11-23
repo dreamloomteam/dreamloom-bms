@@ -10,7 +10,7 @@ import {
   Search, Bell, Maximize, Minimize, ChevronDown, Check, Calendar, DollarSign, Coins, Layers,
   CreditCard, ArrowUpRight, ArrowDownRight, ArrowLeft, Clock, CheckCircle2, UserCheck, ShieldAlert,
   Eye, EyeOff, Phone, Landmark, Building2, Banknote, CheckCircle, Trash2, RotateCw, ArrowDownCircle,
-  Palette, Sparkles, Copy, Sliders, FileSpreadsheet, Compass
+  Palette, Sparkles, Copy, Sliders, FileSpreadsheet, Compass, HeartHandshake
 } from 'lucide-react';
 import MemberAutocomplete from '@/components/MemberAutocomplete';
 import DepositsTab, { DepositRecord } from '@/components/DepositsTab';
@@ -18,6 +18,7 @@ import LoanPortfolioTab from '@/components/LoanPortfolioTab';
 import ActionsDropdown from '@/components/ActionsDropdown';
 import ContributionsTab from '@/components/ContributionsTab';
 import ThePlanTab from '@/components/ThePlanTab';
+import EmergencyFundTab from '@/components/EmergencyFundTab';
 import LoginScreen from '@/components/LoginScreen';
 import AppearanceCustomizerDrawer from '@/components/AppearanceCustomizerDrawer';
 import {
@@ -2935,6 +2936,7 @@ export default function Home() {
         { name: 'Contributions', icon: Wallet },
         { name: 'Deposits', icon: ArrowDownCircle },
         { name: 'Loan Portfolio', icon: CreditCard },
+        { name: 'Emergency & Welfare Fund', icon: HeartHandshake },
         { name: 'Fines & Penalties', icon: AlertTriangle },
         { name: 'Expenses', icon: Receipt },
       ]
@@ -3281,7 +3283,7 @@ export default function Home() {
           <style dangerouslySetInnerHTML={{ __html: generateAppearanceCss(activePageAppearance) }} />
 
           {/* Top Title Bar with Month / Currency / Export Button */}
-          {activeTab !== 'Loan Portfolio' && activeTab !== 'The Plan' && (
+          {activeTab !== 'Loan Portfolio' && activeTab !== 'The Plan' && activeTab !== 'Emergency & Welfare Fund' && (
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <div className="flex flex-wrap items-center gap-3">
                 <div>
@@ -3923,6 +3925,20 @@ export default function Home() {
               currentUser={currentUser}
               onOpenAppearance={() => {
                 setPreviewAppearance(pageAppearances['The Plan'] || DEFAULT_PAGE_APPEARANCE);
+                setIsAppearanceDrawerOpen(true);
+              }}
+            />
+          )}
+
+          {/* ===================================================================== */}
+          {/* EMERGENCY & WELFARE FUND MODULE                                      */}
+          {/* ===================================================================== */}
+          {activeTab === 'Emergency & Welfare Fund' && (
+            <EmergencyFundTab
+              isAdmin={isAdmin}
+              currentUser={currentUser}
+              onOpenAppearance={() => {
+                setPreviewAppearance(pageAppearances['Emergency & Welfare Fund'] || DEFAULT_PAGE_APPEARANCE);
                 setIsAppearanceDrawerOpen(true);
               }}
             />

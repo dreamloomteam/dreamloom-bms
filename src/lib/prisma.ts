@@ -288,6 +288,250 @@ export async function ensureDatabaseSchema(): Promise<void> {
       console.warn('Notice seeding default inventory:', e);
     }
 
+    // 4e. Idempotent Emergency & Welfare Fund Schema Setup
+    try {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyFundSettings" (
+          "id" SERIAL NOT NULL,
+          "fundName" TEXT NOT NULL DEFAULT 'Dreamloom Members'' Emergency and Welfare Fund',
+          "monthlyAllocation" DOUBLE PRECISION NOT NULL DEFAULT 1000.0,
+          "interestRate" DOUBLE PRECISION NOT NULL DEFAULT 10.0,
+          "repaymentPeriodMonths" INTEGER NOT NULL DEFAULT 1,
+          "calculationMethod" TEXT NOT NULL DEFAULT 'Simple',
+          "updatedBy" TEXT,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyFundSettings_pkey" PRIMARY KEY ("id")
+        );
+      `);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyFundAllocation" (
+          "id" SERIAL NOT NULL,
+          "memberId" INTEGER NOT NULL,
+          "month" TEXT NOT NULL,
+          "year" INTEGER NOT NULL,
+          "monthYear" TEXT NOT NULL,
+          "amount" DOUBLE PRECISION NOT NULL DEFAULT 1000.0,
+          "sourceContribution" TEXT NOT NULL DEFAULT 'Internal Allocation (from Monthly KSh 6,000 Contribution)',
+          "status" TEXT NOT NULL DEFAULT 'Allocated',
+          "notes" TEXT,
+          "recordedBy" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyFundAllocation_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "EmergencyFundAllocation_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "EmergencyFundAllocation_member_month_year_key" ON "EmergencyFundAllocation"("memberId", "month", "year");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyFundAllocation_month_year_idx" ON "EmergencyFundAllocation"("month", "year");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyFundAllocation_memberId_idx" ON "EmergencyFundAllocation"("memberId");`);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyLoanApplication" (
+          "id" TEXT NOT NULL,
+          "memberId" INTEGER NOT NULL,
+          "applicationDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "amountRequested" DOUBLE PRECISION NOT NULL,
+          "reason" TEXT NOT NULL,
+          "supportingDocs" TEXT,
+          "proposedRepaymentDate" TIMESTAMP(3) NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'Pending',
+          "currentOutstandingBalance" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "applicantNotes" TEXT,
+          "reviewNotes" TEXT,
+          "reviewedBy" TEXT,
+          "reviewedAt" TIMESTAMP(3),
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyLoanApplication_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "EmergencyLoanApplication_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoanApplication_memberId_idx" ON "EmergencyLoanApplication"("memberId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoanApplication_status_idx" ON "EmergencyLoanApplication"("status");`);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyLoanApproval" (
+          "id" SERIAL NOT NULL,
+          "applicationId" TEXT NOT NULL,
+          "approverMemberId" INTEGER,
+          "approverName" TEXT NOT NULL,
+          "approverRole" TEXT NOT NULL,
+          "resolutionReference" TEXT NOT NULL,
+          "legalDisclosure" TEXT NOT NULL,
+          "decision" TEXT NOT NULL DEFAULT 'Approved',
+          "decisionDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "conditions" TEXT,
+          "signatureRef" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyLoanApproval_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "EmergencyLoanApproval_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "EmergencyLoanApplication"("id") ON DELETE CASCADE ON UPDATE CASCADE
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoanApproval_applicationId_idx" ON "EmergencyLoanApproval"("applicationId");`);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyLoan" (
+          "id" TEXT NOT NULL,
+          "applicationId" TEXT,
+          "memberId" INTEGER NOT NULL,
+          "disbursementDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "principal" DOUBLE PRECISION NOT NULL,
+          "interestRate" DOUBLE PRECISION NOT NULL DEFAULT 10.0,
+          "durationMonths" INTEGER NOT NULL DEFAULT 1,
+          "interestAmount" DOUBLE PRECISION NOT NULL,
+          "totalPayable" DOUBLE PRECISION NOT NULL,
+          "principalPaid" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "interestPaid" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "totalPaid" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "principalBalance" DOUBLE PRECISION NOT NULL,
+          "interestBalance" DOUBLE PRECISION NOT NULL,
+          "totalBalance" DOUBLE PRECISION NOT NULL,
+          "dueDate" TIMESTAMP(3) NOT NULL,
+          "paymentMethod" TEXT NOT NULL DEFAULT 'M-Pesa',
+          "paymentReference" TEXT NOT NULL,
+          "approvalReference" TEXT NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'Active',
+          "disbursedBy" TEXT NOT NULL,
+          "clearedDate" TIMESTAMP(3),
+          "remarks" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyLoan_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "EmergencyLoan_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "EmergencyLoanApplication"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+          CONSTRAINT "EmergencyLoan_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "EmergencyLoan_applicationId_key" ON "EmergencyLoan"("applicationId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoan_memberId_idx" ON "EmergencyLoan"("memberId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoan_status_idx" ON "EmergencyLoan"("status");`);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyLoanRepayment" (
+          "id" SERIAL NOT NULL,
+          "loanId" TEXT NOT NULL,
+          "memberId" INTEGER NOT NULL,
+          "repaymentDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "amount" DOUBLE PRECISION NOT NULL,
+          "principalPaid" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "interestPaid" DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+          "paymentMethod" TEXT NOT NULL DEFAULT 'M-Pesa',
+          "reference" TEXT NOT NULL,
+          "remarks" TEXT,
+          "recordedBy" TEXT NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyLoanRepayment_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "EmergencyLoanRepayment_loanId_fkey" FOREIGN KEY ("loanId") REFERENCES "EmergencyLoan"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT "EmergencyLoanRepayment_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoanRepayment_loanId_idx" ON "EmergencyLoanRepayment"("loanId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyLoanRepayment_memberId_idx" ON "EmergencyLoanRepayment"("memberId");`);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "EmergencyFundTransaction" (
+          "id" TEXT NOT NULL,
+          "transactionDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "type" TEXT NOT NULL,
+          "category" TEXT NOT NULL,
+          "amount" DOUBLE PRECISION NOT NULL,
+          "memberId" INTEGER,
+          "memberName" TEXT,
+          "referenceId" TEXT,
+          "paymentMethod" TEXT,
+          "paymentReference" TEXT,
+          "description" TEXT NOT NULL,
+          "performedBy" TEXT NOT NULL,
+          "isReversed" BOOLEAN NOT NULL DEFAULT false,
+          "reversedAt" TIMESTAMP(3),
+          "reversalReason" TEXT,
+          "reversalTransactionId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "EmergencyFundTransaction_pkey" PRIMARY KEY ("id")
+        );
+      `);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyFundTransaction_type_idx" ON "EmergencyFundTransaction"("type");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyFundTransaction_memberId_idx" ON "EmergencyFundTransaction"("memberId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmergencyFundTransaction_transactionDate_idx" ON "EmergencyFundTransaction"("transactionDate");`);
+
+      // Seed initial default settings if empty
+      const settingsCount = await prisma.emergencyFundSettings.count();
+      if (settingsCount === 0) {
+        await prisma.emergencyFundSettings.create({
+          data: {
+            fundName: "Dreamloom Members' Emergency and Welfare Fund",
+            monthlyAllocation: 1000.0,
+            interestRate: 10.0,
+            repaymentPeriodMonths: 1,
+            calculationMethod: 'Simple',
+            updatedBy: 'System / Simon Memia Wanjiru'
+          }
+        });
+      }
+
+      // Seed initial allocations for registered members for 2026 months if empty
+      const allocCount = await prisma.emergencyFundAllocation.count();
+      if (allocCount === 0) {
+        const allMembers = await prisma.member.findMany({ orderBy: { id: 'asc' } });
+        if (allMembers.length > 0) {
+          const sampleMonths = [
+            { month: 'January', year: 2026, monthYear: 'Jan 2026' },
+            { month: 'February', year: 2026, monthYear: 'Feb 2026' }
+          ];
+          for (const sm of sampleMonths) {
+            for (const m of allMembers) {
+              await prisma.emergencyFundAllocation.upsert({
+                where: {
+                  memberId_month_year: {
+                    memberId: m.id,
+                    month: sm.month,
+                    year: sm.year
+                  }
+                },
+                update: {},
+                create: {
+                  memberId: m.id,
+                  month: sm.month,
+                  year: sm.year,
+                  monthYear: sm.monthYear,
+                  amount: 1000.0,
+                  sourceContribution: 'Internal Allocation (from Monthly KSh 6,000 Contribution)',
+                  status: 'Allocated',
+                  notes: `Scheduled monthly internal allocation for ${m.fullName}`,
+                  recordedBy: 'System / Treasurer'
+                }
+              });
+
+              // Also record in EmergencyFundTransaction ledger
+              const txnId = `TXN-ALC-${sm.year}${sm.month.substring(0, 3).toUpperCase()}-M00${m.id}`;
+              await prisma.emergencyFundTransaction.upsert({
+                where: { id: txnId },
+                update: {},
+                create: {
+                  id: txnId,
+                  transactionDate: new Date(sm.year, sm.month === 'January' ? 0 : 1, 1),
+                  type: 'ALLOCATION',
+                  category: 'Fund Capital',
+                  amount: 1000.0,
+                  memberId: m.id,
+                  memberName: m.fullName,
+                  referenceId: `${sm.monthYear}-M00${m.id}`,
+                  paymentMethod: 'Internal Allocation',
+                  paymentReference: `ALC-${sm.monthYear}-M00${m.id}`,
+                  description: `Monthly internal emergency fund allocation for ${m.fullName} (${sm.monthYear})`,
+                  performedBy: 'Treasurer / System'
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Notice ensuring Emergency Fund schema and seeds:', e);
+    }
+
+
 
     // 5. Backfill any legacy Contribution rows missing memberId, month, or year
     const legacyRows = await prisma.contribution.findMany({
